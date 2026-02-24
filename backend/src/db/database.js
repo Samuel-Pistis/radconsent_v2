@@ -658,12 +658,19 @@ function buildSeedData() {
 // ═══════════════════════════════════════════════════════════════
 
 function seed() {
-  console.log('[DB] No database file found — seeding with demo data…');
+  console.log('[DB] No database file found — initializing with demo users…');
   const data = buildSeedData();
+  data.consents = []; // Start clean — no auto-populated consent records
   write(data);
-  console.log(
-    `[DB] Seeded ${data.users.length} users and ${data.consents.length} consent records.`
-  );
+  console.log(`[DB] Initialized with ${data.users.length} users and 0 consent records.`);
+}
+
+function loadDemoConsents() {
+  const data = read();
+  const { consents } = buildSeedData();
+  data.consents = consents;
+  write(data);
+  return consents.length;
 }
 
 function init() {
@@ -684,4 +691,4 @@ init();
 //  Exports
 // ═══════════════════════════════════════════════════════════════
 
-module.exports = { read, write, all, insert, update, remove, findOne, findMany, filter };
+module.exports = { read, write, all, insert, update, remove, findOne, findMany, filter, loadDemoConsents };

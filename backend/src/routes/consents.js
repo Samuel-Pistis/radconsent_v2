@@ -9,6 +9,14 @@ const router = express.Router();
 // All consent routes require authentication
 router.use(verifyToken);
 
+// POST /api/consents/seed-demo — admin loads demo consent records
+router.post('/seed-demo', (req, res) => {
+  if (req.user.role !== 'admin')
+    return res.status(403).json({ error: 'Only admins can load demo data.' });
+  const count = db.loadDemoConsents();
+  return res.json({ ok: true, loaded: count });
+});
+
 // POST /api/consents/sessions — create a new consent record
 router.post('/sessions', (req, res) => {
   const { patient, modality, language, consentMode, bodyPart } = req.body || {};

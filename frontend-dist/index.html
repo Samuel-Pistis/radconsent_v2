@@ -2122,8 +2122,11 @@ function renderAdminPanel() {
     <div class="card mb-4">
       <div class="card-header" style="justify-content:space-between;align-items:center">
         <h3>Consent Records <span style="font-size:13px;font-weight:400;color:var(--c-text-muted)">(${count})</span></h3>
-        <button class="btn btn-danger btn-sm" onclick="adminDeleteAll()"
-          ${!recs || recs.length === 0 ? 'disabled' : ''}>Delete All Records</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="adminLoadDemo()">Load Demo Data</button>
+          <button class="btn btn-danger btn-sm" onclick="adminDeleteAll()"
+            ${!recs || recs.length === 0 ? 'disabled' : ''}>Delete All Records</button>
+        </div>
       </div>
       <div class="card-body" style="padding:0">
         <table style="width:100%;border-collapse:collapse">
@@ -2150,6 +2153,18 @@ async function adminDeleteRecord(id, name) {
     await api('DELETE', `/consents/${id}`);
     toast(`Record deleted.`, 'success');
     adminState.records = adminState.records?.filter(r => r.id !== id) ?? null;
+    render();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function adminLoadDemo() {
+  if (!confirm('Replace current records with demo data? This cannot be undone.')) return;
+  try {
+    const res = await api('POST', '/consents/seed-demo');
+    toast(`Loaded ${res.loaded} demo records.`, 'success');
+    adminState.records = null;
     render();
   } catch (err) {
     toast(err.message, 'error');
