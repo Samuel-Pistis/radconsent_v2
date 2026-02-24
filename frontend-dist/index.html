@@ -945,7 +945,7 @@ function doLogout() {
 /* ═══════════════════════════════════════════════════════════════
    ROUTER
 ═══════════════════════════════════════════════════════════════ */
-function navigate(page, data) {
+function navigate(page, data, opts = {}) {
   // Reset new-consent form state each time the page is opened fresh
   if (page === 'new-consent') {
     ncState.modality = ''; ncState.sex = '';
@@ -989,8 +989,18 @@ function navigate(page, data) {
   }
   state.page     = page;
   state.pageData = data || {};
+  if (!opts.skipHistory && state.user && page !== 'login') {
+    history.pushState({ page, pageData: data || {} }, '');
+  }
   render();
 }
+
+window.addEventListener('popstate', e => {
+  if (!state.user) return;
+  if (e.state?.page) {
+    navigate(e.state.page, e.state.pageData || {}, { skipHistory: true });
+  }
+});
 
 /* ═══════════════════════════════════════════════════════════════
    UTILITY HELPERS
@@ -1182,7 +1192,7 @@ function renderShell(pageHtml) {
   return `
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="sidebar-logo">
+        <div class="sidebar-logo" onclick="navigate('dashboard')" style="cursor:pointer">
           <div class="logo-row">
             <div class="logo-icon">RC</div>
             <span class="logo-name">RadConsent</span>
