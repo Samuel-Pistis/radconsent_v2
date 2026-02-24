@@ -820,6 +820,20 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .scr-domain-name { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--c-text-muted); margin-bottom: 4px; }
 .scr-domain-finding { font-size: 13px; color: var(--c-text-sec); padding: 2px 0; }
 
+/* ── Dashboard ── */
+.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.dash-stat { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); padding: 20px 20px 16px; border-top: 3px solid var(--c-border); }
+.dash-stat.accent-blue  { border-top-color: var(--c-accent); }
+.dash-stat.accent-amber { border-top-color: var(--c-warning); }
+.dash-stat.accent-red   { border-top-color: var(--c-danger); }
+.dash-stat.accent-green { border-top-color: var(--c-success); }
+.dash-stat-num   { font-size: 30px; font-weight: 700; color: var(--c-text); line-height: 1; margin-bottom: 6px; }
+.dash-stat-label { font-size: 11px; color: var(--c-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.dash-action-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--c-border); }
+.dash-action-row:last-child { border-bottom: none; }
+.dash-action-info { font-size: 13.5px; font-weight: 500; color: var(--c-text); }
+.dash-action-sub  { font-size: 11.5px; color: var(--c-text-muted); margin-top: 2px; }
+
 /* ── Dark mode toggle button ── */
 .btn-dark-toggle {
   display: flex; align-items: center; gap: 7px;
@@ -929,6 +943,7 @@ let stage2State       = { record: null, loading: false };
 let stage3State       = { record: null, loading: false, confirmed: false, confirmedRecord: null };
 let radReviewState    = { record: null, loading: false };
 let adminState        = { records: null, loading: false };
+let dashboardState    = { records: null, loading: false };
 
 /* Dark mode — applied immediately so there's no flash */
 let darkMode = localStorage.getItem('radconsent_dark') === '1';
@@ -997,6 +1012,11 @@ function navigate(page, data, opts = {}) {
   if (page === 'new-consent') {
     ncState.modality = ''; ncState.sex = '';
     ncState.language = 'en'; ncState.consentMode = 'assisted';
+  }
+  // Force reload of dashboard each time it's opened
+  if (page === 'dashboard') {
+    dashboardState.records = null;
+    dashboardState.loading = false;
   }
   // Force reload of admin panel each time it's opened
   if (page === 'admin') {
@@ -1331,20 +1351,142 @@ function renderPage() {
 
 /* ── Page placeholders (replaced in later steps) ── */
 function renderDashboard() {
+  if (!dashboardState.records && !dashboardState.loading) {
+    dashboardState.loading = true;
+    api('GET', '/consents').then(data => {
+      dashboardState.records = data;
+      dashboardState.loading = false;
+      if (state.page === 'dashboard') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      dashboardState.records = [];
+      dashboardState.loading = false;
+      if (state.page === 'dashboard') render();
+    });
+  }
+
+  const recs = dashboardState.records;
+  const role = state.user?.role || '';
+
+  if (!recs) {
+    return `<div class="page-header"><div>
+      <div class="page-title">Dashboard</div>
+      <div class="page-subtitle">Welcome back, ${esc(state.user?.name)}</div>
+    </div></div>
+    <div class="card"><div class="card-body"><div class="loading-state">
+      <span class="spinner spinner-dark"></span>
+      <span style="margin-left:10px;font-size:13px;color:var(--c-text-muted)">Loading…</span>
+    </div></div></div>`;
+  }
+
+  // ── Counts ────────────────────────────────────────────────
+  const total      = recs.length;
+  const closed     = recs.filter(r => r.status === 'closed').length;
+  const flagged    = recs.filter(r => r.status === 'flagged_tier1' || r.status === 'pending_review').length;
+  const inProgress = recs.filter(r => r.status === 'in_progress').length;
+
+  const actionItems = recs.filter(r => {
+    if (role === 'radiographer') return r.status === 'draft_stage1';
+    if (role === 'nurse')        return r.status === 'draft_stage2';
+    if (role === 'radiologist')  return r.status === 'pending_review' || r.status === 'flagged_tier1';
+    if (role === 'admin')        return ['draft_stage1','draft_stage2','pending_review','flagged_tier1'].includes(r.status);
+    return false;
+  });
+
+  const actionLabel = {
+    radiographer: 'Awaiting Report',
+    nurse:        'Awaiting Vitals',
+    radiologist:  'Awaiting Review',
+    admin:        'Needs Attention',
+  }[role] || 'Needs Action';
+
+  // ── Stat cards ────────────────────────────────────────────
+  const stats = `
+    <div class="dash-stats">
+      <div class="dash-stat accent-blue">
+        <div class="dash-stat-num">${total}</div>
+        <div class="dash-stat-label">Total Records</div>
+      </div>
+      <div class="dash-stat accent-amber">
+        <div class="dash-stat-num">${actionItems.length}</div>
+        <div class="dash-stat-label">${esc(actionLabel)}</div>
+      </div>
+      <div class="dash-stat accent-red">
+        <div class="dash-stat-num">${flagged}</div>
+        <div class="dash-stat-label">Flagged</div>
+      </div>
+      <div class="dash-stat accent-green">
+        <div class="dash-stat-num">${closed}</div>
+        <div class="dash-stat-label">Closed</div>
+      </div>
+    </div>`;
+
+  // ── Pending actions card ──────────────────────────────────
+  let actionRows = '';
+  if (actionItems.length === 0) {
+    actionRows = `<div style="padding:16px 0;text-align:center;color:var(--c-text-muted);font-size:13px">
+      ${IC.check}&nbsp; No pending actions — you're all caught up.
+    </div>`;
+  } else {
+    actionItems.slice(0, 8).forEach(r => {
+      const act = getRecordAction(r, role);
+      actionRows += `<div class="dash-action-row">
+        <div>
+          <div class="dash-action-info">${esc(r.patient?.name || '—')}</div>
+          <div class="dash-action-sub">${esc(r.modality?.replace(/_/g,' ') || '')} · ${fmtDate(r.createdAt)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span class="badge badge-${r.status}">${esc(STATUS_LABELS[r.status]||r.status)}</span>
+          <button class="btn ${act.cls}" onclick="navigate('${act.page}',{id:'${r.id}'})">${esc(act.label)}</button>
+        </div>
+      </div>`;
+    });
+    if (actionItems.length > 8) {
+      actionRows += `<div style="padding-top:10px;text-align:center">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('consents')">View all ${actionItems.length} →</button>
+      </div>`;
+    }
+  }
+
+  // ── Recent records card ───────────────────────────────────
+  const recent = [...recs].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+  let recentRows = '';
+  if (recent.length === 0) {
+    recentRows = `<div style="padding:16px 0;text-align:center;color:var(--c-text-muted);font-size:13px">No records yet.</div>`;
+  } else {
+    recent.forEach(r => {
+      recentRows += `<div class="dash-action-row" style="cursor:pointer" onclick="navigate('record-detail',{id:'${r.id}'})">
+        <div>
+          <div class="dash-action-info">${esc(r.patient?.name || '—')}</div>
+          <div class="dash-action-sub">${esc(r.modality?.replace(/_/g,' ') || '')} · ${fmtDate(r.createdAt)}</div>
+        </div>
+        <span class="badge badge-${r.status}">${esc(STATUS_LABELS[r.status]||r.status)}</span>
+      </div>`;
+    });
+  }
+
   return `
     <div class="page-header">
       <div>
         <div class="page-title">Dashboard</div>
         <div class="page-subtitle">Welcome back, ${esc(state.user?.name)}</div>
       </div>
+      <button class="btn btn-primary btn-sm" onclick="navigate('new-consent')">${IC.plus} New Consent</button>
     </div>
-    <div class="card">
-      <div class="card-body">
-        <div class="empty-state">
-          ${IC.dashboard}
-          <h3>Dashboard</h3>
-          <p>Summary statistics and recent activity will appear here.</p>
+
+    ${stats}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-header"><h3>${esc(actionLabel)}</h3></div>
+        <div class="card-body" style="padding:0 20px">${actionRows}</div>
+      </div>
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <h3>Recent Records</h3>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('consents')">View all →</button>
         </div>
+        <div class="card-body" style="padding:0 20px">${recentRows}</div>
       </div>
     </div>`;
 }

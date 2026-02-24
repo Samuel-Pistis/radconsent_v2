@@ -1,0 +1,18 @@
+# Database — keep out of git so admin deletes persist across deploys
+backend/src/db/data.json
+
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
