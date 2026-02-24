@@ -1,0 +1,940 @@
+{
+  "users": [
+    {
+      "id": "11111111-0000-0000-0000-000000000001",
+      "email": "radiographer@radconsent.demo",
+      "password": "$2a$10$.g9pvt.l/Dxev5DMwANTUO9kl0HLTCUq2LUnyBJX1osjYi/GNQgqq",
+      "role": "radiographer",
+      "name": "Chidi Eze",
+      "createdAt": "2025-01-01T08:00:00.000Z",
+      "updatedAt": "2025-01-01T08:00:00.000Z"
+    },
+    {
+      "id": "22222222-0000-0000-0000-000000000002",
+      "email": "nurse@radconsent.demo",
+      "password": "$2a$10$.g9pvt.l/Dxev5DMwANTUO9kl0HLTCUq2LUnyBJX1osjYi/GNQgqq",
+      "role": "nurse",
+      "name": "Amaka Obi",
+      "createdAt": "2025-01-01T08:00:00.000Z",
+      "updatedAt": "2025-01-01T08:00:00.000Z"
+    },
+    {
+      "id": "33333333-0000-0000-0000-000000000003",
+      "email": "radiologist@radconsent.demo",
+      "password": "$2a$10$.g9pvt.l/Dxev5DMwANTUO9kl0HLTCUq2LUnyBJX1osjYi/GNQgqq",
+      "role": "radiologist",
+      "name": "Dr. Amara Okonkwo",
+      "createdAt": "2025-01-01T08:00:00.000Z",
+      "updatedAt": "2025-01-01T08:00:00.000Z"
+    },
+    {
+      "id": "44444444-0000-0000-0000-000000000004",
+      "email": "admin@radconsent.demo",
+      "password": "$2a$10$.g9pvt.l/Dxev5DMwANTUO9kl0HLTCUq2LUnyBJX1osjYi/GNQgqq",
+      "role": "admin",
+      "name": "Admin User",
+      "createdAt": "2025-01-01T08:00:00.000Z",
+      "updatedAt": "2025-01-01T08:00:00.000Z"
+    }
+  ],
+  "consents": [
+    {
+      "id": "c0000001-0000-0000-0000-000000000001",
+      "status": "draft_stage1",
+      "modality": "mri_with_gadolinium",
+      "language": "en",
+      "patient": {
+        "name": "Emeka Nwosu",
+        "dob": "1980-03-15",
+        "gender": "male",
+        "phone": "08012345678",
+        "address": "14 Bode Thomas Street, Surulere, Lagos"
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": [
+          "orthopaedic_hardware_over_6_weeks"
+        ]
+      },
+      "stage1": {
+        "completedAt": "2025-01-15T09:42:00.000Z",
+        "consentVersion": "v1.0-en",
+        "consentAcknowledged": true,
+        "patientSignature": "Emeka Nwosu",
+        "screening": {
+          "cardiac": {
+            "hasPacemaker": false,
+            "pacemakerMRStatus": null,
+            "hasICD": false,
+            "icdMRStatus": null,
+            "hasCardiacMonitor": false,
+            "hasCoronaryStent": false,
+            "hasHeartValve": false,
+            "hasVascularClipsCoils": false
+          },
+          "neurological": {
+            "hasCochlearImplant": false,
+            "cochlearImplantType": null,
+            "hasDeepBrainStimulator": false,
+            "hasAneurysmClip": false,
+            "aneurysmClipType": null,
+            "hasSpinalCordStimulator": false,
+            "hasVPShunt": false
+          },
+          "ocular": {
+            "hasWeldingGrindingHistory": false,
+            "hasMetallicForeignBody": false,
+            "foreignBodyClearedByXray": null
+          },
+          "orthopaedic": {
+            "hasJointReplacement": false,
+            "hasScrewsPlatesRods": true,
+            "surgeryDescription": "Right tibial fracture ORIF (2022)",
+            "isLessThan6WeeksAgo": false
+          },
+          "otherImplants": {
+            "hasInsulinPump": false,
+            "hasIUD": false,
+            "iudType": null,
+            "hasInfusionPort": false,
+            "hasPenileImplant": false,
+            "hasDrugPump": false
+          },
+          "renal": {
+            "onDialysis": false,
+            "hasCKD": false,
+            "ckdStage": null,
+            "hasSingleKidney": false
+          },
+          "allergy": {
+            "hasPriorContrastReaction": false,
+            "reactionSeverity": null
+          },
+          "pregnancy": {
+            "isPossiblyPregnant": null,
+            "trimester": null,
+            "isBreastfeeding": null
+          },
+          "claustrophobia": {
+            "hasClaustrophobia": false,
+            "severity": null,
+            "hadPriorMRIFailure": false
+          },
+          "surgical": {
+            "hadPriorSurgery": true,
+            "surgeryDetails": "Right tibia ORIF 2022"
+          },
+          "tattoosPiercings": {
+            "hasPermanentTattoos": false,
+            "hasNonRemovablePiercings": false
+          },
+          "transdermalPatches": {
+            "hasTransdermalPatch": false,
+            "patchDetails": null
+          }
+        }
+      },
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "createdAt": "2025-01-15T09:30:00.000Z",
+      "updatedAt": "2025-01-15T09:42:00.000Z",
+      "closedAt": null
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000002",
+      "status": "closed",
+      "modality": "ct_with_iv_contrast",
+      "language": "en",
+      "patient": {
+        "name": "Ngozi Adekunle",
+        "dob": "1987-07-22",
+        "gender": "female",
+        "phone": "07098765432",
+        "address": "5 Gana Street, Maitama, Abuja"
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": [
+          "prior_mild_contrast_reaction"
+        ]
+      },
+      "stage1": {
+        "completedAt": "2025-01-10T10:15:00.000Z",
+        "consentVersion": "v1.0-en",
+        "consentAcknowledged": true,
+        "patientSignature": "Ngozi Adekunle",
+        "screening": {
+          "allergy": {
+            "hasPriorContrastReaction": true,
+            "reactionSeverity": "mild"
+          },
+          "renal": {
+            "onDialysis": false,
+            "hasCKD": false,
+            "ckdStage": null,
+            "hasSingleKidney": false
+          },
+          "pregnancy": {
+            "isPossiblyPregnant": false,
+            "trimester": null,
+            "isBreastfeeding": false
+          },
+          "surgical": {
+            "hadPriorSurgery": false,
+            "surgeryDetails": null
+          }
+        }
+      },
+      "stage2": {
+        "completedAt": "2025-01-10T12:30:00.000Z",
+        "performedBy": "11111111-0000-0000-0000-000000000001",
+        "performedByName": "Chidi Eze",
+        "procedureNotes": "CT abdomen and pelvis with IV contrast. Patient tolerated procedure well. No acute adverse reaction observed. Images of diagnostic quality obtained.",
+        "contrastAdministered": true,
+        "contrastAgent": "Omnipaque 300",
+        "contrastVolume": "80ml",
+        "complications": "none",
+        "radiographerSignature": "Chidi Eze"
+      },
+      "stage3": {
+        "completedAt": "2026-02-24T00:34:33.671Z",
+        "performedBy": "22222222-0000-0000-0000-000000000002",
+        "performedByName": "Amaka Obi",
+        "vitals": {
+          "bp": "150/80",
+          "pulse": "66",
+          "spo2": null,
+          "temperature": null,
+          "rr": null
+        },
+        "patientCondition": "Stable — patient discharged in good condition",
+        "nurseSignature": "Amaka"
+      },
+      "radiologistReview": null,
+      "createdAt": "2025-01-10T10:00:00.000Z",
+      "updatedAt": "2026-02-24T00:34:33.673Z",
+      "closedAt": "2026-02-24T00:34:33.671Z"
+    },
+    {
+      "id": "c0000003-0000-0000-0000-000000000003",
+      "status": "declined",
+      "modality": "mri_without_contrast",
+      "language": "en",
+      "patient": {
+        "name": "Babatunde Okafor",
+        "dob": "1963-11-05",
+        "gender": "male",
+        "phone": "08098765432",
+        "address": "22 Bodija Estate, Ibadan, Oyo State"
+      },
+      "tierFlags": {
+        "tier1": [
+          "non_mr_conditional_pacemaker"
+        ],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": {
+        "completedAt": "2025-01-08T11:00:00.000Z",
+        "consentVersion": "v1.0-en",
+        "consentAcknowledged": true,
+        "patientSignature": "Babatunde Okafor",
+        "screening": {
+          "cardiac": {
+            "hasPacemaker": true,
+            "pacemakerMRStatus": "non_mr_conditional",
+            "hasICD": false,
+            "icdMRStatus": null,
+            "hasCardiacMonitor": false,
+            "hasCoronaryStent": false,
+            "hasHeartValve": false,
+            "hasVascularClipsCoils": false
+          },
+          "neurological": {
+            "hasCochlearImplant": false,
+            "cochlearImplantType": null,
+            "hasDeepBrainStimulator": false,
+            "hasAneurysmClip": false,
+            "aneurysmClipType": null,
+            "hasSpinalCordStimulator": false,
+            "hasVPShunt": false
+          },
+          "ocular": {
+            "hasWeldingGrindingHistory": false,
+            "hasMetallicForeignBody": false,
+            "foreignBodyClearedByXray": null
+          },
+          "orthopaedic": {
+            "hasJointReplacement": false,
+            "hasScrewsPlatesRods": false,
+            "surgeryDescription": null,
+            "isLessThan6WeeksAgo": null
+          },
+          "otherImplants": {
+            "hasInsulinPump": false,
+            "hasIUD": false,
+            "iudType": null,
+            "hasInfusionPort": false,
+            "hasPenileImplant": false,
+            "hasDrugPump": false
+          },
+          "renal": {
+            "onDialysis": false,
+            "hasCKD": false,
+            "ckdStage": null,
+            "hasSingleKidney": false
+          },
+          "allergy": {
+            "hasPriorContrastReaction": false,
+            "reactionSeverity": null
+          },
+          "pregnancy": {
+            "isPossiblyPregnant": null,
+            "trimester": null,
+            "isBreastfeeding": null
+          },
+          "claustrophobia": {
+            "hasClaustrophobia": false,
+            "severity": null,
+            "hadPriorMRIFailure": false
+          },
+          "surgical": {
+            "hadPriorSurgery": true,
+            "surgeryDetails": "Pacemaker implant 2018 — Medtronic Sigma SDR303, confirmed non-MR-conditional"
+          },
+          "tattoosPiercings": {
+            "hasPermanentTattoos": false,
+            "hasNonRemovablePiercings": false
+          },
+          "transdermalPatches": {
+            "hasTransdermalPatch": false,
+            "patchDetails": null
+          }
+        }
+      },
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": {
+        "decision": "declined",
+        "notes": "jbjbbknk",
+        "radiologistSignature": "Admin User",
+        "reviewedBy": "44444444-0000-0000-0000-000000000004",
+        "reviewedByName": "Admin User",
+        "reviewedAt": "2026-02-23T16:35:26.963Z"
+      },
+      "createdAt": "2025-01-08T10:45:00.000Z",
+      "updatedAt": "2026-02-23T16:35:26.964Z",
+      "closedAt": null
+    },
+    {
+      "id": "c0000004-0000-0000-0000-000000000004",
+      "status": "pending_review",
+      "modality": "mri_with_gadolinium",
+      "language": "en",
+      "patient": {
+        "name": "Amina Yusuf",
+        "dob": "2001-09-12",
+        "gender": "female",
+        "phone": "08123456789",
+        "address": "8 Nassarawa GRA, Kano, Kano State"
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [
+          "first_trimester_pregnancy_with_gadolinium"
+        ],
+        "tier3": []
+      },
+      "stage1": {
+        "completedAt": "2025-01-20T08:55:00.000Z",
+        "consentVersion": "v1.0-en",
+        "consentAcknowledged": true,
+        "patientSignature": "Amina Yusuf",
+        "screening": {
+          "cardiac": {
+            "hasPacemaker": false,
+            "pacemakerMRStatus": null,
+            "hasICD": false,
+            "icdMRStatus": null,
+            "hasCardiacMonitor": false,
+            "hasCoronaryStent": false,
+            "hasHeartValve": false,
+            "hasVascularClipsCoils": false
+          },
+          "neurological": {
+            "hasCochlearImplant": false,
+            "cochlearImplantType": null,
+            "hasDeepBrainStimulator": false,
+            "hasAneurysmClip": false,
+            "aneurysmClipType": null,
+            "hasSpinalCordStimulator": false,
+            "hasVPShunt": false
+          },
+          "ocular": {
+            "hasWeldingGrindingHistory": false,
+            "hasMetallicForeignBody": false,
+            "foreignBodyClearedByXray": null
+          },
+          "orthopaedic": {
+            "hasJointReplacement": false,
+            "hasScrewsPlatesRods": false,
+            "surgeryDescription": null,
+            "isLessThan6WeeksAgo": null
+          },
+          "otherImplants": {
+            "hasInsulinPump": false,
+            "hasIUD": false,
+            "iudType": null,
+            "hasInfusionPort": false,
+            "hasPenileImplant": false,
+            "hasDrugPump": false
+          },
+          "renal": {
+            "onDialysis": false,
+            "hasCKD": false,
+            "ckdStage": null,
+            "hasSingleKidney": false
+          },
+          "allergy": {
+            "hasPriorContrastReaction": false,
+            "reactionSeverity": null
+          },
+          "pregnancy": {
+            "isPossiblyPregnant": true,
+            "trimester": 1,
+            "isBreastfeeding": false
+          },
+          "claustrophobia": {
+            "hasClaustrophobia": false,
+            "severity": null,
+            "hadPriorMRIFailure": false
+          },
+          "surgical": {
+            "hadPriorSurgery": false,
+            "surgeryDetails": null
+          },
+          "tattoosPiercings": {
+            "hasPermanentTattoos": false,
+            "hasNonRemovablePiercings": false
+          },
+          "transdermalPatches": {
+            "hasTransdermalPatch": false,
+            "patchDetails": null
+          }
+        }
+      },
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": {
+        "reviewedAt": null,
+        "reviewedBy": null,
+        "reviewedByName": null,
+        "decision": null,
+        "notes": null
+      },
+      "createdAt": "2025-01-20T08:40:00.000Z",
+      "updatedAt": "2025-01-20T08:55:00.000Z",
+      "closedAt": null
+    },
+    {
+      "id": "c0000005-0000-0000-0000-000000000005",
+      "status": "closed",
+      "modality": "mammography",
+      "language": "en",
+      "patient": {
+        "name": "Chidinma Obi",
+        "dob": "1971-04-30",
+        "gender": "female",
+        "phone": "08034567890",
+        "address": "3 Rumuola Road, Port Harcourt, Rivers State"
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": {
+        "completedAt": "2024-12-20T09:00:00.000Z",
+        "consentVersion": "v1.0-en",
+        "consentAcknowledged": true,
+        "patientSignature": "Chidinma Obi",
+        "screening": {
+          "pregnancy": {
+            "isPossiblyPregnant": false,
+            "trimester": null,
+            "isBreastfeeding": false
+          },
+          "breastHistory": {
+            "hadPriorBreastSurgery": false,
+            "hasBreastImplants": false,
+            "implantType": null
+          },
+          "lastMammogramDate": "2023-04-15",
+          "familyHistoryBreastCancer": false,
+          "currentSymptoms": false,
+          "symptomsDescription": null
+        }
+      },
+      "stage2": {
+        "completedAt": "2024-12-20T10:15:00.000Z",
+        "performedBy": "11111111-0000-0000-0000-000000000001",
+        "performedByName": "Chidi Eze",
+        "procedureNotes": "Bilateral mammography, CC and MLO views. Standard screening protocol followed. Patient cooperative throughout. No technical repeat required.",
+        "contrastAdministered": false,
+        "contrastAgent": null,
+        "contrastVolume": null,
+        "complications": "none",
+        "radiographerSignature": "Chidi Eze"
+      },
+      "stage3": {
+        "completedAt": "2024-12-20T10:45:00.000Z",
+        "performedBy": "22222222-0000-0000-0000-000000000002",
+        "performedByName": "Amaka Obi",
+        "vitals": {
+          "bp": "118/76",
+          "pulse": "72",
+          "spo2": "99",
+          "temperature": "36.5",
+          "rr": "16"
+        },
+        "patientCondition": "Stable. Patient comfortable and fully oriented. No complaints. Cleared for discharge.",
+        "nurseSignature": "Amaka Obi"
+      },
+      "radiologistReview": null,
+      "createdAt": "2024-12-20T08:45:00.000Z",
+      "updatedAt": "2024-12-20T10:45:00.000Z",
+      "closedAt": "2024-12-20T10:45:00.000Z"
+    },
+    {
+      "id": "974e18a3-b184-4589-b01a-40f9ba8fdb0a",
+      "createdAt": "2026-02-23T14:31:12.627Z",
+      "updatedAt": "2026-02-23T14:31:12.627Z",
+      "status": "in_progress",
+      "modality": "mri_without_contrast",
+      "language": "en",
+      "consentMode": "assisted",
+      "bodyPart": "Abdomen",
+      "patient": {
+        "name": "Faith Olusegun",
+        "hospitalNumber": "5555",
+        "dob": "2026-02-11",
+        "gender": "male",
+        "phone": "08107739248",
+        "referringDoctor": "wwjfwfwj"
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": null,
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    },
+    {
+      "id": "161c6b07-f826-40b0-b503-62fe26a4ee1e",
+      "createdAt": "2026-02-23T14:46:29.804Z",
+      "updatedAt": "2026-02-23T14:46:29.804Z",
+      "status": "in_progress",
+      "modality": "mri_with_gadolinium",
+      "language": "en",
+      "consentMode": "assisted",
+      "bodyPart": null,
+      "patient": {
+        "name": "Test Patient",
+        "hospitalNumber": null,
+        "dob": null,
+        "gender": "female",
+        "phone": null,
+        "referringDoctor": null
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": null,
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    },
+    {
+      "id": "82bef01a-0588-4f66-81fa-d21eb587792e",
+      "createdAt": "2026-02-23T14:47:46.314Z",
+      "updatedAt": "2026-02-23T14:47:46.322Z",
+      "status": "in_progress",
+      "modality": "mri_with_gadolinium",
+      "language": "en",
+      "consentMode": "assisted",
+      "bodyPart": null,
+      "patient": {
+        "name": "Test Patient",
+        "hospitalNumber": null,
+        "dob": null,
+        "gender": "female",
+        "phone": null,
+        "referringDoctor": null
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [
+          "pregnancy"
+        ],
+        "tier3": [
+          "prior_surgery_undocumented_implants"
+        ]
+      },
+      "stage1": {
+        "screening": {
+          "cardiac": {
+            "hasPacemaker": false
+          }
+        },
+        "screeningCompletedAt": "2026-02-23T14:47:46.322Z"
+      },
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    },
+    {
+      "id": "cd5f2aff-daad-40f3-99d9-e852283193d5",
+      "createdAt": "2026-02-23T14:49:29.214Z",
+      "updatedAt": "2026-02-23T14:49:29.214Z",
+      "status": "in_progress",
+      "modality": "ct_without_contrast",
+      "language": "yo",
+      "consentMode": "assisted",
+      "bodyPart": "Lagos",
+      "patient": {
+        "name": "Samuel Pistis",
+        "hospitalNumber": "4444",
+        "dob": "2025-06-18",
+        "gender": "male",
+        "phone": "08107739248",
+        "referringDoctor": "Dr. Adeyemi"
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": null,
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    },
+    {
+      "id": "05d99ffa-d965-485d-9b0f-837211d0824d",
+      "createdAt": "2026-02-23T14:49:51.727Z",
+      "updatedAt": "2026-02-23T14:49:51.727Z",
+      "status": "in_progress",
+      "modality": "mri_without_contrast",
+      "language": "en",
+      "consentMode": "assisted",
+      "bodyPart": "Brain",
+      "patient": {
+        "name": "Faith Samuel Olusegun",
+        "hospitalNumber": "4444",
+        "dob": null,
+        "gender": "male",
+        "phone": "08107739248",
+        "referringDoctor": null
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": null,
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    },
+    {
+      "id": "5f403679-1e50-4959-b28c-7dfe4856fb2c",
+      "createdAt": "2026-02-23T14:58:34.846Z",
+      "updatedAt": "2026-02-23T14:58:34.846Z",
+      "status": "in_progress",
+      "modality": "ct_with_iv_contrast",
+      "language": "en",
+      "consentMode": "assisted",
+      "bodyPart": "Abdomen",
+      "patient": {
+        "name": "Adeola Bakare",
+        "hospitalNumber": null,
+        "dob": null,
+        "gender": "female",
+        "phone": null,
+        "referringDoctor": null
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": null,
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    },
+    {
+      "id": "1f1e5bc6-1ada-4925-b49b-920c8c2e9faa",
+      "createdAt": "2026-02-23T14:59:03.172Z",
+      "updatedAt": "2026-02-23T14:59:03.181Z",
+      "status": "draft_stage1",
+      "modality": "ct_with_iv_contrast",
+      "language": "en",
+      "consentMode": "assisted",
+      "bodyPart": "Abdomen",
+      "patient": {
+        "name": "Adeola Bakare",
+        "hospitalNumber": null,
+        "dob": null,
+        "gender": "female",
+        "phone": null,
+        "referringDoctor": null
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": {
+        "consentVersion": "v1.0-en",
+        "consentAcknowledged": true,
+        "patientSignature": "Adeola Bakare",
+        "witnessName": "Amaka Obi",
+        "completedAt": "2026-02-23T14:59:03.181Z"
+      },
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    },
+    {
+      "id": "e72df457-13d1-4453-926f-4f760ad2ffa8",
+      "createdAt": "2026-02-23T14:59:03.188Z",
+      "updatedAt": "2026-02-24T00:35:12.041Z",
+      "status": "closed",
+      "modality": "mri_without_contrast",
+      "language": "en",
+      "consentMode": "assisted",
+      "bodyPart": null,
+      "patient": {
+        "name": "Test MRI",
+        "hospitalNumber": null,
+        "dob": null,
+        "gender": "male",
+        "phone": null,
+        "referringDoctor": null
+      },
+      "tierFlags": {
+        "tier1": [
+          "non_mr_conditional_pacemaker"
+        ],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": {
+        "screening": {},
+        "screeningCompletedAt": "2026-02-23T14:59:03.194Z",
+        "consentVersion": "v1.0-en",
+        "consentAcknowledged": true,
+        "patientSignature": "Test Patient",
+        "witnessName": null,
+        "completedAt": "2026-02-23T14:59:03.199Z"
+      },
+      "stage2": {
+        "completedAt": "2026-02-23T16:37:52.016Z",
+        "performedBy": "11111111-0000-0000-0000-000000000001",
+        "performedByName": "Chidi Eze",
+        "completedAsPlanned": "yes",
+        "procedureNotes": "edk",
+        "contrastAdministered": false,
+        "contrastAgent": null,
+        "contrastVolume": null,
+        "complications": "none",
+        "radiographerSignature": "ehehedhj"
+      },
+      "stage3": {
+        "completedAt": "2026-02-24T00:35:12.040Z",
+        "performedBy": "22222222-0000-0000-0000-000000000002",
+        "performedByName": "Amaka Obi",
+        "vitals": {
+          "bp": null,
+          "pulse": null,
+          "spo2": null,
+          "temperature": null,
+          "rr": null
+        },
+        "patientCondition": "Stable — patient discharged in good condition. j",
+        "nurseSignature": "j"
+      },
+      "radiologistReview": {
+        "decision": "approved",
+        "notes": "Patient reviewed. MR conditional pacemaker confirmed as MR safe per documentation provided. Procedure approved.",
+        "radiologistSignature": "Dr Test Radiologist",
+        "reviewedBy": "33333333-0000-0000-0000-000000000003",
+        "reviewedByName": "Dr. Amara Okonkwo",
+        "reviewedAt": "2026-02-23T16:14:06.010Z"
+      },
+      "closedAt": "2026-02-24T00:35:12.040Z"
+    },
+    {
+      "id": "a58f43e4-9cef-476e-b727-a083f8ad4831",
+      "createdAt": "2026-02-23T15:34:46.682Z",
+      "updatedAt": "2026-02-23T15:34:46.682Z",
+      "status": "in_progress",
+      "modality": "mammography",
+      "language": "en",
+      "consentMode": "assisted",
+      "bodyPart": "Abdomen",
+      "patient": {
+        "name": "Faith Samuel Olusegun",
+        "hospitalNumber": "4444",
+        "dob": null,
+        "gender": "male",
+        "phone": "08107739248",
+        "referringDoctor": "Dr. Adeyemi"
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": null,
+      "stage2": null,
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    },
+    {
+      "id": "5ca24b67-5118-4ee2-834d-14e40f57d0d3",
+      "createdAt": "2026-02-23T16:38:50.020Z",
+      "updatedAt": "2026-02-24T00:09:40.332Z",
+      "status": "draft_stage2",
+      "modality": "mri_without_contrast",
+      "language": "en",
+      "consentMode": "self-service",
+      "bodyPart": "Abdomen",
+      "patient": {
+        "name": "Faith Olusegun",
+        "hospitalNumber": "4444",
+        "dob": "2026-02-02",
+        "gender": "female",
+        "phone": "08107739248",
+        "referringDoctor": "Dr. Adeyemi"
+      },
+      "tierFlags": {
+        "tier1": [],
+        "tier2": [],
+        "tier3": []
+      },
+      "stage1": {
+        "screening": {
+          "cardiac": {
+            "hasPacemaker": false,
+            "pacemakerMRStatus": null,
+            "hasICD": false,
+            "icdMRStatus": null,
+            "hasCardiacMonitor": false,
+            "hasCoronaryStent": false,
+            "hasHeartValve": false,
+            "hasVascularClipsCoils": false
+          },
+          "neurological": {
+            "hasCochlearImplant": false,
+            "cochlearImplantType": null,
+            "hasDeepBrainStimulator": false,
+            "hasAneurysmClip": false,
+            "aneurysmClipType": null,
+            "hasSpinalCordStimulator": false,
+            "hasVPShunt": false
+          },
+          "ocular": {
+            "hasWeldingGrindingHistory": false,
+            "hasMetallicForeignBody": false,
+            "foreignBodyClearedByXray": null
+          },
+          "orthopaedic": {
+            "hasJointReplacement": false,
+            "hasScrewsPlatesRods": false,
+            "surgeryDescription": null,
+            "isLessThan6WeeksAgo": null
+          },
+          "otherImplants": {
+            "hasInsulinPump": false,
+            "hasIUD": false,
+            "iudType": null,
+            "hasInfusionPort": false,
+            "hasPenileImplant": false,
+            "hasDrugPump": false
+          },
+          "renal": {
+            "onDialysis": false,
+            "hasCKD": false,
+            "ckdStage": null,
+            "hasSingleKidney": false
+          },
+          "allergy": {
+            "hasPriorContrastReaction": false,
+            "reactionSeverity": null
+          },
+          "pregnancy": {
+            "isPossiblyPregnant": false,
+            "trimester": null,
+            "isBreastfeeding": null
+          },
+          "claustrophobia": {
+            "hasClaustrophobia": false,
+            "severity": null,
+            "hadPriorMRIFailure": false
+          },
+          "surgical": {
+            "hadPriorSurgery": false,
+            "surgeryDetails": null
+          },
+          "tattoosPiercings": {
+            "hasPermanentTattoos": false,
+            "hasNonRemovablePiercings": false
+          },
+          "transdermalPatches": {
+            "hasTransdermalPatch": false,
+            "patchDetails": null
+          }
+        },
+        "screeningCompletedAt": "2026-02-23T16:39:09.913Z",
+        "consentVersion": "v1.0-en",
+        "consentAcknowledged": true,
+        "patientSignature": "Adeola Maruf",
+        "witnessName": "Adeola Made",
+        "completedAt": "2026-02-23T16:39:36.634Z"
+      },
+      "stage2": {
+        "completedAt": "2026-02-24T00:09:40.331Z",
+        "performedBy": "11111111-0000-0000-0000-000000000001",
+        "performedByName": "Chidi Eze",
+        "completedAsPlanned": "yes",
+        "procedureNotes": "hh",
+        "contrastAdministered": false,
+        "contrastAgent": null,
+        "contrastVolume": null,
+        "complications": "none",
+        "radiographerSignature": "chi"
+      },
+      "stage3": null,
+      "radiologistReview": null,
+      "closedAt": null
+    }
+  ]
+}

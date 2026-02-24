@@ -1,0 +1,3991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RadConsent — Radiology Consent Management</title>
+  <style>
+/* ═══════════════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  background: #F1F5F9;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: #1B6CA8; text-decoration: none; }
+a:hover { text-decoration: underline; }
+svg { display: block; }
+button { cursor: pointer; font-family: inherit; font-size: inherit; }
+input, select, textarea { font-family: inherit; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CSS VARIABLES
+═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Brand */
+  --c-primary:        #0B2545;
+  --c-primary-hover:  #163660;
+  --c-accent:         #1B6CA8;
+  --c-accent-hover:   #155E91;
+  /* Semantic */
+  --c-warning:        #D97706;
+  --c-warning-light:  #FEF3C7;
+  --c-warning-border: #FCD34D;
+  --c-danger:         #DC2626;
+  --c-danger-light:   #FEE2E2;
+  --c-danger-border:  #FCA5A5;
+  --c-success:        #16A34A;
+  --c-success-light:  #DCFCE7;
+  --c-success-border: #86EFAC;
+  --c-info:           #2563EB;
+  --c-info-light:     #DBEAFE;
+  --c-info-border:    #93C5FD;
+  /* Neutral */
+  --c-bg:             #F1F5F9;
+  --c-surface:        #FFFFFF;
+  --c-border:         #E2E8F0;
+  --c-text:           #0F172A;
+  --c-text-sec:       #475569;
+  --c-text-muted:     #94A3B8;
+  /* Sidebar */
+  --sidebar-w:        240px;
+  /* Misc */
+  --radius-sm:        4px;
+  --radius:           8px;
+  --radius-lg:        12px;
+  --shadow-sm:        0 1px 2px 0 rgba(0,0,0,.05);
+  --shadow:           0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1);
+  --shadow-md:        0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
+  --shadow-lg:        0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1);
+  --t:                150ms ease;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   APP SHELL LAYOUT
+═══════════════════════════════════════════════════════════════ */
+.app-shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--c-primary);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: fixed;
+  top: 0; left: 0;
+  overflow-y: auto;
+  z-index: 100;
+}
+.sidebar-logo {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  flex-shrink: 0;
+}
+.sidebar-logo .logo-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-icon {
+  width: 30px; height: 30px;
+  background: var(--c-accent);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 14px;
+  flex-shrink: 0;
+}
+.logo-name { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+.logo-sub {
+  color: rgba(255,255,255,.4);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+  padding-left: 40px;
+}
+
+/* ── Nav ── */
+.sidebar-nav { padding: 16px 0 8px; flex: 1; }
+.nav-section-label {
+  padding: 0 20px 6px;
+  font-size: 9.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1.2px;
+  color: rgba(255,255,255,.3);
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px;
+  color: rgba(255,255,255,.75);
+  font-size: 13px; font-weight: 400;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background var(--t), color var(--t);
+  user-select: none;
+}
+.nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+.nav-item.active {
+  background: rgba(255,255,255,.13);
+  border-left-color: var(--c-accent);
+  color: #fff; font-weight: 500;
+}
+.nav-item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: .8; }
+.nav-item.active svg, .nav-item:hover svg { opacity: 1; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--c-danger); color: #fff;
+  font-size: 9.5px; font-weight: 700;
+  padding: 1px 5px; border-radius: 99px;
+  min-width: 17px; text-align: center;
+}
+
+/* ── Sidebar footer ── */
+.sidebar-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  flex-shrink: 0;
+}
+.sidebar-user { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.sidebar-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--c-accent);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 600; font-size: 11px;
+  flex-shrink: 0;
+}
+.sidebar-user-name { color: #fff; font-size: 12.5px; font-weight: 500; line-height: 1.2; }
+.sidebar-user-role { color: rgba(255,255,255,.45); font-size: 10.5px; text-transform: capitalize; margin-top: 1px; }
+.btn-signout {
+  display: flex; align-items: center; gap: 7px;
+  width: 100%; padding: 7px 11px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,.65); font-size: 12px;
+  cursor: pointer;
+  transition: background var(--t), color var(--t), border-color var(--t);
+}
+.btn-signout:hover {
+  background: rgba(220,38,38,.18);
+  border-color: rgba(220,38,38,.3);
+  color: #fca5a5;
+}
+.btn-signout svg { width: 13px; height: 13px; }
+
+/* ── Main content ── */
+.main-content {
+  margin-left: var(--sidebar-w);
+  flex: 1; overflow-y: auto;
+  height: 100vh;
+  background: var(--c-bg);
+}
+.main-inner { padding: 28px 32px; max-width: 1200px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE HEADER
+═══════════════════════════════════════════════════════════════ */
+.page-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 22px; gap: 16px; flex-wrap: wrap;
+}
+.page-title { font-size: 20px; font-weight: 700; color: var(--c-text); letter-spacing: -.3px; }
+.page-subtitle { font-size: 12.5px; color: var(--c-text-sec); margin-top: 3px; }
+.page-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════════════════════ */
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.card-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.card-header h3 { font-size: 13.5px; font-weight: 600; color: var(--c-text); }
+.card-body { padding: 20px; }
+.card-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--c-border);
+  background: #FAFAFA;
+  border-radius: 0 0 var(--radius) var(--radius);
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 15px;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; white-space: nowrap; text-decoration: none;
+  transition: background var(--t), border-color var(--t), color var(--t), opacity var(--t);
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.btn-primary   { background: var(--c-accent);   border-color: var(--c-accent);   color: #fff; }
+.btn-primary:hover:not(:disabled)   { background: var(--c-accent-hover); border-color: var(--c-accent-hover); }
+.btn-dark      { background: var(--c-primary);  border-color: var(--c-primary);  color: #fff; }
+.btn-dark:hover:not(:disabled)      { background: var(--c-primary-hover); border-color: var(--c-primary-hover); }
+.btn-secondary { background: var(--c-surface);  border-color: var(--c-border);   color: var(--c-text); }
+.btn-secondary:hover:not(:disabled) { background: var(--c-bg); border-color: #CBD5E1; }
+.btn-danger    { background: var(--c-danger);   border-color: var(--c-danger);   color: #fff; }
+.btn-danger:hover:not(:disabled)    { background: #B91C1C; border-color: #B91C1C; }
+.btn-danger-outline { background: transparent; border-color: var(--c-danger); color: var(--c-danger); }
+.btn-danger-outline:hover:not(:disabled) { background: var(--c-danger-light); }
+.btn-success   { background: var(--c-success);  border-color: var(--c-success);  color: #fff; }
+.btn-success:hover:not(:disabled)   { background: #15803D; border-color: #15803D; }
+.btn-warning   { background: var(--c-warning);  border-color: var(--c-warning);  color: #fff; }
+.btn-warning:hover:not(:disabled)   { background: #B45309; border-color: #B45309; }
+.btn-ghost     { background: transparent; border-color: transparent; color: var(--c-text-sec); }
+.btn-ghost:hover:not(:disabled)     { background: var(--c-bg); color: var(--c-text); }
+.btn-sm  { padding: 4px 10px; font-size: 12px; }
+.btn-sm svg { width: 12px; height: 12px; }
+.btn-lg  { padding: 10px 22px; font-size: 14.5px; border-radius: var(--radius); }
+.btn-lg svg { width: 16px; height: 16px; }
+.btn-block { width: 100%; }
+.btn-icon { padding: 6px; border-radius: var(--radius-sm); }
+.btn-icon svg { width: 16px; height: 16px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   FORMS
+═══════════════════════════════════════════════════════════════ */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  display: block; font-size: 11.5px; font-weight: 500;
+  color: var(--c-text-sec); margin-bottom: 5px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.form-label .req { color: var(--c-danger); margin-left: 2px; }
+.form-control, .form-select {
+  display: block; width: 100%;
+  padding: 8px 11px; font-size: 13.5px;
+  color: var(--c-text); background: var(--c-surface);
+  border: 1px solid var(--c-border); border-radius: var(--radius-sm);
+  transition: border-color var(--t), box-shadow var(--t);
+  appearance: none; -webkit-appearance: none;
+}
+.form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2364748B' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center;
+  background-size: 15px; padding-right: 32px; cursor: pointer;
+}
+.form-control:focus, .form-select:focus {
+  outline: none; border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px rgba(27,108,168,.12);
+}
+.form-control.is-error, .form-select.is-error { border-color: var(--c-danger); }
+.form-control.is-error:focus, .form-select.is-error:focus { box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
+.form-control::placeholder { color: var(--c-text-muted); }
+textarea.form-control { resize: vertical; min-height: 80px; }
+.form-hint  { margin-top: 4px; font-size: 11px; color: var(--c-text-muted); }
+.form-error { margin-top: 4px; font-size: 11px; color: var(--c-danger); }
+.form-check { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; }
+.form-check input[type="checkbox"],
+.form-check input[type="radio"] {
+  width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px;
+  accent-color: var(--c-accent); cursor: pointer;
+}
+.form-check-label { font-size: 13.5px; color: var(--c-text); cursor: pointer; }
+.form-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   BADGES
+═══════════════════════════════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 99px;
+  font-size: 11px; font-weight: 500;
+  white-space: nowrap; border: 1px solid transparent;
+}
+/* Status badges */
+.badge-in_progress    { background:#F1F5F9; color:#475569; border-color:#CBD5E1; }
+.badge-draft_stage1   { background:var(--c-info-light); color:#1D4ED8; border-color:var(--c-info-border); }
+.badge-draft_stage2   { background:#EDE9FE; color:#6D28D9; border-color:#C4B5FD; }
+.badge-closed         { background:var(--c-success-light); color:#15803D; border-color:var(--c-success-border); }
+.badge-pending_review { background:var(--c-warning-light); color:#B45309; border-color:var(--c-warning-border); }
+.badge-flagged_tier1  { background:var(--c-danger-light); color:#B91C1C; border-color:var(--c-danger-border); }
+.badge-voided         { background:#F8FAFC; color:var(--c-text-muted); border-color:var(--c-border); text-decoration:line-through; }
+.badge-declined       { background:#FEF2F2; color:#991B1B; border-color:#FCA5A5; }
+/* Tier badges */
+.badge-tier1 { background:var(--c-danger-light); color:#B91C1C; border-color:var(--c-danger-border); font-weight:600; }
+.badge-tier2 { background:var(--c-warning-light); color:#B45309; border-color:var(--c-warning-border); }
+.badge-tier3 { background:var(--c-info-light); color:#1D4ED8; border-color:var(--c-info-border); }
+/* Role badges */
+.badge-role-radiographer { background:#DBEAFE; color:#1D4ED8; border-color:#BFDBFE; }
+.badge-role-nurse        { background:var(--c-success-light); color:#15803D; border-color:var(--c-success-border); }
+.badge-role-radiologist  { background:#F3E8FF; color:#7E22CE; border-color:#E9D5FF; }
+.badge-role-admin        { background:var(--c-warning-light); color:#B45309; border-color:var(--c-warning-border); }
+/* Generic colour badges */
+.badge-gray   { background:#F1F5F9; color:#475569; border-color:#CBD5E1; }
+.badge-blue   { background:var(--c-info-light); color:#1D4ED8; border-color:var(--c-info-border); }
+.badge-green  { background:var(--c-success-light); color:#15803D; border-color:var(--c-success-border); }
+.badge-amber  { background:var(--c-warning-light); color:#B45309; border-color:var(--c-warning-border); }
+.badge-red    { background:var(--c-danger-light); color:#B91C1C; border-color:var(--c-danger-border); }
+.badge-purple { background:#F3E8FF; color:#7E22CE; border-color:#E9D5FF; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TABLES
+═══════════════════════════════════════════════════════════════ */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--c-border); }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table thead th {
+  padding: 9px 14px;
+  text-align: left; font-size: 10.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .6px;
+  color: var(--c-text-sec); background: #F8FAFC;
+  border-bottom: 1px solid var(--c-border); white-space: nowrap;
+}
+.table tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--c-border);
+  color: var(--c-text); vertical-align: middle;
+}
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover td { background: #F8FAFC; }
+.table tbody tr.clickable { cursor: pointer; }
+.table .col-narrow { width: 1%; white-space: nowrap; }
+.table .col-right  { text-align: right; }
+.table .col-center { text-align: center; }
+
+/* ═══════════════════════════════════════════════════════════════
+   ALERTS
+═══════════════════════════════════════════════════════════════ */
+.alert {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 14px; border-radius: var(--radius);
+  border: 1px solid transparent; font-size: 13px; margin-bottom: 14px;
+}
+.alert svg { width: 17px; height: 17px; flex-shrink: 0; margin-top: 1px; }
+.alert-info    { background:var(--c-info-light);    border-color:var(--c-info-border);    color:#1E40AF; }
+.alert-success { background:var(--c-success-light); border-color:var(--c-success-border); color:#166534; }
+.alert-warning { background:var(--c-warning-light); border-color:var(--c-warning-border); color:#92400E; }
+.alert-danger  { background:var(--c-danger-light);  border-color:var(--c-danger-border);  color:#991B1B; }
+.alert-title   { font-weight: 600; margin-bottom: 2px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MODALS
+═══════════════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(11,37,69,.55);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  animation: fadeIn 150ms ease;
+}
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+.modal {
+  background: var(--c-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%; max-width: 520px;
+  max-height: 88vh;
+  display: flex; flex-direction: column;
+  animation: modalIn 200ms ease;
+}
+.modal-lg { max-width: 720px; }
+.modal-xl { max-width: 960px; }
+@keyframes modalIn { from { opacity:0; transform:translateY(-10px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+.modal-header {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.modal-header h2 { font-size: 15px; font-weight: 600; color: var(--c-text); }
+.modal-close {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: var(--radius-sm);
+  color: var(--c-text-muted); cursor: pointer;
+  transition: background var(--t), color var(--t);
+}
+.modal-close:hover { background: var(--c-bg); color: var(--c-text); }
+.modal-close svg { width: 15px; height: 15px; }
+.modal-body   { padding: 18px 22px; overflow-y: auto; flex: 1; }
+.modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOGIN PAGE
+═══════════════════════════════════════════════════════════════ */
+.login-page {
+  min-height: 100vh;
+  background: linear-gradient(150deg, #0B2545 0%, #123354 45%, #1B6CA8 100%);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.login-container { width: 100%; max-width: 400px; }
+.login-logo { text-align: center; margin-bottom: 24px; }
+.login-logo-mark {
+  width: 52px; height: 52px;
+  background: rgba(255,255,255,.13);
+  border: 1.5px solid rgba(255,255,255,.22);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 11px;
+}
+.login-logo-mark svg { width: 26px; height: 26px; color: #fff; }
+.login-app-name  { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -.3px; }
+.login-app-sub   { color: rgba(255,255,255,.5); font-size: 12px; margin-top: 3px; }
+.login-card      { background: var(--c-surface); border-radius: var(--radius-lg); box-shadow: 0 20px 60px rgba(0,0,0,.3); padding: 26px; margin-bottom: 16px; }
+.login-card h2   { font-size: 15px; font-weight: 600; color: var(--c-text); margin-bottom: 18px; }
+.login-error {
+  background: var(--c-danger-light); border: 1px solid var(--c-danger-border);
+  color: #991B1B; border-radius: var(--radius-sm);
+  padding: 9px 12px; font-size: 12.5px; margin-bottom: 14px; display: none;
+}
+.login-error.show { display: block; }
+/* Demo panel */
+.demo-panel {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: var(--radius); padding: 14px;
+}
+.demo-panel-title {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: rgba(255,255,255,.45); margin-bottom: 9px;
+}
+.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.demo-btn {
+  background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.18);
+  border-radius: var(--radius-sm); padding: 9px 11px;
+  text-align: left; cursor: pointer;
+  transition: background var(--t), border-color var(--t);
+}
+.demo-btn:hover { background: rgba(255,255,255,.17); border-color: rgba(255,255,255,.32); }
+.demo-btn-role { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: rgba(255,255,255,.45); margin-bottom: 2px; }
+.demo-btn-name { font-size: 12px; font-weight: 500; color: rgba(255,255,255,.88); }
+
+/* ═══════════════════════════════════════════════════════════════
+   STAT CARDS
+═══════════════════════════════════════════════════════════════ */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.stat-card {
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm);
+}
+.stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .6px; color: var(--c-text-sec); margin-bottom: 6px; }
+.stat-value { font-size: 26px; font-weight: 700; color: var(--c-text); letter-spacing: -1px; line-height: 1; }
+.stat-sub   { font-size: 11.5px; color: var(--c-text-muted); margin-top: 5px; }
+.stat-accent  { border-left: 3px solid var(--c-accent); }
+.stat-warning { border-left: 3px solid var(--c-warning); }
+.stat-danger  { border-left: 3px solid var(--c-danger); }
+.stat-success { border-left: 3px solid var(--c-success); }
+
+/* ═══════════════════════════════════════════════════════════════
+   SCREENING SECTION CARDS
+═══════════════════════════════════════════════════════════════ */
+.screen-domain {
+  border: 1px solid var(--c-border); border-radius: var(--radius);
+  margin-bottom: 12px; overflow: hidden;
+}
+.screen-domain-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; background: #F8FAFC; cursor: pointer;
+  user-select: none;
+}
+.screen-domain-title { font-size: 13px; font-weight: 600; color: var(--c-text); }
+.screen-domain-body  { padding: 14px 16px; border-top: 1px solid var(--c-border); }
+
+/* ═══════════════════════════════════════════════════════════════
+   MISC / UTILS
+═══════════════════════════════════════════════════════════════ */
+.divider   { border: none; border-top: 1px solid var(--c-border); margin: 18px 0; }
+.section-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--c-text-muted); margin-bottom: 10px; }
+
+/* Spinner */
+.spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .65s linear infinite; }
+.spinner-dark { border-color:rgba(15,23,42,.1); border-top-color:var(--c-accent); }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* Empty & loading states */
+.loading-state, .empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 56px 24px; text-align: center; gap: 8px; color: var(--c-text-muted);
+}
+.empty-state svg { width: 36px; height: 36px; opacity: .35; margin-bottom: 6px; }
+.empty-state h3  { font-size: 14px; font-weight: 600; color: var(--c-text-sec); }
+.empty-state p   { font-size: 12.5px; max-width: 280px; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+  padding: 10px 16px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; box-shadow: var(--shadow-md);
+  border: 1px solid transparent; max-width: 340px;
+  animation: toastIn 200ms ease;
+}
+@keyframes toastIn { from { transform:translateY(12px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+.toast-success { background:var(--c-success-light); border-color:var(--c-success-border); color:#166534; }
+.toast-error   { background:var(--c-danger-light);  border-color:var(--c-danger-border);  color:#991B1B; }
+.toast-warning { background:var(--c-warning-light); border-color:var(--c-warning-border); color:#92400E; }
+.toast-info    { background:var(--c-info-light);    border-color:var(--c-info-border);    color:#1E40AF; }
+
+/* Flex / grid helpers */
+.flex           { display: flex; }
+.flex-col       { display: flex; flex-direction: column; }
+.items-center   { align-items: center; }
+.items-start    { align-items: flex-start; }
+.justify-between{ justify-content: space-between; }
+.justify-end    { justify-content: flex-end; }
+.gap-1 { gap: 4px; }  .gap-2 { gap: 8px; }  .gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; } .gap-6 { gap: 24px; }
+.flex-1 { flex: 1; }  .flex-wrap { flex-wrap: wrap; }
+.ml-auto { margin-left: auto; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+/* Spacing */
+.mt-1{margin-top:4px;} .mt-2{margin-top:8px;} .mt-3{margin-top:12px;} .mt-4{margin-top:16px;} .mt-6{margin-top:24px;}
+.mb-1{margin-bottom:4px;} .mb-2{margin-bottom:8px;} .mb-3{margin-bottom:12px;} .mb-4{margin-bottom:16px;} .mb-6{margin-bottom:24px;}
+/* Text */
+.text-xs  { font-size: 11px; }  .text-sm { font-size: 12px; }
+.text-lg  { font-size: 15px; }  .text-xl { font-size: 18px; }
+.text-muted   { color: var(--c-text-muted); }
+.text-sec     { color: var(--c-text-sec); }
+.text-danger  { color: var(--c-danger); }
+.text-success { color: var(--c-success); }
+.text-warning { color: var(--c-warning); }
+.text-accent  { color: var(--c-accent); }
+.font-medium  { font-weight: 500; }
+.font-semibold{ font-weight: 600; }
+.font-bold    { font-weight: 700; }
+.w-full    { width: 100%; }
+.hidden    { display: none !important; }
+.truncate  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.capitalize{ text-transform: capitalize; }
+.text-center { text-align: center; }
+.text-right  { text-align: right; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  :root { --sidebar-w: 210px; }
+  .main-inner { padding: 20px 22px; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+  .modality-grid { grid-template-columns: repeat(3, 1fr); }
+  .consent-mode-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .demo-grid { grid-template-columns: 1fr; }
+  .modality-grid { grid-template-columns: repeat(2, 1fr); }
+  .sex-btn-group { flex-wrap: wrap; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW CONSENT PAGE
+═══════════════════════════════════════════════════════════════ */
+
+/* Fix gap doubling when form-group sits inside a grid row */
+.form-row > .form-group,
+.form-row-3 > .form-group { margin-bottom: 0; }
+
+/* Sidebar — New Consent action button */
+.sidebar-actions { padding: 0 14px 12px; }
+.sidebar-new-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; padding: 9px 14px;
+  background: var(--c-accent); border: none; border-radius: var(--radius-sm);
+  color: #fff; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: background var(--t);
+}
+.sidebar-new-btn:hover { background: var(--c-accent-hover); }
+.sidebar-new-btn.active { background: var(--c-accent-hover); outline: 2px solid rgba(255,255,255,.25); outline-offset: 1px; }
+.sidebar-new-btn svg { width: 14px; height: 14px; }
+
+/* Form section containers */
+.nc-section-header {
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; gap: 10px;
+}
+.nc-section-num {
+  width: 22px; height: 22px;
+  background: var(--c-accent); color: #fff; border-radius: 50%;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.nc-section-title { font-size: 14px; font-weight: 600; color: var(--c-text); }
+.nc-section-title .req { color: var(--c-danger); font-weight: 400; margin-left: 2px; }
+.nc-section-body { padding: 18px 20px; }
+
+/* Sex toggle buttons */
+.sex-btn-group { display: flex; gap: 8px; }
+.sex-btn {
+  flex: 1; padding: 8px 10px;
+  border: 1.5px solid var(--c-border); border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  font-size: 13px; font-weight: 500; color: var(--c-text-sec);
+  cursor: pointer; text-align: center;
+  transition: border-color var(--t), background var(--t), color var(--t);
+}
+.sex-btn:hover    { border-color: #93C5FD; color: var(--c-accent); background: #EFF6FF; }
+.sex-btn.selected { border-color: var(--c-accent); background: var(--c-info-light); color: var(--c-accent); font-weight: 600; }
+
+/* Modality card grid */
+.modality-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.modality-card {
+  border: 2px solid var(--c-border); border-radius: var(--radius);
+  padding: 14px 12px 12px; cursor: pointer;
+  background: var(--c-surface);
+  transition: border-color var(--t), background var(--t), box-shadow var(--t);
+  display: flex; flex-direction: column; gap: 5px;
+  position: relative;
+}
+.modality-card:hover    { border-color: #93C5FD; background: #F7FBFF; }
+.modality-card.selected { border-color: var(--c-accent); background: #EFF6FF; box-shadow: 0 0 0 3px rgba(27,108,168,.1); }
+.modality-check {
+  position: absolute; top: 8px; right: 8px;
+  width: 18px; height: 18px;
+  background: var(--c-accent); border-radius: 50%;
+  display: none; align-items: center; justify-content: center; color: #fff;
+}
+.modality-check svg { width: 10px; height: 10px; }
+.modality-card.selected .modality-check { display: flex; }
+.modality-icon {
+  width: 38px; height: 38px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .2px; line-height: 1;
+}
+.mi-mri { background: #DBEAFE; color: #1D4ED8; }
+.mi-ct  { background: #CCFBF1; color: #0D9488; }
+.mi-mmg { background: #FCE7F3; color: #BE185D; }
+.modality-icon sup { font-size: 8px; font-weight: 900; margin-left: 1px; vertical-align: super; }
+.modality-name { font-size: 12px; font-weight: 600; color: var(--c-text); line-height: 1.3; }
+.modality-desc { font-size: 10.5px; color: var(--c-text-muted); line-height: 1.3; }
+.modality-tag  {
+  font-size: 9.5px; font-weight: 500;
+  color: #1D4ED8; background: var(--c-info-light);
+  border-radius: 99px; padding: 1px 6px;
+  display: inline-block; margin-top: 2px; width: fit-content;
+}
+
+/* Language selector */
+.lang-btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.lang-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 16px;
+  border: 2px solid var(--c-border); border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  font-size: 13px; font-weight: 500; color: var(--c-text);
+  cursor: pointer;
+  transition: border-color var(--t), background var(--t), color var(--t);
+}
+.lang-btn:hover    { border-color: #93C5FD; background: #F7FBFF; }
+.lang-btn.selected { border-color: var(--c-accent); background: var(--c-info-light); color: var(--c-accent); font-weight: 600; }
+.lang-flag  { font-size: 18px; line-height: 1; }
+.lang-code  { font-size: 13px; }
+.lang-phase { font-size: 10px; color: var(--c-text-muted); }
+
+/* Consent mode cards */
+.consent-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.consent-mode-card {
+  border: 2px solid var(--c-border); border-radius: var(--radius);
+  padding: 18px; cursor: pointer; background: var(--c-surface);
+  position: relative;
+  transition: border-color var(--t), background var(--t), box-shadow var(--t);
+}
+.consent-mode-card:hover    { border-color: #93C5FD; background: #F7FBFF; }
+.consent-mode-card.selected { border-color: var(--c-accent); background: #EFF6FF; box-shadow: 0 0 0 3px rgba(27,108,168,.1); }
+.consent-mode-default {
+  position: absolute; top: 10px; right: 12px;
+  font-size: 9.5px; font-weight: 600;
+  background: var(--c-success-light); color: #15803D;
+  border: 1px solid var(--c-success-border);
+  padding: 2px 7px; border-radius: 99px;
+}
+.consent-mode-icon {
+  width: 36px; height: 36px; background: var(--c-bg); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px; color: var(--c-text-sec);
+}
+.consent-mode-card.selected .consent-mode-icon { background: #DBEAFE; color: var(--c-accent); }
+.consent-mode-icon svg { width: 18px; height: 18px; }
+.consent-mode-name { font-size: 13.5px; font-weight: 600; color: var(--c-text); margin-bottom: 5px; }
+.consent-mode-desc { font-size: 12px; color: var(--c-text-sec); line-height: 1.5; }
+
+/* Submit row */
+.nc-submit-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-top: 20px; border-top: 1px solid var(--c-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MRI SCREENING STEP MACHINE
+═══════════════════════════════════════════════════════════════ */
+.scr-progress-wrap { margin-bottom: 20px; }
+.scr-step-label { font-size: 11px; color: var(--c-text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .7px; display: flex; justify-content: space-between; }
+.scr-progress-bar { height: 4px; background: var(--c-border); border-radius: 99px; overflow: hidden; }
+.scr-progress-fill { height: 100%; background: var(--c-accent); border-radius: 99px; transition: width 350ms ease; }
+
+.scr-domain-tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--c-accent); margin-bottom: 10px; }
+.scr-question { font-size: 18px; font-weight: 600; color: var(--c-text); line-height: 1.4; margin-bottom: 4px; }
+.scr-question-hint { font-size: 13px; color: var(--c-text-sec); margin-top: 6px; }
+
+.scr-choice-grid { display: grid; gap: 10px; margin-top: 22px; }
+.scr-choice-grid.two-col { grid-template-columns: 1fr 1fr; }
+.scr-choice-btn {
+  padding: 14px 18px; border: 2px solid var(--c-border); border-radius: var(--radius);
+  background: var(--c-surface); cursor: pointer;
+  color: var(--c-text); text-align: left;
+  transition: border-color var(--t), background var(--t);
+  display: flex; flex-direction: column;
+}
+.scr-choice-btn:hover { border-color: var(--c-accent); background: #EFF6FF; }
+.scr-choice-btn.selected { border-color: var(--c-accent); background: #EFF6FF; color: var(--c-accent); }
+.scr-choice-label { font-size: 14px; font-weight: 600; }
+.scr-choice-desc  { font-size: 12px; color: var(--c-text-sec); margin-top: 3px; }
+
+.scr-check-list { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.scr-check-option {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+  border: 1px solid var(--c-border); border-radius: var(--radius-sm);
+  cursor: pointer; transition: border-color var(--t), background var(--t);
+}
+.scr-check-option:hover { border-color: var(--c-accent); background: #F8FBFF; }
+.scr-check-option input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; accent-color: var(--c-accent); cursor: pointer; }
+.scr-check-label { font-size: 13.5px; font-weight: 500; color: var(--c-text); }
+.scr-check-tier  { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
+.scr-continue-row { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+
+.scr-alert { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: var(--radius); border: 1px solid; margin-bottom: 12px; }
+.scr-alert svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+.scr-alert-title { font-size: 13px; font-weight: 600; }
+.scr-alert-body  { font-size: 12.5px; margin-top: 3px; line-height: 1.5; }
+.scr-alert-tier1 { background: var(--c-danger-light);  border-color: var(--c-danger-border);  color: #991B1B; }
+.scr-alert-tier2 { background: var(--c-warning-light); border-color: var(--c-warning-border); color: #92400E; }
+.scr-alert-clear { background: var(--c-success-light); border-color: var(--c-success-border); color: #166534; }
+
+.scr-flag-group { margin-bottom: 16px; }
+.scr-flag-group-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--c-text-muted); margin-bottom: 8px; }
+.scr-flag-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--c-border); font-size: 13px; color: var(--c-text); }
+.scr-flag-item:last-child { border-bottom: none; }
+
+.scr-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+.scr-meta-item { font-size: 12.5px; }
+.scr-meta-label { color: var(--c-text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+.scr-meta-value { color: var(--c-text); font-weight: 500; }
+
+/* ── Flagged queue cards ─────────────────────────────────── */
+.fq-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; display: flex; box-shadow: var(--shadow-sm); }
+.fq-accent { width: 4px; flex-shrink: 0; }
+.fq-accent.t1 { background: var(--c-danger); }
+.fq-accent.t2 { background: var(--c-warning); }
+.fq-body { flex: 1; padding: 18px 20px; min-width: 0; }
+.fq-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.fq-name { font-size: 15px; font-weight: 600; color: var(--c-text); }
+.fq-sub  { font-size: 12px; color: var(--c-text-muted); margin-top: 3px; }
+.fq-flags { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.fq-flag-row { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--c-text-sec); }
+
+/* ── Radiologist decision cards ─────────────────────────── */
+.decision-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 2px solid var(--c-border); border-radius: var(--radius); cursor: pointer; transition: border-color var(--t), background var(--t); margin-bottom: 8px; }
+.decision-card:hover { border-color: var(--c-accent); background: var(--c-info-light); }
+.decision-card.selected { border-color: var(--c-accent); background: var(--c-info-light); }
+.decision-card input[type="radio"] { width: 16px; height: 16px; flex-shrink: 0; margin-top: 3px; accent-color: var(--c-accent); cursor: pointer; }
+.decision-label { font-size: 14px; font-weight: 600; color: var(--c-text); }
+.decision-desc  { font-size: 12px; color: var(--c-text-sec); margin-top: 2px; }
+
+/* ── Screening domain blocks (review page) ──────────────── */
+.scr-domain-block { padding: 10px 0; border-bottom: 1px solid var(--c-border); }
+.scr-domain-block:last-child { border-bottom: none; }
+.scr-domain-name { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--c-text-muted); margin-bottom: 4px; }
+.scr-domain-finding { font-size: 13px; color: var(--c-text-sec); padding: 2px 0; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="modal-root"></div>
+
+  <script>
+/* ═══════════════════════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════════════════════ */
+const API_BASE = '/api';
+
+const MODALITY_LABELS = {
+  mri_without_contrast : 'MRI (no contrast)',
+  mri_with_gadolinium  : 'MRI + Gadolinium',
+  ct_without_contrast  : 'CT (no contrast)',
+  ct_with_iv_contrast  : 'CT + IV Contrast',
+  mammography          : 'Mammography',
+};
+
+const STATUS_LABELS = {
+  in_progress    : 'In Progress',
+  draft_stage1   : 'Stage 1 Complete',
+  draft_stage2   : 'Stage 2 Complete',
+  closed         : 'Closed',
+  pending_review : 'Pending Review',
+  flagged_tier1  : 'Tier 1 Flagged',
+  declined       : 'Declined',
+  voided         : 'Voided',
+};
+
+const ROLE_LABELS = {
+  radiographer : 'Radiographer',
+  nurse        : 'Nurse',
+  radiologist  : 'Radiologist',
+  admin        : 'Admin',
+};
+
+const LANGUAGE_LABELS = { en: 'English', yo: 'Yorùbá', ig: 'Igbo', ha: 'Hausa' };
+
+const DECISION_LABELS = {
+  approved                  : 'Approved',
+  proceed_with_modifications: 'Proceed with Modifications',
+  declined                  : 'Declined',
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════ */
+const state = {
+  user     : null,   // { id, email, name, role }
+  token    : null,   // JWT string
+  page     : 'login',
+  pageData : {},     // arbitrary per-page data
+};
+
+/* New Consent form — ephemeral UI state (reset on each visit) */
+const ncState = {
+  modality    : '',
+  language    : 'en',
+  consentMode : 'assisted',
+  sex         : '',
+};
+
+/* MRI Screening step-machine state */
+let mriScrState = { steps: [], stepIdx: 0, answers: {}, consent: null };
+
+/* Consent Declaration state */
+let consentDeclState = { lang: 'en', consent: null, signed: false, signedResult: null };
+
+/* Records archive + detail state */
+let recordsState      = { records: null, loading: false, search: '', statusFilter: 'all' };
+let recordDetailState = { record: null, loading: false };
+let stage2State       = { record: null, loading: false };
+let stage3State       = { record: null, loading: false, confirmed: false, confirmedRecord: null };
+let radReviewState    = { record: null, loading: false };
+let adminState        = { records: null, loading: false };
+
+/* ═══════════════════════════════════════════════════════════════
+   API HELPER
+═══════════════════════════════════════════════════════════════ */
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (state.token) opts.headers['Authorization'] = `Bearer ${state.token}`;
+  if (body !== undefined) opts.body = JSON.stringify(body);
+
+  let res;
+  try {
+    res = await fetch(API_BASE + path, opts);
+  } catch {
+    throw new Error('Network error — is the server running?');
+  }
+
+  if (res.status === 401) { doLogout(); return null; }
+
+  let data;
+  try { data = await res.json(); } catch { throw new Error('Server returned an invalid response.'); }
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════════════════ */
+function doLogin(user, token) {
+  state.user  = user;
+  state.token = token;
+  localStorage.setItem('radconsent_token', token);
+  localStorage.setItem('radconsent_user',  JSON.stringify(user));
+  navigate('dashboard');
+}
+
+function doLogout() {
+  state.user = null; state.token = null;
+  state.page = 'login'; state.pageData = {};
+  localStorage.removeItem('radconsent_token');
+  localStorage.removeItem('radconsent_user');
+  render();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ROUTER
+═══════════════════════════════════════════════════════════════ */
+function navigate(page, data) {
+  // Reset new-consent form state each time the page is opened fresh
+  if (page === 'new-consent') {
+    ncState.modality = ''; ncState.sex = '';
+    ncState.language = 'en'; ncState.consentMode = 'assisted';
+  }
+  // Force reload of admin panel each time it's opened
+  if (page === 'admin') {
+    adminState.records = null;
+    adminState.loading = false;
+  }
+  // Force reload of records list whenever the archive or flagged queue is opened
+  if (page === 'consents' || page === 'flagged') {
+    recordsState.records = null;
+    recordsState.loading = false;
+  }
+  // Force reload of record detail when opening a different record
+  if (page === 'record-detail') {
+    if (recordDetailState.record?.id !== data?.id) {
+      recordDetailState.record  = null;
+      recordDetailState.loading = false;
+    }
+  }
+  if (page === 'stage2-report') {
+    if (stage2State.record?.id !== data?.id) {
+      stage2State.record  = null;
+      stage2State.loading = false;
+    }
+  }
+  if (page === 'stage3-vitals') {
+    if (stage3State.record?.id !== data?.id) {
+      stage3State.record    = null;
+      stage3State.loading   = false;
+      stage3State.confirmed = false;
+    }
+  }
+  if (page === 'rad-review') {
+    if (radReviewState.record?.id !== data?.id) {
+      radReviewState.record  = null;
+      radReviewState.loading = false;
+    }
+  }
+  state.page     = page;
+  state.pageData = data || {};
+  render();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY HELPERS
+═══════════════════════════════════════════════════════════════ */
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function statusBadge(status) {
+  const label = STATUS_LABELS[status] || status;
+  return `<span class="badge badge-${esc(status)}">${esc(label)}</span>`;
+}
+
+function roleBadge(role) {
+  return `<span class="badge badge-role-${esc(role)}">${esc(ROLE_LABELS[role] || role)}</span>`;
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function formatDateTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function initials(name) {
+  return (name || '?').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+}
+
+function toast(msg, type = 'info', ms = 3500) {
+  const id = `toast-${Date.now()}`;
+  document.body.insertAdjacentHTML('beforeend',
+    `<div id="${id}" class="toast toast-${type}">${esc(msg)}</div>`
+  );
+  setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, ms);
+}
+
+function openModal(html) { document.getElementById('modal-root').innerHTML = html; }
+function closeModal()     { document.getElementById('modal-root').innerHTML = '';  }
+
+/* ═══════════════════════════════════════════════════════════════
+   SVG ICONS
+═══════════════════════════════════════════════════════════════ */
+const IC = {
+  dashboard : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
+  records   : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
+  flagged   : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  admin     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  logout    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+  close     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  check     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  warning   : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  info      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+  plus      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  search    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  download  : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+  eye       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  edit      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  medical   : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+  users     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  chevron_r : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  chevron_d : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`,
+  clipboard : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`,
+  shield    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   NAV CONFIG (role-aware)
+═══════════════════════════════════════════════════════════════ */
+function getNavItems(role) {
+  const items = [
+    { id: 'dashboard', label: 'Dashboard',        icon: IC.dashboard },
+    { id: 'consents',  label: 'Consent Records',  icon: IC.records   },
+  ];
+  if (role === 'radiologist' || role === 'admin') {
+    items.push({ id: 'flagged', label: 'Flagged Queue', icon: IC.flagged });
+  }
+  if (role === 'admin') {
+    items.push({ id: 'admin', label: 'Admin Panel', icon: IC.admin });
+  }
+  return items;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — LOGIN PAGE
+═══════════════════════════════════════════════════════════════ */
+function renderLogin() {
+  return `
+    <div class="login-page">
+      <div class="login-container">
+        <div class="login-logo">
+          <div class="login-logo-mark">${IC.medical}</div>
+          <div class="login-app-name">RadConsent</div>
+          <div class="login-app-sub">Radiology Consent Management Platform</div>
+        </div>
+
+        <div class="login-card">
+          <h2>Sign in to your account</h2>
+          <div id="login-error" class="login-error"></div>
+          <form id="login-form" autocomplete="on">
+            <div class="form-group">
+              <label class="form-label" for="login-email">Email address</label>
+              <input class="form-control" type="email" id="login-email" name="email"
+                placeholder="name@example.com" autocomplete="email" required />
+            </div>
+            <div class="form-group" style="margin-bottom:18px">
+              <label class="form-label" for="login-password">Password</label>
+              <input class="form-control" type="password" id="login-password" name="password"
+                placeholder="••••••••" autocomplete="current-password" required />
+            </div>
+            <button type="submit" id="login-btn" class="btn btn-dark btn-lg btn-block">Sign In</button>
+          </form>
+        </div>
+
+        <div class="demo-panel">
+          <div class="demo-panel-title">Demo accounts — click to fill</div>
+          <div class="demo-grid">
+            <button class="demo-btn" onclick="fillDemo('radiographer@radconsent.demo')">
+              <div class="demo-btn-role">Radiographer</div>
+              <div class="demo-btn-name">Chidi Eze</div>
+            </button>
+            <button class="demo-btn" onclick="fillDemo('nurse@radconsent.demo')">
+              <div class="demo-btn-role">Nurse</div>
+              <div class="demo-btn-name">Amaka Obi</div>
+            </button>
+            <button class="demo-btn" onclick="fillDemo('radiologist@radconsent.demo')">
+              <div class="demo-btn-role">Radiologist</div>
+              <div class="demo-btn-name">Dr. Amara Okonkwo</div>
+            </button>
+            <button class="demo-btn" onclick="fillDemo('admin@radconsent.demo')">
+              <div class="demo-btn-role">Admin</div>
+              <div class="demo-btn-name">Admin User</div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function fillDemo(email) {
+  document.getElementById('login-email').value    = email;
+  document.getElementById('login-password').value = 'demo1234';
+  document.getElementById('login-email').focus();
+}
+
+function bindLoginEvents() {
+  const form = document.getElementById('login-form');
+  if (!form) return;
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn    = document.getElementById('login-btn');
+    const errBox = document.getElementById('login-error');
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span>&nbsp;Signing in…`;
+    errBox.textContent = '';
+    errBox.classList.remove('show');
+
+    try {
+      const data = await api('POST', '/auth/login', { email, password });
+      if (data) doLogin(data.user, data.token);
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — APP SHELL
+═══════════════════════════════════════════════════════════════ */
+function renderShell(pageHtml) {
+  const role     = state.user?.role || '';
+  const navItems = getNavItems(role);
+
+  const navLinks = navItems.map(item => `
+    <div class="nav-item${state.page === item.id ? ' active' : ''}" onclick="navigate('${item.id}')">
+      ${item.icon}<span>${item.label}</span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <div class="logo-row">
+            <div class="logo-icon">RC</div>
+            <span class="logo-name">RadConsent</span>
+          </div>
+          <div class="logo-sub">Radiology Consent</div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section-label">Navigation</div>
+          ${navLinks}
+        </nav>
+
+        <div class="sidebar-actions">
+          <button class="sidebar-new-btn${state.page === 'new-consent' ? ' active' : ''}"
+            onclick="navigate('new-consent')">
+            ${IC.plus} New Consent
+          </button>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-user">
+            <div class="sidebar-avatar">${initials(state.user?.name)}</div>
+            <div>
+              <div class="sidebar-user-name">${esc(state.user?.name)}</div>
+              <div class="sidebar-user-role">${ROLE_LABELS[role] || role}</div>
+            </div>
+          </div>
+          <button class="btn-signout" onclick="doLogout()">
+            ${IC.logout} Sign Out
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <div class="main-inner">${pageHtml}</div>
+      </main>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — PAGE ROUTER
+═══════════════════════════════════════════════════════════════ */
+function renderPage() {
+  const role = state.user?.role;
+
+  // Role guards for restricted pages
+  if (state.page === 'flagged' && role !== 'radiologist' && role !== 'admin') {
+    state.page = 'dashboard';
+  }
+  if (state.page === 'admin' && role !== 'admin') {
+    state.page = 'dashboard';
+  }
+  if (state.page === 'stage2-report' && role !== 'radiographer' && role !== 'admin') {
+    toast('Only radiographers can file procedure reports.', 'error');
+    state.page = 'consents';
+  }
+  if (state.page === 'stage3-vitals' && role !== 'nurse' && role !== 'admin') {
+    toast('Only nurses can submit vitals checks.', 'error');
+    state.page = 'consents';
+  }
+  if (state.page === 'rad-review' && role !== 'radiologist' && role !== 'admin') {
+    toast('Only radiologists can review flagged records.', 'error');
+    state.page = 'flagged';
+  }
+
+  switch (state.page) {
+    case 'dashboard'          : return renderDashboard();
+    case 'consents'           : return renderConsents();
+    case 'flagged'            : return renderFlagged();
+    case 'admin'              : return renderAdminPanel();
+    case 'new-consent'        : return renderNewConsent();
+    case 'record-detail'      : return renderRecordDetail();
+    case 'mri-screening'      : return renderMriScreening();
+    case 'consent-declaration': return renderConsentDeclaration();
+    case 'stage2-report'      : return renderStage2Report();
+    case 'stage3-vitals'      : return renderStage3Vitals();
+    case 'rad-review'         : return renderRadReview();
+    default:
+      return `<div class="empty-state">${IC.info}<h3>Page not found</h3>
+        <button class="btn btn-primary mt-4" onclick="navigate('dashboard')">Go to Dashboard</button></div>`;
+  }
+}
+
+/* ── Page placeholders (replaced in later steps) ── */
+function renderDashboard() {
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle">Welcome back, ${esc(state.user?.name)}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="empty-state">
+          ${IC.dashboard}
+          <h3>Dashboard</h3>
+          <p>Summary statistics and recent activity will appear here.</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── Records helpers ──────────────────────────────────────── */
+function highestTier(tierFlags) {
+  if (!tierFlags) return null;
+  if (tierFlags.tier1?.length) return 'tier1';
+  if (tierFlags.tier2?.length) return 'tier2';
+  if (tierFlags.tier3?.length) return 'tier3';
+  return null;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+const LANG_FLAG = { en: '🇬🇧', yo: '🟢', ig: '🔴', ha: '🔵' };
+
+const STATUS_FILTER_OPTS = [
+  { value: 'all',           label: 'All Statuses'         },
+  { value: 'in_progress',   label: 'In Progress'          },
+  { value: 'draft_stage1',  label: 'Awaiting Radiographer'},
+  { value: 'draft_stage2',  label: 'Awaiting Nurse'       },
+  { value: 'pending_review',label: 'Pending Review'       },
+  { value: 'flagged_tier1', label: 'Tier 1 Flagged'       },
+  { value: 'closed',        label: 'Closed'               },
+  { value: 'declined',      label: 'Declined'             },
+  { value: 'voided',        label: 'Voided'               },
+];
+
+function getRecordAction(rec, role) {
+  if (rec.status === 'draft_stage1' && role === 'radiographer')
+    return { label: 'File Report', cls: 'btn-primary btn-sm', page: 'stage2-report' };
+  if (rec.status === 'draft_stage2' && role === 'nurse')
+    return { label: 'Vitals Check', cls: 'btn-primary btn-sm', page: 'stage3-vitals' };
+  if ((rec.status === 'pending_review' || rec.status === 'flagged_tier1') &&
+      (role === 'radiologist' || role === 'admin'))
+    return { label: 'Review', cls: 'btn-warning btn-sm', page: 'rad-review' };
+  return { label: 'View', cls: 'btn-secondary btn-sm', page: 'record-detail' };
+}
+
+function getFilteredRecords(extraStatusFilter) {
+  let recs = recordsState.records || [];
+  const q  = recordsState.search.trim().toLowerCase();
+  const sf = extraStatusFilter || recordsState.statusFilter;
+  if (q) recs = recs.filter(r =>
+    (r.patient?.name || '').toLowerCase().includes(q) ||
+    (r.patient?.hospitalNumber || '').toLowerCase().includes(q)
+  );
+  if (sf !== 'all') recs = recs.filter(r => r.status === sf);
+  return recs;
+}
+
+function buildRecordsRows(extraStatusFilter) {
+  const recs = getFilteredRecords(extraStatusFilter);
+  const role = state.user?.role || '';
+
+  if (!recs.length) {
+    return `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--c-text-muted);font-size:13px">
+      No records match your search.</td></tr>`;
+  }
+
+  return recs.map(rec => {
+    const tier     = highestTier(rec.tierFlags);
+    const tierBadge = tier
+      ? `<span class="badge badge-${tier}">${tier === 'tier1' ? 'T1' : tier === 'tier2' ? 'T2' : 'T3'}</span>`
+      : `<span style="color:var(--c-text-muted)">—</span>`;
+    const action = getRecordAction(rec, role);
+    const t1Count = rec.tierFlags?.tier1?.length || 0;
+    const t2Count = rec.tierFlags?.tier2?.length || 0;
+    const t3Count = rec.tierFlags?.tier3?.length || 0;
+    const flagTitle = [
+      t1Count ? `${t1Count} Tier-1` : '',
+      t2Count ? `${t2Count} Tier-2` : '',
+      t3Count ? `${t3Count} Tier-3` : '',
+    ].filter(Boolean).join(', ') || 'No flags';
+
+    return `<tr class="clickable" onclick="navigate('record-detail',{id:'${rec.id}'})">
+      <td>
+        <div style="font-weight:500">${esc(rec.patient?.name || '—')}</div>
+        ${rec.patient?.hospitalNumber ? `<div style="font-size:11px;color:var(--c-text-muted);margin-top:2px">${esc(rec.patient.hospitalNumber)}</div>` : ''}
+      </td>
+      <td style="font-size:12px;color:var(--c-text-sec)">${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</td>
+      <td style="font-size:13px">${LANG_FLAG[rec.language] || ''}&nbsp;${esc(LANGUAGE_LABELS[rec.language] || rec.language)}</td>
+      <td><span class="badge badge-${rec.status}">${esc(STATUS_LABELS[rec.status] || rec.status)}</span></td>
+      <td title="${esc(flagTitle)}">${tierBadge}</td>
+      <td style="font-size:12px;color:var(--c-text-sec);white-space:nowrap">${fmtDate(rec.createdAt)}</td>
+      <td class="col-narrow" onclick="event.stopPropagation()">
+        <button class="btn ${action.cls}" onclick="navigate('${action.page}',{id:'${rec.id}'})">${esc(action.label)}</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function recordsSearch(val) {
+  recordsState.search = val;
+  const tbody = document.getElementById('records-tbody');
+  if (tbody) tbody.innerHTML = buildRecordsRows();
+}
+
+function recordsFilterStatus(val) {
+  recordsState.statusFilter = val;
+  const tbody = document.getElementById('records-tbody');
+  if (tbody) tbody.innerHTML = buildRecordsRows();
+}
+
+function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
+  // Trigger async load if needed
+  if (!recordsState.records && !recordsState.loading) {
+    recordsState.loading = true;
+    api('GET', '/consents').then(data => {
+      recordsState.records = data || [];
+      recordsState.loading = false;
+      if (state.page === 'consents' || state.page === 'flagged') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      recordsState.records = [];
+      recordsState.loading = false;
+      if (state.page === 'consents' || state.page === 'flagged') render();
+    });
+  }
+
+  const filterOpts = STATUS_FILTER_OPTS.map(o =>
+    `<option value="${o.value}"${recordsState.statusFilter===o.value?' selected':''}>${esc(o.label)}</option>`
+  ).join('');
+
+  const body = recordsState.loading || !recordsState.records
+    ? `<tr><td colspan="8"><div class="loading-state" style="padding:40px">
+        <span class="spinner spinner-dark"></span>
+        <span style="margin-left:10px;font-size:13px;color:var(--c-text-muted)">Loading records…</span>
+       </div></td></tr>`
+    : buildRecordsRows(extraStatusFilter);
+
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-title">${title}</div>
+        <div class="page-subtitle">${subtitle}</div>
+      </div>
+      <button class="btn btn-primary" onclick="navigate('new-consent')">${IC.plus}&nbsp;New Consent</button>
+    </div>
+
+    <div class="card">
+      ${showFilters ? `
+      <div class="card-header" style="gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px;position:relative">
+          <div style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--c-text-muted)">${IC.search.replace('viewBox','style="width:14px;height:14px" viewBox')}</div>
+          <input class="form-control" type="search" placeholder="Search patient name or hospital number…"
+            value="${esc(recordsState.search)}"
+            oninput="recordsSearch(this.value)"
+            style="padding-left:32px" />
+        </div>
+        <select class="form-select" style="width:auto;min-width:180px" onchange="recordsFilterStatus(this.value)">
+          ${filterOpts}
+        </select>
+      </div>` : ''}
+      <div class="table-wrap" style="border:none;border-radius:0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Modality</th>
+              <th>Language</th>
+              <th>Status</th>
+              <th>Tier Flag</th>
+              <th>Date</th>
+              <th class="col-narrow col-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="records-tbody">${body}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function renderConsents() {
+  return renderRecordsTable(
+    'Consent Records',
+    'All patient consent sessions',
+    null,
+    true
+  );
+}
+
+function renderFlagged() {
+  if (!recordsState.records && !recordsState.loading) {
+    recordsState.loading = true;
+    api('GET', '/consents').then(data => {
+      recordsState.records = data || [];
+      recordsState.loading = false;
+      if (state.page === 'flagged') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      recordsState.records = [];
+      recordsState.loading = false;
+      if (state.page === 'flagged') render();
+    });
+  }
+
+  const recs = (recordsState.records || []).filter(r =>
+    r.status === 'pending_review' || r.status === 'flagged_tier1'
+  );
+
+  let content;
+  if (recordsState.loading || !recordsState.records) {
+    content = `<div class="card"><div class="card-body">
+      <div class="loading-state" style="padding:40px">
+        <span class="spinner spinner-dark"></span>
+        <span style="margin-left:10px;font-size:13px;color:var(--c-text-muted)">Loading…</span>
+      </div></div></div>`;
+  } else if (!recs.length) {
+    content = `<div class="card"><div class="card-body">
+      <div class="empty-state" style="padding:40px 20px">
+        ${IC.check.replace('stroke="currentColor"','stroke="#16A34A" stroke-width="2.5"')}
+        <h3 style="margin-top:12px">No records pending review</h3>
+        <p>All flagged cases have been reviewed.</p>
+      </div></div></div>`;
+  } else {
+    content = recs.map(rec => buildFlaggedCard(rec)).join('');
+  }
+
+  const subtitle = recs.length
+    ? `${recs.length} record${recs.length === 1 ? '' : 's'} awaiting radiologist review`
+    : 'All cases reviewed';
+
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Flagged Queue</div>
+        <div class="page-subtitle">${subtitle}</div>
+      </div>
+    </div>
+    ${content}`;
+}
+
+function buildFlaggedCard(rec) {
+  const isTier1 = rec.status === 'flagged_tier1';
+  const t1 = rec.tierFlags?.tier1 || [];
+  const t2 = rec.tierFlags?.tier2 || [];
+  const flagRows = [
+    ...t1.map(f => `<div class="fq-flag-row">
+      <span class="badge badge-tier1" style="flex-shrink:0">T1</span>
+      <span>${esc(SCR_FLAG_LABELS[f] || f)}</span>
+    </div>`),
+    ...t2.map(f => `<div class="fq-flag-row">
+      <span class="badge badge-tier2" style="flex-shrink:0">T2</span>
+      <span>${esc(SCR_FLAG_LABELS[f] || f)}</span>
+    </div>`),
+  ].join('');
+  return `
+    <div class="fq-card">
+      <div class="fq-accent ${isTier1 ? 't1' : 't2'}"></div>
+      <div class="fq-body">
+        <div class="fq-head">
+          <div>
+            <div class="fq-name">${esc(rec.patient?.name || '—')}</div>
+            <div class="fq-sub">
+              ${esc(MODALITY_LABELS[rec.modality] || rec.modality)}
+              ${rec.patient?.hospitalNumber ? ' · ' + esc(rec.patient.hospitalNumber) : ''}
+              · ${fmtDateTime(rec.createdAt)}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+            <span class="badge badge-${rec.status}">${esc(STATUS_LABELS[rec.status] || rec.status)}</span>
+            <button class="btn btn-warning btn-sm"
+              onclick="navigate('rad-review',{id:'${rec.id}'})">Review &amp; Sign Off</button>
+            <button class="btn btn-ghost btn-sm"
+              onclick="navigate('record-detail',{id:'${rec.id}'})">View Record</button>
+          </div>
+        </div>
+        <div class="fq-flags">${flagRows}</div>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RADIOLOGIST REVIEW
+═══════════════════════════════════════════════════════════════ */
+
+/* Build per-domain positive-finding summary from structured screening object */
+function scrDomainSummary(scr) {
+  if (!scr) return [];
+  const out = [];
+
+  const c = scr.cardiac || {};
+  const cF = [
+    c.hasPacemaker        && `Pacemaker/ICD — MR status: ${c.pacemakerMRStatus || 'unknown'}`,
+    c.hasCardiacMonitor   && 'Implanted cardiac monitor (loop recorder)',
+    c.hasCoronaryStent    && 'Coronary stent',
+    c.hasHeartValve       && 'Prosthetic heart valve',
+    c.hasVascularClipsCoils && 'Vascular coil / clip / stent graft',
+  ].filter(Boolean);
+  if (cF.length) out.push({ domain: 'Cardiac & Vascular', findings: cF });
+
+  const n = scr.neurological || {};
+  const nF = [
+    n.hasCochlearImplant      && `Cochlear implant — type: ${n.cochlearImplantType || 'unknown'}`,
+    n.hasDeepBrainStimulator  && 'Deep brain stimulator (DBS)',
+    n.hasAneurysmClip         && `Aneurysm clip — type: ${n.aneurysmClipType || 'unknown'}`,
+    n.hasSpinalCordStimulator && 'Spinal cord stimulator (SCS)',
+    n.hasVPShunt              && 'CSF / VP shunt',
+  ].filter(Boolean);
+  if (nF.length) out.push({ domain: 'Neurological', findings: nF });
+
+  const oc = scr.ocular || {};
+  if (oc.hasMetallicForeignBody) {
+    out.push({ domain: 'Ocular', findings: [
+      oc.foreignBodyClearedByXray === true  ? 'Prior metallic foreign body — cleared by X-ray' :
+      oc.foreignBodyClearedByXray === false ? 'Metallic foreign body — NOT cleared by X-ray' :
+      'Metallic foreign body — clearance unknown',
+    ]});
+  }
+
+  const ort = scr.orthopaedic || {};
+  if (ort.hasScrewsPlatesRods) {
+    out.push({ domain: 'Orthopaedic', findings: [
+      ort.isLessThan6WeeksAgo === true  ? 'Metal implant — surgery < 6 weeks ago' :
+      ort.isLessThan6WeeksAgo === false ? 'Metal implant — surgery > 6 weeks ago' :
+      'Orthopaedic hardware — timing unknown',
+    ]});
+  }
+
+  const oi = scr.otherImplants || {};
+  const oiF = [
+    oi.hasInsulinPump  && 'Insulin pump',
+    oi.hasIUD          && `IUD (${oi.iudType || 'type unknown'})`,
+    oi.hasInfusionPort && 'Infusion port',
+    oi.hasDrugPump     && 'Implanted drug pump',
+  ].filter(Boolean);
+  if (oiF.length) out.push({ domain: 'Other Implants', findings: oiF });
+
+  const r = scr.renal || {};
+  const rF = [
+    r.onDialysis      && 'Currently on dialysis',
+    r.hasCKD          && 'CKD / reduced renal function',
+    r.hasSingleKidney && 'Single kidney',
+  ].filter(Boolean);
+  if (rF.length) out.push({ domain: 'Renal Function', findings: rF });
+
+  const al = scr.allergy || {};
+  if (al.hasPriorContrastReaction) {
+    out.push({ domain: 'Allergy / Contrast', findings: [
+      `Prior contrast reaction — severity: ${al.reactionSeverity || 'unknown'}`,
+    ]});
+  }
+
+  const pr = scr.pregnancy || {};
+  if (pr.isPossiblyPregnant) {
+    out.push({ domain: 'Pregnancy', findings: [
+      `Possible pregnancy — ${pr.trimester === 1 ? '1st trimester or unsure' : '2nd or 3rd trimester'}`,
+    ]});
+  }
+
+  const cl = scr.claustrophobia || {};
+  if (cl.hasClaustrophobia) {
+    out.push({ domain: 'Claustrophobia', findings: [
+      cl.hadPriorMRIFailure ? 'Severe claustrophobia — prior MRI scan abandoned' : 'Severe claustrophobia',
+    ]});
+  }
+
+  const su = scr.surgical || {};
+  if (su.hadPriorSurgery) out.push({ domain: 'Surgical History', findings: ['Prior surgery — possible undocumented implants'] });
+
+  const ta = scr.tattoosPiercings || {};
+  if (ta.hasPermanentTattoos) out.push({ domain: 'Tattoos & Make-up', findings: ['Permanent tattoos or permanent make-up'] });
+
+  const tp = scr.transdermalPatches || {};
+  if (tp.hasTransdermalPatch) out.push({ domain: 'Transdermal Patches', findings: ['Currently wearing transdermal medication patch'] });
+
+  return out;
+}
+
+function radReviewSelectDecision(val) {
+  document.querySelectorAll('.decision-card').forEach(el => el.classList.remove('selected'));
+  const card = document.getElementById('dc-' + val);
+  if (card) {
+    card.classList.add('selected');
+    const radio = card.querySelector('input[type="radio"]');
+    if (radio) radio.checked = true;
+  }
+  radReviewCheckSubmit();
+}
+
+function radReviewCheckSubmit() {
+  const decision = document.querySelector('input[name="rad-decision"]:checked')?.value;
+  const notes    = document.getElementById('rv-notes')?.value?.trim();
+  const sig      = document.getElementById('rv-sig')?.value?.trim();
+  const btn      = document.getElementById('rv-submit-btn');
+  if (btn) btn.disabled = !(decision && notes && sig);
+}
+
+async function radReviewSubmit() {
+  const decision = document.querySelector('input[name="rad-decision"]:checked')?.value;
+  const notes    = document.getElementById('rv-notes')?.value?.trim();
+  const sig      = document.getElementById('rv-sig')?.value?.trim();
+  if (!decision || !notes || !sig) { toast('Please complete all required fields.', 'error'); return; }
+
+  const btn = document.getElementById('rv-submit-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
+
+  try {
+    await api('PUT', `/consents/${radReviewState.record.id}/review`, {
+      decision,
+      notes,
+      radiologistSignature: sig,
+    });
+    toast('Decision recorded successfully.', 'success');
+    radReviewState.record = null;
+    navigate('flagged');
+  } catch (err) {
+    toast(err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit Decision'; }
+  }
+}
+
+function renderRadReview() {
+  const id = state.pageData.id;
+
+  if (!radReviewState.record && !radReviewState.loading) {
+    radReviewState.loading = true;
+    api('GET', `/consents/${id}`).then(data => {
+      radReviewState.record  = data;
+      radReviewState.loading = false;
+      if (state.page === 'rad-review') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      radReviewState.loading = false;
+      navigate('flagged');
+    });
+  }
+
+  const rec  = radReviewState.record;
+  const back = `<button class="btn btn-ghost btn-sm" onclick="navigate('flagged')"
+    style="margin-bottom:6px;margin-left:-6px">← Back to Flagged Queue</button>`;
+
+  if (!rec) {
+    return `<div class="page-header"><div>${back}
+      <div class="page-title">Radiologist Review</div></div></div>
+      <div class="card"><div class="card-body"><div class="loading-state">
+        <span class="spinner spinner-dark"></span>
+        <span style="margin-left:10px;font-size:13px;color:var(--c-text-muted)">Loading record…</span>
+      </div></div></div>`;
+  }
+
+  const t1      = rec.tierFlags?.tier1 || [];
+  const t2      = rec.tierFlags?.tier2 || [];
+  const isTier1 = t1.length > 0;
+
+  // ── Flags section ────────────────────────────────────────────
+  const flagsHtml = [
+    ...t1.map(f => `<div class="fq-flag-row" style="padding:8px 0;border-bottom:1px solid var(--c-border)">
+      <span class="badge badge-tier1" style="flex-shrink:0;white-space:nowrap">T1 — Absolute contraindication</span>
+      <span style="font-size:13.5px;font-weight:500">${esc(SCR_FLAG_LABELS[f] || f)}</span>
+    </div>`),
+    ...t2.map(f => `<div class="fq-flag-row" style="padding:8px 0;border-bottom:1px solid var(--c-border)">
+      <span class="badge badge-tier2" style="flex-shrink:0;white-space:nowrap">T2 — Review required</span>
+      <span style="font-size:13.5px;font-weight:500">${esc(SCR_FLAG_LABELS[f] || f)}</span>
+    </div>`),
+  ].join('');
+
+  // ── Screening domain summary ──────────────────────────────────
+  const scrDomains = scrDomainSummary(rec.stage1?.screening);
+  const screeningHtml = scrDomains.length
+    ? scrDomains.map(d => `
+      <div class="scr-domain-block">
+        <div class="scr-domain-name">${esc(d.domain)}</div>
+        ${d.findings.map(f => `<div class="scr-domain-finding">• ${esc(f)}</div>`).join('')}
+      </div>`).join('')
+    : `<p style="color:var(--c-text-muted);font-size:13px;padding:8px 0">No structured screening data available.</p>`;
+
+  // ── Decision cards ────────────────────────────────────────────
+  const DECISIONS = [
+    { value: 'approved',                  icon: '✅', label: 'Clear to proceed',            desc: 'Procedure may go ahead as planned' },
+    { value: 'proceed_with_modifications', icon: '🔄', label: 'Proceed with modifications',  desc: 'Procedure may proceed under the conditions detailed in your notes' },
+    { value: 'declined',                  icon: '⛔', label: 'Decline',                      desc: 'Procedure should not proceed — patient should be counselled accordingly' },
+  ];
+  const decisionsHtml = DECISIONS.map(d => `
+    <label class="decision-card" id="dc-${d.value}" onclick="radReviewSelectDecision('${d.value}')">
+      <input type="radio" name="rad-decision" value="${d.value}">
+      <div style="font-size:20px;flex-shrink:0;line-height:1;margin-top:1px">${d.icon}</div>
+      <div>
+        <div class="decision-label">${d.label}</div>
+        <div class="decision-desc">${d.desc}</div>
+      </div>
+    </label>`).join('');
+
+  const userName = state.user?.name || '';
+  const borderColor = isTier1 ? 'var(--c-danger)' : 'var(--c-warning)';
+
+  return `
+    <div class="page-header">
+      <div>
+        ${back}
+        <div class="page-title">${esc(rec.patient?.name || 'Patient')}</div>
+        <div class="page-subtitle">Radiologist Review · ${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</div>
+      </div>
+    </div>
+
+    <!-- Flags requiring review -->
+    <div class="card mb-4" style="border-left:4px solid ${borderColor}">
+      <div class="card-header">
+        <h3 style="display:flex;align-items:center;gap:8px">
+          ${IC.warning.replace('stroke="currentColor"', `stroke="${isTier1 ? '#DC2626' : '#D97706'}"`)}&nbsp;
+          ${isTier1 ? 'Tier 1 — Absolute Contraindication' : 'Tier 2 — Conditional Risk Factors'}
+        </h3>
+        <span class="badge badge-${rec.status}">${esc(STATUS_LABELS[rec.status] || rec.status)}</span>
+      </div>
+      <div class="card-body">${flagsHtml || '<p style="color:var(--c-text-muted);font-size:13px">No T1/T2 flags found.</p>'}</div>
+    </div>
+
+    <!-- Patient demographics -->
+    <div class="card mb-4">
+      <div class="card-header"><h3>${IC.users}&nbsp; Patient</h3></div>
+      <div class="card-body">
+        <div class="scr-meta-grid">
+          ${rec.patient?.name           ? `<div class="scr-meta-item"><div class="scr-meta-label">Full Name</div><div class="scr-meta-value">${esc(rec.patient.name)}</div></div>` : ''}
+          ${rec.patient?.dob            ? `<div class="scr-meta-item"><div class="scr-meta-label">Date of Birth</div><div class="scr-meta-value">${esc(rec.patient.dob)}</div></div>` : ''}
+          ${rec.patient?.gender         ? `<div class="scr-meta-item"><div class="scr-meta-label">Gender</div><div class="scr-meta-value">${esc(rec.patient.gender)}</div></div>` : ''}
+          ${rec.patient?.hospitalNumber ? `<div class="scr-meta-item"><div class="scr-meta-label">Hospital Number</div><div class="scr-meta-value">${esc(rec.patient.hospitalNumber)}</div></div>` : ''}
+          ${rec.patient?.phone          ? `<div class="scr-meta-item"><div class="scr-meta-label">Phone</div><div class="scr-meta-value">${esc(rec.patient.phone)}</div></div>` : ''}
+          ${rec.patient?.referringDoctor? `<div class="scr-meta-item"><div class="scr-meta-label">Referring Doctor</div><div class="scr-meta-value">${esc(rec.patient.referringDoctor)}</div></div>` : ''}
+          <div class="scr-meta-item"><div class="scr-meta-label">Modality</div><div class="scr-meta-value">${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</div></div>
+          ${rec.bodyPart ? `<div class="scr-meta-item"><div class="scr-meta-label">Body Part</div><div class="scr-meta-value">${esc(rec.bodyPart)}</div></div>` : ''}
+          <div class="scr-meta-item"><div class="scr-meta-label">Screened</div><div class="scr-meta-value">${fmtDateTime(rec.stage1?.screeningCompletedAt || rec.createdAt)}</div></div>
+          <div class="scr-meta-item"><div class="scr-meta-label">Signed</div><div class="scr-meta-value">${fmtDateTime(rec.stage1?.completedAt)}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MRI screening positive findings -->
+    <div class="card mb-4">
+      <div class="card-header"><h3>MRI Safety Screening — Positive Findings</h3></div>
+      <div class="card-body">${screeningHtml}</div>
+    </div>
+
+    <!-- Decision form -->
+    <div class="card mb-4">
+      <div class="card-header"><h3>Radiologist Decision</h3></div>
+      <div class="card-body">
+        <div class="section-label" style="margin-bottom:10px">Decision <span style="color:var(--c-danger)">*</span></div>
+        ${decisionsHtml}
+        <div class="divider"></div>
+        <div class="form-group">
+          <label class="form-label" for="rv-notes">
+            Clinical Notes <span style="color:var(--c-danger)">*</span>
+          </label>
+          <textarea id="rv-notes" class="form-control" rows="5"
+            placeholder="Document your clinical reasoning, any conditions placed on this consent, or grounds for declining…"
+            oninput="radReviewCheckSubmit()"></textarea>
+        </div>
+        <div class="form-group mt-4">
+          <label class="form-label" for="rv-sig">
+            Radiologist Signature <span style="color:var(--c-danger)">*</span>
+          </label>
+          <input id="rv-sig" type="text" class="form-control"
+            value="${esc(userName)}"
+            placeholder="Type your full name to sign"
+            oninput="radReviewCheckSubmit()">
+          <div class="form-hint">Typing your name constitutes your electronic signature on this decision.</div>
+        </div>
+        <button id="rv-submit-btn" class="btn btn-primary mt-4"
+          onclick="radReviewSubmit()" disabled>
+          Submit Decision
+        </button>
+      </div>
+    </div>`;
+}
+
+function renderAdminPanel() {
+  if (!adminState.records && !adminState.loading) {
+    adminState.loading = true;
+    api('GET', '/consents').then(data => {
+      adminState.records = data;
+      adminState.loading = false;
+      if (state.page === 'admin') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      adminState.records = [];
+      adminState.loading = false;
+      if (state.page === 'admin') render();
+    });
+  }
+
+  const recs = adminState.records;
+
+  const MODALITY_SHORT = {
+    mri_without_contrast: 'MRI',
+    mri_with_gadolinium : 'MRI + Gad',
+    ct_without_contrast : 'CT',
+    ct_with_iv_contrast : 'CT + IV',
+    mammography         : 'Mammo',
+  };
+
+  let tableBody = '';
+  if (!recs) {
+    tableBody = `<tr><td colspan="5" style="text-align:center;padding:24px">
+      <span class="spinner spinner-dark"></span>&nbsp;Loading…</td></tr>`;
+  } else if (recs.length === 0) {
+    tableBody = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--c-text-muted)">
+      No consent records found.</td></tr>`;
+  } else {
+    recs.forEach(r => {
+      tableBody += `<tr>
+        <td style="font-weight:500">${esc(r.patient?.name || '—')}</td>
+        <td style="color:var(--c-text-sec)">${esc(MODALITY_SHORT[r.modality] || r.modality)}</td>
+        <td><span class="badge badge-${r.status}">${esc(STATUS_LABELS[r.status] || r.status)}</span></td>
+        <td style="color:var(--c-text-muted);font-size:12px">${fmtDate(r.createdAt)}</td>
+        <td style="text-align:right">
+          <button class="btn btn-danger btn-sm"
+            onclick="adminDeleteRecord('${r.id}','${esc(r.patient?.name||'this record')}')">Delete</button>
+        </td>
+      </tr>`;
+    });
+  }
+
+  const count = recs?.length ?? '…';
+
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Admin Panel</div>
+        <div class="page-subtitle">Record management</div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header" style="justify-content:space-between;align-items:center">
+        <h3>Consent Records <span style="font-size:13px;font-weight:400;color:var(--c-text-muted)">(${count})</span></h3>
+        <button class="btn btn-danger btn-sm" onclick="adminDeleteAll()"
+          ${!recs || recs.length === 0 ? 'disabled' : ''}>Delete All Records</button>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="border-bottom:1px solid var(--c-border);background:var(--c-bg)">
+              <th style="padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Patient</th>
+              <th style="padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Procedure</th>
+              <th style="padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Status</th>
+              <th style="padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Created</th>
+              <th style="padding:10px 16px"></th>
+            </tr>
+          </thead>
+          <tbody style="font-size:13.5px">
+            ${tableBody}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function adminDeleteRecord(id, name) {
+  if (!confirm(`Delete the record for "${name}"? This cannot be undone.`)) return;
+  try {
+    await api('DELETE', `/consents/${id}`);
+    toast(`Record deleted.`, 'success');
+    adminState.records = adminState.records?.filter(r => r.id !== id) ?? null;
+    render();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function adminDeleteAll() {
+  const count = adminState.records?.length ?? 0;
+  if (!confirm(`Delete all ${count} consent record${count !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+  try {
+    await api('DELETE', '/consents');
+    toast('All records deleted.', 'success');
+    adminState.records = [];
+    render();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW CONSENT — STATE HELPERS
+═══════════════════════════════════════════════════════════════ */
+function selectModality(mod) {
+  ncState.modality = mod;
+  document.querySelectorAll('.modality-card').forEach(c =>
+    c.classList.toggle('selected', c.dataset.mod === mod)
+  );
+  updateNcSubmit();
+}
+
+function selectLanguage(lang) {
+  ncState.language = lang;
+  document.querySelectorAll('.lang-btn').forEach(b =>
+    b.classList.toggle('selected', b.dataset.lang === lang)
+  );
+}
+
+function selectConsentMode(mode) {
+  ncState.consentMode = mode;
+  document.querySelectorAll('.consent-mode-card').forEach(c =>
+    c.classList.toggle('selected', c.dataset.mode === mode)
+  );
+}
+
+function selectSex(sex) {
+  ncState.sex = sex;
+  document.querySelectorAll('.sex-btn').forEach(b =>
+    b.classList.toggle('selected', b.dataset.sex === sex)
+  );
+  updateNcSubmit();
+}
+
+function updateNcSubmit() {
+  const btn  = document.getElementById('nc-submit-btn');
+  if (!btn) return;
+  const name = (document.getElementById('nc-name')?.value || '').trim();
+  btn.disabled = !(name && ncState.modality && ncState.sex);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW CONSENT — SUBMIT
+═══════════════════════════════════════════════════════════════ */
+async function submitNewConsent() {
+  const name = (document.getElementById('nc-name')?.value || '').trim();
+  if (!name || !ncState.modality || !ncState.sex) return;
+
+  const btn = document.getElementById('nc-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span>&nbsp;Creating record…`;
+
+  const payload = {
+    patient: {
+      name,
+      hospitalNumber  : (document.getElementById('nc-hosp-num')?.value    || '').trim(),
+      dob             : (document.getElementById('nc-dob')?.value          || ''),
+      gender          : ncState.sex,
+      phone           : (document.getElementById('nc-phone')?.value        || '').trim(),
+      referringDoctor : (document.getElementById('nc-ref-doctor')?.value   || '').trim(),
+    },
+    modality    : ncState.modality,
+    language    : ncState.language,
+    consentMode : ncState.consentMode,
+    bodyPart    : (document.getElementById('nc-body-part')?.value || '').trim(),
+  };
+
+  try {
+    const data = await api('POST', '/consents/sessions', payload);
+    if (!data) return;
+    if (ncState.modality.startsWith('mri_')) {
+      navigate('mri-screening', { consent: data });
+    } else {
+      navigate('consent-declaration', { consent: data });
+    }
+  } catch (err) {
+    toast(err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Start Consent Workflow →';
+    updateNcSubmit();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RECORD DETAIL
+═══════════════════════════════════════════════════════════════ */
+async function downloadRecord(id) {
+  const btn = document.getElementById('dl-record-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing…'; }
+  try {
+    const resp = await fetch(`${API_BASE}/consents/${id}/pdf`, {
+      headers: { 'Authorization': `Bearer ${state.token}` },
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: 'Download failed.' }));
+      throw new Error(err.error || 'Download failed.');
+    }
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `radconsent-${id}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Download Record'; }
+  }
+}
+
+function renderRecordDetail() {
+  const id = state.pageData.id;
+
+  // Load if needed
+  if (!recordDetailState.record && !recordDetailState.loading) {
+    recordDetailState.loading = true;
+    api('GET', `/consents/${id}`).then(data => {
+      recordDetailState.record  = data;
+      recordDetailState.loading = false;
+      if (state.page === 'record-detail') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      recordDetailState.loading = false;
+      navigate('consents');
+    });
+  }
+
+  const rec  = recordDetailState.record;
+  const back = `<button class="btn btn-ghost btn-sm" onclick="navigate('consents')"
+    style="margin-bottom:6px;margin-left:-6px">← Back to Records</button>`;
+
+  if (!rec) {
+    return `<div class="page-header"><div>${back}
+      <div class="page-title">Record Detail</div></div></div>
+      <div class="card"><div class="card-body"><div class="loading-state">
+        <span class="spinner spinner-dark"></span>
+        <span style="margin-left:10px;font-size:13px;color:var(--c-text-muted)">Loading record…</span>
+      </div></div></div>`;
+  }
+
+  const tier  = highestTier(rec.tierFlags);
+  const t1    = rec.tierFlags?.tier1 || [];
+  const t2    = rec.tierFlags?.tier2 || [];
+  const t3    = rec.tierFlags?.tier3 || [];
+
+  // ── Stage completion ────────────────────────────────────────
+  const s1done = !!rec.stage1?.consentAcknowledged;
+  const s2done = !!rec.stage2;
+  const s3done = !!rec.stage3;
+  const needsReview = rec.status === 'pending_review' || rec.status === 'flagged_tier1';
+  const reviewDone  = !!rec.radiologistReview?.decision;
+
+  function stageIcon(done) {
+    return done
+      ? `<div style="width:28px;height:28px;border-radius:50%;background:var(--c-success-light);border:2px solid var(--c-success-border);display:flex;align-items:center;justify-content:center;flex-shrink:0">${IC.check.replace('stroke="currentColor"','stroke="#16A34A" stroke-width="2.5"').replace(/<svg /,'<svg width="14" height="14" ')}</div>`
+      : `<div style="width:28px;height:28px;border-radius:50%;background:var(--c-bg);border:2px solid var(--c-border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--c-text-muted);font-size:11px;font-weight:600"></div>`;
+  }
+
+  function metaRow(label, value) {
+    if (!value) return '';
+    return `<div class="scr-meta-item"><div class="scr-meta-label">${label}</div><div class="scr-meta-value">${value}</div></div>`;
+  }
+
+  function pendingBanner(who, action, btn = '') {
+    return `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--c-bg);border:1px dashed var(--c-border);border-radius:var(--radius-sm);font-size:12.5px;color:var(--c-text-sec)">
+      ${IC.info.replace('stroke="currentColor"','stroke="var(--c-text-muted)"').replace(/<svg /,'<svg width="14" height="14" ')}
+      <span>Waiting for: <strong>${esc(who)}</strong> — ${esc(action)}</span>
+      ${btn ? `<div style="margin-left:auto;flex-shrink:0">${btn}</div>` : ''}
+    </div>`;
+  }
+
+  // ── Stage timeline header ────────────────────────────────────
+  const stages = [
+    { num: '1', label: 'Consent Declaration', done: s1done },
+    { num: '2', label: 'Radiographer Report', done: s2done },
+    { num: '3', label: 'Nurse Vitals',        done: s3done },
+    ...(needsReview ? [{ num: '✓', label: 'Radiologist Review', done: reviewDone }] : []),
+  ];
+  const timeline = stages.map((st, i) => `
+    <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+      ${i > 0 ? `<div style="height:2px;flex:1;background:${stages[i-1].done?'var(--c-success)':'var(--c-border)'}"></div>` : ''}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center">
+        ${stageIcon(st.done)}
+        <div style="font-size:10.5px;font-weight:600;color:${st.done?'var(--c-success)':'var(--c-text-muted)'};white-space:nowrap">${esc(st.label)}</div>
+      </div>
+    </div>`).join('');
+
+  // ── Patient info ─────────────────────────────────────────────
+  const patientCard = `
+    <div class="card mb-4">
+      <div class="card-header"><h3>${IC.users}&nbsp; Patient</h3></div>
+      <div class="card-body">
+        <div class="scr-meta-grid">
+          ${metaRow('Full Name',         esc(rec.patient?.name))}
+          ${metaRow('Date of Birth',     esc(rec.patient?.dob))}
+          ${metaRow('Gender',            esc(rec.patient?.gender))}
+          ${metaRow('Phone',             esc(rec.patient?.phone))}
+          ${metaRow('Hospital Number',   esc(rec.patient?.hospitalNumber))}
+          ${metaRow('Referring Doctor',  esc(rec.patient?.referringDoctor))}
+        </div>
+      </div>
+    </div>`;
+
+  // ── Procedure card ───────────────────────────────────────────
+  const tierBadgeDetail = tier
+    ? `<span class="badge badge-${tier}">${tier==='tier1'?'Tier 1':tier==='tier2'?'Tier 2':'Tier 3'}</span>`
+    : `<span class="badge badge-green">No flags</span>`;
+
+  const procedureCard = `
+    <div class="card mb-4">
+      <div class="card-header">
+        <h3>${IC.medical}&nbsp; Procedure</h3>
+        <span class="badge badge-${rec.status}">${esc(STATUS_LABELS[rec.status] || rec.status)}</span>
+      </div>
+      <div class="card-body">
+        <div class="scr-meta-grid">
+          ${metaRow('Modality',    esc(MODALITY_LABELS[rec.modality] || rec.modality))}
+          ${metaRow('Body Part',   esc(rec.bodyPart))}
+          ${metaRow('Language',    (LANG_FLAG[rec.language]||'') + ' ' + esc(LANGUAGE_LABELS[rec.language] || rec.language))}
+          ${metaRow('Consent Mode', esc(rec.consentMode))}
+          ${metaRow('Created',     fmtDateTime(rec.createdAt))}
+          <div class="scr-meta-item"><div class="scr-meta-label">Highest Tier</div><div class="scr-meta-value">${tierBadgeDetail}</div></div>
+        </div>
+        ${(t1.length + t2.length + t3.length) > 0 ? `
+        <div class="divider"></div>
+        <div class="section-label">Safety Flags</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${t1.map(f=>`<span class="badge badge-tier1">T1: ${esc(SCR_FLAG_LABELS[f]||f)}</span>`).join('')}
+          ${t2.map(f=>`<span class="badge badge-tier2">T2: ${esc(SCR_FLAG_LABELS[f]||f)}</span>`).join('')}
+          ${t3.map(f=>`<span class="badge badge-tier3">T3: ${esc(SCR_FLAG_LABELS[f]||f)}</span>`).join('')}
+        </div>` : ''}
+      </div>
+    </div>`;
+
+  // ── Stage 1 card ─────────────────────────────────────────────
+  const s1 = rec.stage1;
+  const stage1Card = `
+    <div class="card mb-4">
+      <div class="card-header">
+        <h3 style="display:flex;align-items:center;gap:8px">${stageIcon(s1done)}&nbsp;Stage 1 — Consent Declaration</h3>
+        ${s1done ? `<span class="badge badge-green">Complete</span>` : `<span class="badge badge-gray">Pending</span>`}
+      </div>
+      <div class="card-body">
+        ${s1done ? `
+          <div class="scr-meta-grid">
+            ${metaRow('Patient Signature',   esc(s1.patientSignature))}
+            ${metaRow('Signed',              fmtDateTime(s1.completedAt))}
+            ${metaRow('Witnessed By',        esc(s1.witnessName))}
+            ${metaRow('Consent Version',     esc(s1.consentVersion))}
+            ${metaRow('Screening Completed', s1.screeningCompletedAt ? fmtDateTime(s1.screeningCompletedAt) : null)}
+          </div>` : pendingBanner('Patient / Staff', 'Consent declaration signature required')}
+      </div>
+    </div>`;
+
+  // ── Stage 2 card ─────────────────────────────────────────────
+  const s2 = rec.stage2;
+  let stage2Card = '';
+  if (s1done) {
+    // Check if stage 2 is blocked (tier1 flag without radiologist sign-off)
+    const blocked = rec.status === 'flagged_tier1' && !reviewDone;
+    const s2Btn = (!s2done && !blocked && state.user?.role === 'radiographer')
+      ? `<button class="btn btn-primary btn-sm" onclick="navigate('stage2-report',{id:'${rec.id}'})">File Report</button>`
+      : '';
+    stage2Card = `
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 style="display:flex;align-items:center;gap:8px">${stageIcon(s2done)}&nbsp;Stage 2 — Radiographer Report</h3>
+          ${s2done ? `<span class="badge badge-green">Complete</span>`
+            : blocked ? `<span class="badge badge-flagged_tier1">Blocked — Awaiting Review</span>`
+            : `<span class="badge badge-gray">Pending</span>`}
+        </div>
+        <div class="card-body">
+          ${s2done ? `
+            <div class="scr-meta-grid">
+              ${metaRow('Performed By',  esc(s2.performedByName))}
+              ${metaRow('Completed',     fmtDateTime(s2.completedAt))}
+              ${metaRow('Contrast',      s2.contrastAdministered ? `${esc(s2.contrastAgent||'—')} ${esc(s2.contrastVolume||'')}` : 'None')}
+              ${metaRow('Complications', esc(s2.complications))}
+            </div>
+            ${s2.procedureNotes ? `<div class="divider"></div>
+              <div class="section-label">Procedure Notes</div>
+              <p style="font-size:13.5px;color:var(--c-text-sec);line-height:1.6">${esc(s2.procedureNotes)}</p>` : ''}
+          ` : blocked
+            ? pendingBanner('Radiologist', 'Radiologist sign-off required before procedure can proceed')
+            : pendingBanner('Radiographer', 'File procedure report after scan is complete', s2Btn)}
+        </div>
+      </div>`;
+  }
+
+  // ── Radiologist review action button ─────────────────────────
+  const reviewBtn = (needsReview && !reviewDone &&
+      (state.user?.role === 'radiologist' || state.user?.role === 'admin'))
+    ? `<button class="btn btn-warning btn-sm" onclick="navigate('rad-review',{id:'${rec.id}'})">Review &amp; Sign Off</button>`
+    : '';
+
+  // ── Stage 3 card ─────────────────────────────────────────────
+  const s3 = rec.stage3;
+  const s3Btn = (!s3done && s2done && state.user?.role === 'nurse')
+    ? `<button class="btn btn-primary btn-sm" onclick="navigate('stage3-vitals',{id:'${rec.id}'})">Vitals Check</button>`
+    : '';
+  let stage3Card = '';
+  if (s2done) {
+    stage3Card = `
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 style="display:flex;align-items:center;gap:8px">${stageIcon(s3done)}&nbsp;Stage 3 — Nurse Vitals Check</h3>
+          ${s3done ? `<span class="badge badge-green">Complete</span>` : `<span class="badge badge-gray">Pending</span>`}
+        </div>
+        <div class="card-body">
+          ${s3done ? `
+            <div class="scr-meta-grid">
+              ${metaRow('Performed By',    esc(s3.performedByName))}
+              ${metaRow('Completed',       fmtDateTime(s3.completedAt))}
+              ${s3.vitals?.bp  ? metaRow('Blood Pressure', esc(s3.vitals.bp) + ' mmHg') : ''}
+              ${s3.vitals?.pulse  ? metaRow('Pulse', esc(s3.vitals.pulse) + ' bpm') : ''}
+              ${s3.vitals?.spo2   ? metaRow('SpO₂',  esc(s3.vitals.spo2)  + '%') : ''}
+              ${s3.vitals?.temperature ? metaRow('Temperature', esc(s3.vitals.temperature) + ' °C') : ''}
+              ${s3.vitals?.rr    ? metaRow('Resp. Rate', esc(s3.vitals.rr) + ' /min') : ''}
+            </div>
+            ${s3.patientCondition ? `<div class="divider"></div>
+              <div class="section-label">Patient Condition</div>
+              <p style="font-size:13.5px;color:var(--c-text-sec);line-height:1.6">${esc(s3.patientCondition)}</p>` : ''}
+          ` : pendingBanner('Nurse', 'Post-procedure vitals check required', s3Btn)}
+        </div>
+      </div>`;
+  }
+
+  // ── Radiologist review card ───────────────────────────────────
+  let reviewCard = '';
+  if (needsReview) {
+    const rv = rec.radiologistReview;
+    reviewCard = `
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 style="display:flex;align-items:center;gap:8px">${stageIcon(reviewDone)}&nbsp;Radiologist Review</h3>
+          ${reviewDone
+            ? `<span class="badge ${rv.decision==='approved'?'badge-green':rv.decision==='declined'?'badge-red':'badge-amber'}">${esc(DECISION_LABELS[rv.decision]||rv.decision)}</span>`
+            : `<span class="badge badge-${rec.status}">${esc(STATUS_LABELS[rec.status]||rec.status)}</span>`}
+        </div>
+        <div class="card-body">
+          ${reviewDone ? `
+            <div class="scr-meta-grid">
+              ${metaRow('Reviewed By', esc(rv.reviewedByName))}
+              ${metaRow('Decision',    esc(DECISION_LABELS[rv.decision]||rv.decision))}
+              ${metaRow('Reviewed',    fmtDateTime(rv.reviewedAt))}
+            </div>
+            ${rv.notes ? `<div class="divider"></div>
+              <div class="section-label">Notes</div>
+              <p style="font-size:13.5px;color:var(--c-text-sec);line-height:1.6">${esc(rv.notes)}</p>` : ''}
+          ` : pendingBanner('Radiologist', rec.status === 'flagged_tier1'
+              ? 'Absolute contraindication identified — sign-off required before procedure can proceed'
+              : 'Conditional risk factor identified — review and approve before procedure commences',
+              reviewBtn)}
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="page-header">
+      <div>
+        ${back}
+        <div class="page-title">${esc(rec.patient?.name || 'Patient')}</div>
+        <div class="page-subtitle">${esc(MODALITY_LABELS[rec.modality] || rec.modality)} · <span style="font-family:monospace;font-size:11px">${esc(rec.id)}</span></div>
+      </div>
+      ${rec.status === 'closed' ? `
+      <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+        <button id="dl-record-btn" class="btn btn-secondary btn-sm"
+          onclick="downloadRecord('${rec.id}')">
+          ↓ Download Record
+        </button>
+      </div>` : ''}
+    </div>
+
+    <!-- Stage timeline -->
+    <div class="card mb-4">
+      <div class="card-body" style="padding:20px 24px">
+        <div style="display:flex;align-items:flex-start;gap:0">${timeline}</div>
+      </div>
+    </div>
+
+    ${patientCard}
+    ${procedureCard}
+    ${stage1Card}
+    ${stage2Card}
+    ${stage3Card}
+    ${reviewCard}`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE 2 — POST-PROCEDURE REPORT (RADIOGRAPHER)
+═══════════════════════════════════════════════════════════════ */
+function renderStage2Report() {
+  const id = state.pageData.id;
+
+  if (!stage2State.record && !stage2State.loading) {
+    stage2State.loading = true;
+    api('GET', `/consents/${id}`).then(data => {
+      stage2State.record  = data;
+      stage2State.loading = false;
+      if (state.page === 'stage2-report') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      stage2State.loading = false;
+      navigate('consents');
+    });
+  }
+
+  const rec = stage2State.record;
+  const back = `<button class="btn btn-ghost btn-sm" onclick="navigate('consents')"
+    style="margin-bottom:6px;margin-left:-6px">← Back to Records</button>`;
+
+  if (!rec) return `
+    <div class="page-header"><div>${back}<div class="page-title">File Procedure Report</div></div></div>
+    <div class="card"><div class="card-body"><div class="loading-state">
+      <span class="spinner spinner-dark"></span>
+      <span style="margin-left:10px;font-size:13px;color:var(--c-text-muted)">Loading…</span>
+    </div></div></div>`;
+
+  const tier  = highestTier(rec.tierFlags);
+  const t1    = rec.tierFlags?.tier1 || [];
+  const t2    = rec.tierFlags?.tier2 || [];
+  const t3    = rec.tierFlags?.tier3 || [];
+  const totalFlags = t1.length + t2.length + t3.length;
+
+  const contextCard = `
+    <div class="card mb-4">
+      <div class="card-header"><h3>${IC.shield}&nbsp; Screening Summary</h3></div>
+      <div class="card-body">
+        <div class="scr-meta-grid mb-3">
+          <div class="scr-meta-item"><div class="scr-meta-label">Patient</div><div class="scr-meta-value">${esc(rec.patient?.name)}</div></div>
+          <div class="scr-meta-item"><div class="scr-meta-label">Modality</div><div class="scr-meta-value">${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</div></div>
+          ${rec.bodyPart ? `<div class="scr-meta-item"><div class="scr-meta-label">Body Part</div><div class="scr-meta-value">${esc(rec.bodyPart)}</div></div>` : ''}
+          <div class="scr-meta-item"><div class="scr-meta-label">Safety Flags</div><div class="scr-meta-value">
+            ${totalFlags === 0
+              ? `<span class="badge badge-green">No flags</span>`
+              : `${t1.length?`<span class="badge badge-tier1 mr-1">T1: ${t1.length}</span>`:''}${t2.length?`<span class="badge badge-tier2 mr-1">T2: ${t2.length}</span>`:''}${t3.length?`<span class="badge badge-tier3">T3: ${t3.length}</span>`:''}`}
+          </div></div>
+        </div>
+        ${tier === 'tier1' ? `<div class="scr-alert scr-alert-tier1">${IC.warning}
+          <div><div class="scr-alert-title">Tier 1 flag present</div>
+          <div class="scr-alert-body">${t1.map(f=>esc(SCR_FLAG_LABELS[f]||f)).join('; ')}</div></div></div>` : ''}
+        ${tier === 'tier2' ? `<div class="scr-alert scr-alert-tier2">${IC.warning}
+          <div><div class="scr-alert-title">Tier 2 flag present</div>
+          <div class="scr-alert-body">${t2.map(f=>esc(SCR_FLAG_LABELS[f]||f)).join('; ')}</div></div></div>` : ''}
+      </div>
+    </div>`;
+
+  return `
+    <div class="page-header">
+      <div>
+        ${back}
+        <div class="page-title">Post-Procedure Report</div>
+        <div class="page-subtitle">${esc(rec.patient?.name)} · ${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</div>
+      </div>
+    </div>
+
+    ${contextCard}
+
+    <div class="card">
+      <div class="card-header"><h3>${IC.clipboard}&nbsp; Stage 2 — Radiographer Report</h3></div>
+      <div class="card-body">
+
+        <!-- Completion status -->
+        <div class="mb-4">
+          <div class="form-label">Was the procedure completed as planned? <span class="req">*</span></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+            ${[['yes','Yes — completed as planned'],['partial','Partial — partially completed'],['no','No — procedure not completed']].map(([v,l],i)=>`
+            <label style="display:flex;align-items:center;gap:7px;padding:9px 14px;border:1px solid var(--c-border);border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:500">
+              <input type="radio" name="s2-completed" value="${v}" ${i===0?'checked':''} style="accent-color:var(--c-accent)">
+              ${esc(l)}
+            </label>`).join('')}
+          </div>
+        </div>
+
+        <!-- Procedure notes -->
+        <div class="mb-4">
+          <label class="form-label" for="s2-notes">Procedure Report <span class="req">*</span></label>
+          <textarea class="form-control" id="s2-notes" rows="5"
+            placeholder="Describe what was performed, any deviations from the planned procedure, and any intra-procedure observations."
+            oninput="stage2CheckSubmit()" style="min-height:120px"></textarea>
+        </div>
+
+        <!-- Complications -->
+        <div class="mb-4">
+          <div class="form-label">Any complications or adverse events? <span class="req">*</span></div>
+          <div style="display:flex;gap:16px;margin-top:8px">
+            <label style="display:flex;align-items:center;gap:7px;font-size:13.5px;cursor:pointer">
+              <input type="radio" name="s2-complications" value="no" checked
+                onchange="stage2ToggleComplications(false)" style="accent-color:var(--c-accent)">
+              No — none observed
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13.5px;cursor:pointer">
+              <input type="radio" name="s2-complications" value="yes"
+                onchange="stage2ToggleComplications(true)" style="accent-color:var(--c-accent)">
+              Yes — describe below
+            </label>
+          </div>
+          <div id="s2-complications-details" style="display:none;margin-top:10px">
+            <textarea class="form-control" id="s2-complication-text" rows="3"
+              placeholder="Describe the complication or adverse event and action taken."></textarea>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Radiographer signature -->
+        <div class="form-row">
+          <div>
+            <label class="form-label" for="s2-performer">Radiographer Name</label>
+            <input class="form-control" type="text" id="s2-performer"
+              value="${esc(state.user?.name || '')}" readonly
+              style="background:var(--c-bg);color:var(--c-text-sec);cursor:default" />
+          </div>
+          <div>
+            <label class="form-label" for="s2-sig">Signature <span class="req">*</span></label>
+            <input class="form-control" type="text" id="s2-sig"
+              placeholder="Type your full name to sign"
+              autocomplete="off" oninput="stage2CheckSubmit()" />
+            <div class="form-hint">Typing your name constitutes a valid electronic signature.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('consents')">Cancel</button>
+        <button id="s2-submit-btn" class="btn btn-primary" onclick="stage2Submit()" disabled>
+          Submit Report &amp; Sign Stage 2
+        </button>
+      </div>
+    </div>`;
+}
+
+function stage2ToggleComplications(show) {
+  const el = document.getElementById('s2-complications-details');
+  if (el) el.style.display = show ? '' : 'none';
+}
+
+function stage2CheckSubmit() {
+  const notes = (document.getElementById('s2-notes')?.value || '').trim();
+  const sig   = (document.getElementById('s2-sig')?.value  || '').trim();
+  const btn   = document.getElementById('s2-submit-btn');
+  if (btn) btn.disabled = !(notes && sig);
+}
+
+async function stage2Submit() {
+  const completedAsPlanned  = document.querySelector('[name="s2-completed"]:checked')?.value || 'yes';
+  const procedureNotes      = (document.getElementById('s2-notes')?.value || '').trim();
+  const hasComplications    = document.querySelector('[name="s2-complications"]:checked')?.value === 'yes';
+  const complicationDetails = (document.getElementById('s2-complication-text')?.value || '').trim();
+  const radiographerSignature = (document.getElementById('s2-sig')?.value || '').trim();
+
+  if (!procedureNotes)         { toast('Procedure report is required.', 'warning'); return; }
+  if (!radiographerSignature)  { toast('Please type your name to sign.', 'warning'); return; }
+
+  const btn = document.getElementById('s2-submit-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
+
+  try {
+    await api('PUT', `/consents/${stage2State.record.id}/stage2`, {
+      completedAsPlanned,
+      procedureNotes,
+      hasComplications,
+      complicationDetails : hasComplications ? complicationDetails : null,
+      radiographerSignature,
+    });
+    toast('Stage 2 report filed.', 'success');
+    stage2State.record = null;
+    navigate('consents');
+  } catch (err) {
+    toast(err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit Report & Sign Stage 2'; }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE 3 — POST-PROCEDURE VITALS CHECK (NURSE)
+═══════════════════════════════════════════════════════════════ */
+function renderStage3Vitals() {
+  const id = state.pageData.id;
+
+  if (!stage3State.record && !stage3State.loading) {
+    stage3State.loading = true;
+    api('GET', `/consents/${id}`).then(data => {
+      stage3State.record  = data;
+      stage3State.loading = false;
+      if (state.page === 'stage3-vitals') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      stage3State.loading = false;
+      navigate('consents');
+    });
+  }
+
+  const rec = stage3State.record;
+  const back = `<button class="btn btn-ghost btn-sm" onclick="navigate('consents')"
+    style="margin-bottom:6px;margin-left:-6px">← Back to Records</button>`;
+
+  if (!rec) return `
+    <div class="page-header"><div>${back}<div class="page-title">Vitals Check</div></div></div>
+    <div class="card"><div class="card-body"><div class="loading-state">
+      <span class="spinner spinner-dark"></span>
+      <span style="margin-left:10px;font-size:13px;color:var(--c-text-muted)">Loading…</span>
+    </div></div></div>`;
+
+  // ── Confirmation screen ──────────────────────────────────────
+  if (stage3State.confirmed && stage3State.confirmedRecord) {
+    const r  = stage3State.confirmedRecord;
+    const ts = (label, iso) => iso
+      ? `<div style="display:contents"><span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px">${label}</span><span style="font-size:13px;font-weight:500">${fmtDateTime(iso)}</span></div>`
+      : '';
+    return `
+      <div class="page-header"><div>
+        <div class="page-title">Vitals Check</div>
+        <div class="page-subtitle">${esc(r.patient?.name)} · ${esc(MODALITY_LABELS[r.modality] || r.modality)}</div>
+      </div></div>
+      <div class="card">
+        <div class="card-body" style="text-align:center;padding:52px 32px">
+          <div style="width:60px;height:60px;border-radius:50%;background:var(--c-success-light);border:2px solid var(--c-success-border);display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+            ${IC.check.replace('stroke="currentColor"','stroke="#16A34A" stroke-width="2.5"').replace(/<svg /,'<svg width="28" height="28" ')}
+          </div>
+          <div style="font-size:19px;font-weight:700;color:var(--c-text);margin-bottom:6px">Record Closed</div>
+          <div style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:28px">All three stages are complete. The consent record has been closed.</div>
+          <div style="display:inline-grid;grid-template-columns:auto auto;gap:8px 28px;text-align:left;background:var(--c-bg);border:1px solid var(--c-border);border-radius:var(--radius);padding:18px 24px;margin-bottom:32px;min-width:340px">
+            <span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px">Patient</span>
+            <span style="font-size:13px;font-weight:600">${esc(r.patient?.name)}</span>
+            ${ts('Stage 1 — Consent', r.stage1?.completedAt)}
+            ${ts('Stage 2 — Radiographer', r.stage2?.completedAt)}
+            ${ts('Stage 3 — Nurse Vitals', r.stage3?.completedAt)}
+            <span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px">Status</span>
+            <span class="badge badge-closed">Closed</span>
+          </div>
+          <button class="btn btn-primary btn-lg" onclick="navigate('dashboard')">Return to Dashboard</button>
+        </div>
+      </div>`;
+  }
+
+  // ── Stage 2 context (read-only) ─────────────────────────────
+  const s2 = rec.stage2;
+  const contextCard = `
+    <div class="card mb-4">
+      <div class="card-header"><h3>${IC.clipboard}&nbsp; Stage 2 Report (Read-Only)</h3></div>
+      <div class="card-body">
+        <div class="scr-meta-grid mb-3">
+          <div class="scr-meta-item"><div class="scr-meta-label">Patient</div><div class="scr-meta-value">${esc(rec.patient?.name)}</div></div>
+          <div class="scr-meta-item"><div class="scr-meta-label">Modality</div><div class="scr-meta-value">${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</div></div>
+          <div class="scr-meta-item"><div class="scr-meta-label">Performed By</div><div class="scr-meta-value">${esc(s2?.performedByName || '—')}</div></div>
+          <div class="scr-meta-item"><div class="scr-meta-label">Completed</div><div class="scr-meta-value">${fmtDateTime(s2?.completedAt)}</div></div>
+          <div class="scr-meta-item" style="grid-column:1/-1">
+            <div class="scr-meta-label">Complications</div>
+            <div class="scr-meta-value">${esc(s2?.complications || '—')}</div>
+          </div>
+        </div>
+        ${s2?.procedureNotes ? `<div class="divider"></div>
+          <div class="section-label">Procedure Notes</div>
+          <div style="background:var(--c-bg);border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:14px;font-size:13px;color:var(--c-text-sec);line-height:1.6">${esc(s2.procedureNotes)}</div>` : ''}
+      </div>
+    </div>`;
+
+  return `
+    <div class="page-header">
+      <div>
+        ${back}
+        <div class="page-title">Post-Procedure Vitals Check</div>
+        <div class="page-subtitle">${esc(rec.patient?.name)} · ${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</div>
+      </div>
+    </div>
+
+    ${contextCard}
+
+    <div class="card">
+      <div class="card-header"><h3>${IC.medical}&nbsp; Stage 3 — Nurse Vitals</h3></div>
+      <div class="card-body">
+
+        <!-- Blood pressure + pulse -->
+        <div class="mb-4">
+          <div class="form-label">Observations</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;align-items:flex-end">
+            <div>
+              <div style="font-size:11px;color:var(--c-text-muted);margin-bottom:4px">Systolic (mmHg)</div>
+              <input class="form-control" type="number" id="s3-bp-sys" min="50" max="300"
+                placeholder="e.g. 120" style="width:110px" />
+            </div>
+            <div style="padding-bottom:8px;color:var(--c-text-muted);font-size:18px;font-weight:300">/</div>
+            <div>
+              <div style="font-size:11px;color:var(--c-text-muted);margin-bottom:4px">Diastolic (mmHg)</div>
+              <input class="form-control" type="number" id="s3-bp-dia" min="30" max="200"
+                placeholder="e.g. 80" style="width:110px" />
+            </div>
+            <div style="width:1px;height:36px;background:var(--c-border);margin:0 4px;align-self:flex-end"></div>
+            <div>
+              <div style="font-size:11px;color:var(--c-text-muted);margin-bottom:4px">Pulse (bpm)</div>
+              <input class="form-control" type="number" id="s3-pulse" min="20" max="300"
+                placeholder="e.g. 72" style="width:110px" />
+            </div>
+          </div>
+        </div>
+
+        <!-- General condition -->
+        <div class="mb-4">
+          <div class="form-label">General Condition <span class="req">*</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+            ${[
+              ['stable',     '✅', 'Stable',                  'Patient discharged in good condition',             'var(--c-success-light)', 'var(--c-success-border)'],
+              ['monitoring', '⚠️', 'Requires Monitoring',     'Patient to be observed before discharge',          'var(--c-warning-light)', 'var(--c-warning-border)'],
+              ['referred',   '🚨', 'Referred for Further Care','Patient referred or admitted for additional care', 'var(--c-danger-light)',  'var(--c-danger-border)'],
+            ].map(([v, emoji, label, desc, bg, border]) => `
+            <label style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border:1px solid ${border};border-radius:var(--radius);background:${bg};cursor:pointer">
+              <input type="radio" name="s3-condition" value="${v}" ${v==='stable'?'checked':''}
+                style="accent-color:var(--c-accent);margin-top:3px;flex-shrink:0">
+              <div>
+                <div style="font-size:14px;font-weight:600">${emoji}&nbsp; ${esc(label)}</div>
+                <div style="font-size:12px;color:var(--c-text-sec);margin-top:2px">${esc(desc)}</div>
+              </div>
+            </label>`).join('')}
+          </div>
+        </div>
+
+        <!-- Additional notes -->
+        <div class="mb-4">
+          <label class="form-label" for="s3-notes">Additional Notes <span style="font-weight:400;color:var(--c-text-muted)">(optional)</span></label>
+          <textarea class="form-control" id="s3-notes" rows="3"
+            placeholder="Any additional observations, instructions given to the patient, or follow-up actions."></textarea>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Nurse signature -->
+        <div class="form-row">
+          <div>
+            <label class="form-label" for="s3-performer">Nurse Name</label>
+            <input class="form-control" type="text" id="s3-performer"
+              value="${esc(state.user?.name || '')}" readonly
+              style="background:var(--c-bg);color:var(--c-text-sec);cursor:default" />
+          </div>
+          <div>
+            <label class="form-label" for="s3-sig">Signature <span class="req">*</span></label>
+            <input class="form-control" type="text" id="s3-sig"
+              placeholder="Type your full name to sign"
+              autocomplete="off" oninput="stage3CheckSubmit()" />
+            <div class="form-hint">Typing your name constitutes a valid electronic signature.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('consents')">Cancel</button>
+        <button id="s3-submit-btn" class="btn btn-primary" onclick="stage3Submit()" disabled>
+          Submit Vitals &amp; Close Record
+        </button>
+      </div>
+    </div>`;
+}
+
+function stage3CheckSubmit() {
+  const sig = (document.getElementById('s3-sig')?.value || '').trim();
+  const btn = document.getElementById('s3-submit-btn');
+  if (btn) btn.disabled = !sig;
+}
+
+async function stage3Submit() {
+  const sig       = (document.getElementById('s3-sig')?.value || '').trim();
+  const condition = document.querySelector('[name="s3-condition"]:checked')?.value;
+  const notes     = (document.getElementById('s3-notes')?.value || '').trim();
+  const bpSys     = document.getElementById('s3-bp-sys')?.value;
+  const bpDia     = document.getElementById('s3-bp-dia')?.value;
+  const pulse     = document.getElementById('s3-pulse')?.value;
+
+  if (!sig)       { toast('Please type your name to sign.', 'warning'); return; }
+  if (!condition) { toast('Please select a patient condition.', 'warning'); return; }
+
+  const btn = document.getElementById('s3-submit-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
+
+  try {
+    const result = await api('PUT', `/consents/${stage3State.record.id}/stage3`, {
+      bloodPressureSystolic  : bpSys  ? Number(bpSys)  : null,
+      bloodPressureDiastolic : bpDia  ? Number(bpDia)  : null,
+      pulse                  : pulse  ? Number(pulse)  : null,
+      condition,
+      notes  : notes || null,
+      nurseSignature: sig,
+    });
+    if (!result) return;
+    stage3State.confirmed      = true;
+    stage3State.confirmedRecord = result;
+    render();
+  } catch (err) {
+    toast(err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit Vitals & Close Record'; }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW CONSENT — RENDER
+═══════════════════════════════════════════════════════════════ */
+function renderNewConsent() {
+  return `
+    <div class="page-header">
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('consents')"
+          style="margin-bottom:6px;margin-left:-6px;gap:4px">
+          ← Back to Records
+        </button>
+        <div class="page-title">New Consent Session</div>
+        <div class="page-subtitle">Complete the form below to start the patient consent workflow</div>
+      </div>
+    </div>
+
+    <!-- ── Section 1: Patient Details ── -->
+    <div class="card mb-4">
+      <div class="nc-section-header">
+        <div class="nc-section-num">1</div>
+        <div class="nc-section-title">Patient Details</div>
+      </div>
+      <div class="nc-section-body">
+        <div class="form-row mb-3">
+          <div class="form-group">
+            <label class="form-label" for="nc-name">Full Name <span class="req">*</span></label>
+            <input class="form-control" type="text" id="nc-name"
+              placeholder="e.g. Emeka Nwosu" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nc-hosp-num">Hospital Number / Patient ID</label>
+            <input class="form-control" type="text" id="nc-hosp-num"
+              placeholder="e.g. HN/2025/00123" />
+          </div>
+        </div>
+        <div class="form-row mb-3">
+          <div class="form-group">
+            <label class="form-label" for="nc-dob">Date of Birth</label>
+            <input class="form-control" type="date" id="nc-dob" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sex <span class="req">*</span></label>
+            <div class="sex-btn-group">
+              <button class="sex-btn" data-sex="male"   onclick="selectSex('male')">Male</button>
+              <button class="sex-btn" data-sex="female" onclick="selectSex('female')">Female</button>
+              <button class="sex-btn" data-sex="other"  onclick="selectSex('other')">Other</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="nc-phone">Phone Number</label>
+            <input class="form-control" type="tel" id="nc-phone"
+              placeholder="e.g. 08012345678" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nc-ref-doctor">Referring Doctor</label>
+            <input class="form-control" type="text" id="nc-ref-doctor"
+              placeholder="e.g. Dr. Adeyemi" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Section 2: Procedure & Modality ── -->
+    <div class="card mb-4">
+      <div class="nc-section-header">
+        <div class="nc-section-num">2</div>
+        <div class="nc-section-title">Procedure &amp; Modality <span class="req">*</span></div>
+      </div>
+      <div class="nc-section-body">
+        <div class="modality-grid mb-4">
+
+          <div class="modality-card" data-mod="mri_without_contrast"
+            onclick="selectModality('mri_without_contrast')">
+            <div class="modality-check">${IC.check}</div>
+            <div class="modality-icon mi-mri">MRI</div>
+            <div class="modality-name">MRI</div>
+            <div class="modality-desc">Without contrast agent</div>
+            <span class="modality-tag">Safety screening</span>
+          </div>
+
+          <div class="modality-card" data-mod="mri_with_gadolinium"
+            onclick="selectModality('mri_with_gadolinium')">
+            <div class="modality-check">${IC.check}</div>
+            <div class="modality-icon mi-mri">MRI<sup>+</sup></div>
+            <div class="modality-name">MRI + Gadolinium</div>
+            <div class="modality-desc">With gadolinium contrast</div>
+            <span class="modality-tag">Safety screening</span>
+          </div>
+
+          <div class="modality-card" data-mod="ct_without_contrast"
+            onclick="selectModality('ct_without_contrast')">
+            <div class="modality-check">${IC.check}</div>
+            <div class="modality-icon mi-ct">CT</div>
+            <div class="modality-name">CT Scan</div>
+            <div class="modality-desc">Without contrast agent</div>
+          </div>
+
+          <div class="modality-card" data-mod="ct_with_iv_contrast"
+            onclick="selectModality('ct_with_iv_contrast')">
+            <div class="modality-check">${IC.check}</div>
+            <div class="modality-icon mi-ct">CT<sup>+</sup></div>
+            <div class="modality-name">CT + IV Contrast</div>
+            <div class="modality-desc">With intravenous contrast</div>
+          </div>
+
+          <div class="modality-card" data-mod="mammography"
+            onclick="selectModality('mammography')">
+            <div class="modality-check">${IC.check}</div>
+            <div class="modality-icon mi-mmg">MMG</div>
+            <div class="modality-name">Mammography</div>
+            <div class="modality-desc">Breast X-ray imaging</div>
+          </div>
+
+        </div>
+        <div class="form-group" style="max-width:500px">
+          <label class="form-label" for="nc-body-part">Body Part / Region</label>
+          <input class="form-control" type="text" id="nc-body-part"
+            placeholder="e.g. Brain, Lumbar spine, Right knee, Abdomen &amp; pelvis" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Section 3: Preferred Language ── -->
+    <div class="card mb-4">
+      <div class="nc-section-header">
+        <div class="nc-section-num">3</div>
+        <div class="nc-section-title">Patient's Preferred Language</div>
+      </div>
+      <div class="nc-section-body">
+        <div class="lang-btn-group">
+          <button class="lang-btn selected" data-lang="en" onclick="selectLanguage('en')">
+            <span class="lang-flag">🇬🇧</span>
+            <span class="lang-code">English</span>
+          </button>
+          <button class="lang-btn" data-lang="yo" onclick="selectLanguage('yo')">
+            <span class="lang-flag">🟢</span>
+            <span class="lang-code">Yorùbá</span>
+            <span class="lang-phase">EN only</span>
+          </button>
+          <button class="lang-btn" data-lang="ig" onclick="selectLanguage('ig')">
+            <span class="lang-flag">🔴</span>
+            <span class="lang-code">Igbo</span>
+            <span class="lang-phase">EN only</span>
+          </button>
+          <button class="lang-btn" data-lang="ha" onclick="selectLanguage('ha')">
+            <span class="lang-flag">🔵</span>
+            <span class="lang-code">Hausa</span>
+            <span class="lang-phase">EN only</span>
+          </button>
+        </div>
+        <p class="form-hint mt-3">
+          The selected language is recorded on the consent record.
+          All Phase 1 content is displayed in English.
+        </p>
+      </div>
+    </div>
+
+    <!-- ── Section 4: Consent Mode ── -->
+    <div class="card mb-6">
+      <div class="nc-section-header">
+        <div class="nc-section-num">4</div>
+        <div class="nc-section-title">Consent Mode</div>
+      </div>
+      <div class="nc-section-body">
+        <div class="consent-mode-grid">
+
+          <div class="consent-mode-card selected" data-mode="assisted"
+            onclick="selectConsentMode('assisted')">
+            <div class="consent-mode-default">Default</div>
+            <div class="consent-mode-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div class="consent-mode-name">Staff-Assisted</div>
+            <div class="consent-mode-desc">
+              A radiographer or nurse guides the patient through the form.
+              Recommended for most patients.
+            </div>
+          </div>
+
+          <div class="consent-mode-card" data-mode="self-service"
+            onclick="selectConsentMode('self-service')">
+            <div class="consent-mode-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div class="consent-mode-name">Patient Self-Service</div>
+            <div class="consent-mode-desc">
+              The patient completes the form independently on a tablet or screen.
+              Suitable for tech-comfortable patients.
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Submit ── -->
+    <div class="nc-submit-row">
+      <p class="text-muted text-sm">
+        Fields marked <span class="text-danger font-semibold">*</span> are required to continue
+      </p>
+      <button id="nc-submit-btn" class="btn btn-primary btn-lg" disabled
+        onclick="submitNewConsent()">
+        Start Consent Workflow →
+      </button>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MRI SAFETY SCREENING — STEP MACHINE
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Step definitions ─────────────────────────────────────── */
+const SCR_STEPS = [
+  // D1 — Cardiac & Vascular
+  {
+    id: 'd1_main', domain: 1, domainName: 'Cardiac & Vascular', type: 'yesno',
+    question: 'Do you have any device implanted in or around your heart or blood vessels?',
+    hint: 'This includes pacemakers, ICDs, stents, heart valves, and similar devices.',
+    options: null, showIf: null,
+  },
+  {
+    id: 'd1_type', domain: 1, domainName: 'Cardiac & Vascular', type: 'multicheck',
+    question: 'Which cardiac or vascular device(s) do you have?',
+    hint: 'Select all that apply.',
+    showIf: (a) => a.d1_main === 'yes',
+    options: [
+      { id: 'pacemaker_unknown',    label: 'Pacemaker / ICD — type unknown',                    tier: 'tier2', tierLabel: 'Tier 2' },
+      { id: 'pacemaker_non_mr',     label: 'Pacemaker / ICD — confirmed NOT MR-conditional',    tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'pacemaker_mr_cond',    label: 'Pacemaker / ICD — confirmed MR-conditional',        tier: 'tier2', tierLabel: 'Tier 2' },
+      { id: 'cardiac_monitor',      label: 'Implanted cardiac monitor (loop recorder)',          tier: 'tier2', tierLabel: 'Tier 2' },
+      { id: 'coronary_stent',       label: 'Coronary stent',                                    tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
+      { id: 'heart_valve',          label: 'Prosthetic heart valve',                            tier: 'tier2', tierLabel: 'Tier 2' },
+      { id: 'vascular_coil',        label: 'Vascular coil, clip, or stent graft',               tier: 'tier2', tierLabel: 'Tier 2' },
+    ],
+  },
+
+  // D2 — Neurological
+  {
+    id: 'd2_main', domain: 2, domainName: 'Neurological', type: 'yesno',
+    question: 'Do you have any implant inside your skull, spine, or nervous system?',
+    hint: 'Includes cochlear implants, brain stimulators, aneurysm clips, and spinal cord stimulators.',
+    options: null, showIf: null,
+  },
+  {
+    id: 'd2_type', domain: 2, domainName: 'Neurological', type: 'multicheck',
+    question: 'Which neurological implant(s) do you have?',
+    hint: 'Select all that apply.',
+    showIf: (a) => a.d2_main === 'yes',
+    options: [
+      { id: 'cochlear_unknown',    label: 'Cochlear implant — type unknown',                   tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'cochlear_mr_cond',    label: 'Cochlear implant — confirmed MR-conditional',       tier: 'tier2', tierLabel: 'Tier 2' },
+      { id: 'deep_brain_stim',     label: 'Deep brain stimulator (DBS)',                       tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'aneurysm_unknown',    label: 'Aneurysm / surgical clip — type unknown',           tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'aneurysm_mr_safe',    label: 'Aneurysm clip — confirmed MR-safe',                tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
+      { id: 'spinal_cord_stim',    label: 'Spinal cord stimulator (SCS)',                      tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'vp_shunt',            label: 'CSF / VP shunt',                                    tier: 'tier2', tierLabel: 'Tier 2' },
+    ],
+  },
+
+  // D3 — Ocular
+  {
+    id: 'd3_main', domain: 3, domainName: 'Ocular', type: 'yesno',
+    question: 'Have you ever had metal enter your eye from welding, grinding, or machining?',
+    hint: 'Even small metallic particles can be dangerous in an MRI scanner.',
+    options: null, showIf: null,
+  },
+  {
+    id: 'd3_xray', domain: 3, domainName: 'Ocular', type: 'radio',
+    question: 'Was the metallic foreign body cleared by X-ray or scan?',
+    hint: 'Cleared means a radiologist confirmed no residual metallic fragment was present.',
+    showIf: (a) => a.d3_main === 'yes',
+    options: [
+      { id: 'cleared',   label: 'Yes — cleared by X-ray or scan', tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
+      { id: 'not_cleared', label: 'No, or unsure', tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+    ],
+  },
+
+  // D4 — Orthopaedic
+  {
+    id: 'd4_main', domain: 4, domainName: 'Orthopaedic', type: 'yesno',
+    question: 'Do you have any metal implants from orthopaedic surgery?',
+    hint: 'Includes joint replacements, screws, plates, rods, or fixation devices.',
+    options: null, showIf: null,
+  },
+  {
+    id: 'd4_timing', domain: 4, domainName: 'Orthopaedic', type: 'radio',
+    question: 'How long ago was the orthopaedic surgery?',
+    hint: 'Recent implants may not be fully integrated with surrounding tissue.',
+    showIf: (a) => a.d4_main === 'yes',
+    options: [
+      { id: 'lt6wks', label: 'Less than 6 weeks ago', desc: 'Recent surgery', tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+      { id: 'gt6wks', label: 'More than 6 weeks ago', desc: 'Well-established implant', tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
+    ],
+  },
+
+  // D5 — Other Implanted Devices
+  {
+    id: 'd5_main', domain: 5, domainName: 'Other Implanted Devices', type: 'yesno',
+    question: 'Do you have any other implanted device not already mentioned?',
+    hint: 'Includes insulin pumps, IUDs, infusion ports, and drug pumps.',
+    options: null, showIf: null,
+  },
+  {
+    id: 'd5_type', domain: 5, domainName: 'Other Implanted Devices', type: 'multicheck',
+    question: 'Which other implanted device(s) do you have?',
+    hint: 'Select all that apply.',
+    showIf: (a) => a.d5_main === 'yes',
+    options: [
+      { id: 'insulin_pump',  label: 'Insulin pump',          tier: 'tier2', tierLabel: 'Tier 2' },
+      { id: 'copper_iud',    label: 'Copper IUD',            tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
+      { id: 'hormonal_iud',  label: 'Hormonal IUD',          tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
+      { id: 'infusion_port', label: 'Infusion port',         tier: 'tier2', tierLabel: 'Tier 2' },
+      { id: 'drug_pump',     label: 'Implanted drug pump',   tier: 'tier2', tierLabel: 'Tier 2' },
+    ],
+  },
+
+  // D6 — Renal Function (contrast only)
+  {
+    id: 'd6_main', domain: 6, domainName: 'Renal Function', type: 'yesno',
+    question: 'Do you have any history of kidney disease, or are you currently on dialysis?',
+    hint: 'Gadolinium contrast may be restricted in patients with reduced renal function.',
+    options: null, showIf: (_, c) => c.modality === 'mri_with_gadolinium',
+  },
+  {
+    id: 'd6_type', domain: 6, domainName: 'Renal Function', type: 'multicheck',
+    question: 'Which renal condition(s) apply to you?',
+    hint: 'Select all that apply.',
+    showIf: (a, c) => a.d6_main === 'yes' && c.modality === 'mri_with_gadolinium',
+    options: [
+      { id: 'dialysis',       label: 'Currently on dialysis',              tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'ckd',            label: 'CKD or reduced kidney function',     tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+      { id: 'single_kidney',  label: 'Single kidney',                      tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+    ],
+  },
+
+  // D7 — Allergy History (contrast only)
+  {
+    id: 'd7_main', domain: 7, domainName: 'Allergy History', type: 'yesno',
+    question: 'Have you ever had a reaction to contrast dye (contrast medium)?',
+    hint: 'Tell us about any past reaction, even if it seemed minor.',
+    options: null, showIf: (_, c) => c.modality === 'mri_with_gadolinium',
+  },
+  {
+    id: 'd7_severity', domain: 7, domainName: 'Allergy History', type: 'radio',
+    question: 'How severe was your contrast reaction?',
+    showIf: (a, c) => a.d7_main === 'yes' && c.modality === 'mri_with_gadolinium',
+    options: [
+      { id: 'mild',     label: 'Mild',     desc: 'Nausea, warmth, flushing',             tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
+      { id: 'moderate', label: 'Moderate', desc: 'Hives, vomiting, significant distress', tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+      { id: 'severe',   label: 'Severe',   desc: 'Difficulty breathing, collapse',        tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+    ],
+  },
+
+  // D8 — Pregnancy (female only)
+  {
+    id: 'd8_main', domain: 8, domainName: 'Pregnancy', type: 'yesno',
+    question: 'Is there any possibility you could be pregnant?',
+    hint: 'MRI is generally avoided in early pregnancy unless the benefit outweighs the risk.',
+    options: null, showIf: (_, c) => c.patient?.gender === 'female',
+  },
+  {
+    id: 'd8_trimester', domain: 8, domainName: 'Pregnancy', type: 'radio',
+    question: 'How far along is the pregnancy?',
+    showIf: (a, c) => a.d8_main === 'yes' && c.patient?.gender === 'female',
+    options: [
+      { id: 'first_or_unsure', label: 'First trimester, or unsure', desc: 'Up to 12 weeks / not confirmed', tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+      { id: 'second_third',    label: 'Second or third trimester',  desc: '12 weeks or beyond',             tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+    ],
+  },
+
+  // D9 — Claustrophobia
+  {
+    id: 'd9_main', domain: 9, domainName: 'Claustrophobia', type: 'yesno',
+    question: 'Do you experience severe claustrophobia in enclosed spaces?',
+    options: null, showIf: null,
+  },
+  {
+    id: 'd9_prior_fail', domain: 9, domainName: 'Claustrophobia', type: 'radio',
+    question: 'Have you previously been unable to complete an MRI scan because of claustrophobia?',
+    showIf: (a) => a.d9_main === 'yes',
+    options: [
+      { id: 'yes', label: 'Yes — scan was abandoned', tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+      { id: 'no',  label: 'No — I managed before',   tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+    ],
+  },
+
+  // D10 — Surgical History
+  {
+    id: 'd10_main', domain: 10, domainName: 'Surgical History', type: 'yesno',
+    question: 'Have you ever had any surgery anywhere on your body?',
+    hint: 'Undocumented implants may have been placed during prior operations.',
+    options: null, showIf: null,
+  },
+
+  // D11 — Tattoos & Piercings
+  {
+    id: 'd11_main', domain: 11, domainName: 'Tattoos & Permanent Make-up', type: 'yesno',
+    question: 'Do you have any permanent tattoos or permanent make-up?',
+    hint: 'Some tattoo inks contain metallic pigments that can react to MRI fields.',
+    options: null, showIf: null,
+  },
+
+  // D12 — Transdermal Patches
+  {
+    id: 'd12_main', domain: 12, domainName: 'Transdermal Patches', type: 'yesno',
+    question: 'Are you currently wearing any stick-on medication patches on your skin?',
+    hint: 'Some patches contain metallic backing and must be removed before scanning.',
+    options: null, showIf: null,
+  },
+];
+
+/* ── Build active step list for this consent ──────────────── */
+function mriScrBuildSteps(consent, answers) {
+  return SCR_STEPS.filter(s => !s.showIf || s.showIf(answers, consent));
+}
+
+/* ── Initialise / reset for a new consent session ──────────── */
+function mriScrInit(consent) {
+  if (mriScrState.consent?.id === consent.id) return; // already initialised
+  mriScrState = {
+    consent,
+    answers : {},
+    stepIdx : 0,
+    steps   : mriScrBuildSteps(consent, {}),
+  };
+}
+
+/* ── Recompute active steps after each answer ──────────────── */
+function mriScrRefreshSteps() {
+  const { consent, answers, stepIdx, steps } = mriScrState;
+  const newSteps = mriScrBuildSteps(consent, answers);
+  // Preserve current position: find index of current step id in new list
+  const curId = steps[stepIdx]?.id;
+  const newIdx = curId ? Math.max(0, newSteps.findIndex(s => s.id === curId)) : stepIdx;
+  mriScrState.steps   = newSteps;
+  mriScrState.stepIdx = Math.min(newIdx, newSteps.length - 1);
+}
+
+/* ── Record answer and advance ─────────────────────────────── */
+function mriScrAnswer(stepId, value) {
+  mriScrState.answers[stepId] = value;
+  mriScrRefreshSteps();
+  mriScrState.stepIdx++;
+  render();
+}
+
+/* ── Multicheck: read all checked boxes then advance ─────────  */
+function mriScrMultiNext(stepId) {
+  const boxes = document.querySelectorAll(`[data-scr-check="${stepId}"]:checked`);
+  const vals  = Array.from(boxes).map(b => b.value);
+  if (vals.length === 0) { toast('Please select at least one option.', 'warning'); return; }
+  mriScrState.answers[stepId] = vals;
+  mriScrRefreshSteps();
+  mriScrState.stepIdx++;
+  render();
+}
+
+/* ── Go back one step ──────────────────────────────────────── */
+function mriScrBack() {
+  if (mriScrState.stepIdx > 0) {
+    mriScrState.stepIdx--;
+    render();
+  } else {
+    navigate('new-consent');
+  }
+}
+
+/* ── Compute tier flags + structured screening object ─────── */
+function mriScrComputeResults() {
+  const { answers, consent } = mriScrState;
+  const tier1 = [], tier2 = [], tier3 = [];
+
+  function flag(tier, key) {
+    if (tier === 'tier1') tier1.push(key);
+    else if (tier === 'tier2') tier2.push(key);
+    else tier3.push(key);
+  }
+
+  // D1 — Cardiac
+  const d1types = answers.d1_type || [];
+  if (d1types.includes('pacemaker_unknown'))  flag('tier2', 'pacemaker_unknown_mr_status');
+  if (d1types.includes('pacemaker_non_mr'))   flag('tier1', 'non_mr_conditional_pacemaker');
+  if (d1types.includes('pacemaker_mr_cond'))  flag('tier2', 'mr_conditional_pacemaker');
+  if (d1types.includes('cardiac_monitor'))    flag('tier2', 'implanted_cardiac_monitor');
+  if (d1types.includes('coronary_stent'))     flag('tier3', 'coronary_stent');
+  if (d1types.includes('heart_valve'))        flag('tier2', 'prosthetic_heart_valve');
+  if (d1types.includes('vascular_coil'))      flag('tier2', 'vascular_coil_clip_stent_graft');
+
+  const hasPacemaker = d1types.some(t => t.startsWith('pacemaker'));
+  const hasICD       = d1types.some(t => t.startsWith('pacemaker_non_mr') || t.startsWith('pacemaker_mr_cond') || t.startsWith('pacemaker_unknown'));
+  const pacemakerStatus = d1types.includes('pacemaker_non_mr') ? 'non_mr_conditional'
+                        : d1types.includes('pacemaker_mr_cond') ? 'mr_conditional'
+                        : d1types.includes('pacemaker_unknown') ? 'unknown' : null;
+
+  const cardiac = {
+    hasPacemaker           : d1types.some(t => t.startsWith('pacemaker')),
+    pacemakerMRStatus      : pacemakerStatus,
+    hasICD                 : false,
+    icdMRStatus            : null,
+    hasCardiacMonitor      : d1types.includes('cardiac_monitor'),
+    hasCoronaryStent       : d1types.includes('coronary_stent'),
+    hasHeartValve          : d1types.includes('heart_valve'),
+    hasVascularClipsCoils  : d1types.includes('vascular_coil'),
+  };
+
+  // D2 — Neurological
+  const d2types = answers.d2_type || [];
+  if (d2types.includes('cochlear_unknown'))  flag('tier1', 'cochlear_implant_unknown');
+  if (d2types.includes('cochlear_mr_cond'))  flag('tier2', 'mr_conditional_cochlear_implant');
+  if (d2types.includes('deep_brain_stim'))   flag('tier1', 'deep_brain_stimulator');
+  if (d2types.includes('aneurysm_unknown'))  flag('tier1', 'aneurysm_clip_unknown');
+  if (d2types.includes('aneurysm_mr_safe'))  flag('tier3', 'aneurysm_clip_mr_safe');
+  if (d2types.includes('spinal_cord_stim'))  flag('tier1', 'spinal_cord_stimulator');
+  if (d2types.includes('vp_shunt'))          flag('tier2', 'csf_vp_shunt');
+
+  const neurological = {
+    hasCochlearImplant       : d2types.some(t => t.startsWith('cochlear')),
+    cochlearImplantType      : d2types.includes('cochlear_mr_cond') ? 'mr_conditional' : d2types.includes('cochlear_unknown') ? 'unknown' : null,
+    hasDeepBrainStimulator   : d2types.includes('deep_brain_stim'),
+    hasAneurysmClip          : d2types.some(t => t.startsWith('aneurysm')),
+    aneurysmClipType         : d2types.includes('aneurysm_mr_safe') ? 'mr_safe' : d2types.includes('aneurysm_unknown') ? 'unknown' : null,
+    hasSpinalCordStimulator  : d2types.includes('spinal_cord_stim'),
+    hasVPShunt               : d2types.includes('vp_shunt'),
+  };
+
+  // D3 — Ocular
+  const d3yes  = answers.d3_main === 'yes';
+  const d3xray = answers.d3_xray;
+  if (d3yes) {
+    if (d3xray === 'cleared')     flag('tier3', 'ocular_foreign_body_cleared');
+    else if (d3xray === 'not_cleared') flag('tier1', 'metallic_ocular_foreign_body');
+  }
+  const ocular = {
+    hasWeldingGrindingHistory : d3yes,
+    hasMetallicForeignBody    : d3yes,
+    foreignBodyClearedByXray  : d3yes ? (d3xray === 'cleared') : null,
+  };
+
+  // D4 — Orthopaedic
+  const d4yes    = answers.d4_main === 'yes';
+  const d4timing = answers.d4_timing;
+  if (d4yes) {
+    if (d4timing === 'lt6wks') flag('tier2', 'orthopaedic_hardware_under_6_weeks');
+    else                       flag('tier3', 'orthopaedic_hardware_over_6_weeks');
+  }
+  const orthopaedic = {
+    hasJointReplacement  : false,
+    hasScrewsPlatesRods  : d4yes,
+    surgeryDescription   : null,
+    isLessThan6WeeksAgo  : d4yes ? (d4timing === 'lt6wks') : null,
+  };
+
+  // D5 — Other implants
+  const d5types = answers.d5_type || [];
+  if (d5types.includes('insulin_pump'))  flag('tier2', 'insulin_pump');
+  if (d5types.includes('copper_iud'))    flag('tier3', 'copper_iud');
+  if (d5types.includes('hormonal_iud'))  flag('tier3', 'hormonal_iud');
+  if (d5types.includes('infusion_port')) flag('tier2', 'infusion_port');
+  if (d5types.includes('drug_pump'))     flag('tier2', 'drug_pump');
+
+  const iudType = d5types.includes('copper_iud') ? 'copper' : d5types.includes('hormonal_iud') ? 'hormonal' : null;
+  const otherImplants = {
+    hasInsulinPump   : d5types.includes('insulin_pump'),
+    hasIUD           : d5types.some(t => t.includes('iud')),
+    iudType,
+    hasInfusionPort  : d5types.includes('infusion_port'),
+    hasPenileImplant : false,
+    hasDrugPump      : d5types.includes('drug_pump'),
+  };
+
+  // D6 — Renal
+  const d6types = answers.d6_type || [];
+  if (d6types.includes('dialysis'))      flag('tier1', 'on_dialysis');
+  if (d6types.includes('ckd'))           flag('tier2', 'ckd_reduced_renal_function');
+  if (d6types.includes('single_kidney')) flag('tier2', 'single_kidney');
+
+  const renal = {
+    onDialysis    : d6types.includes('dialysis'),
+    hasCKD        : d6types.includes('ckd'),
+    ckdStage      : null,
+    hasSingleKidney: d6types.includes('single_kidney'),
+  };
+
+  // D7 — Allergy
+  const d7sev = answers.d7_severity;
+  if (d7sev === 'mild')     flag('tier3', 'prior_mild_contrast_reaction');
+  if (d7sev === 'moderate') flag('tier2', 'prior_moderate_contrast_reaction');
+  if (d7sev === 'severe')   flag('tier1', 'prior_severe_contrast_reaction');
+
+  const allergy = {
+    hasPriorContrastReaction : answers.d7_main === 'yes',
+    reactionSeverity         : d7sev || null,
+  };
+
+  // D8 — Pregnancy
+  const d8yes      = answers.d8_main === 'yes';
+  const d8trimester = answers.d8_trimester;
+  if (d8yes) {
+    const flagKey = (consent.modality === 'mri_with_gadolinium' && d8trimester === 'first_or_unsure')
+      ? 'first_trimester_pregnancy_with_gadolinium'
+      : 'pregnancy';
+    flag('tier2', flagKey);
+  }
+  const pregnancy = {
+    isPossiblyPregnant : consent.patient?.gender === 'female' ? d8yes : null,
+    trimester          : d8yes ? (d8trimester === 'first_or_unsure' ? 1 : 2) : null,
+    isBreastfeeding    : null,
+  };
+
+  // D9 — Claustrophobia
+  if (answers.d9_main === 'yes') flag('tier2', 'claustrophobia');
+  const claustrophobia = {
+    hasClaustrophobia  : answers.d9_main === 'yes',
+    severity           : answers.d9_main === 'yes' ? 'severe' : null,
+    hadPriorMRIFailure : answers.d9_prior_fail === 'yes',
+  };
+
+  // D10 — Surgical
+  if (answers.d10_main === 'yes') flag('tier3', 'prior_surgery_undocumented_implants');
+  const surgical = {
+    hadPriorSurgery : answers.d10_main === 'yes',
+    surgeryDetails  : null,
+  };
+
+  // D11 — Tattoos
+  if (answers.d11_main === 'yes') flag('tier3', 'permanent_tattoos_or_makeup');
+  const tattoosPiercings = {
+    hasPermanentTattoos      : answers.d11_main === 'yes',
+    hasNonRemovablePiercings : false,
+  };
+
+  // D12 — Transdermal patches
+  if (answers.d12_main === 'yes') flag('tier3', 'transdermal_medication_patch');
+  const transdermalPatches = {
+    hasTransdermalPatch : answers.d12_main === 'yes',
+    patchDetails        : null,
+  };
+
+  const screening = { cardiac, neurological, ocular, orthopaedic, otherImplants, renal, allergy, pregnancy, claustrophobia, surgical, tattoosPiercings, transdermalPatches };
+  return { tier1, tier2, tier3, screening };
+}
+
+/* ── Human-readable flag labels ──────────────────────────────  */
+const SCR_FLAG_LABELS = {
+  // T1
+  non_mr_conditional_pacemaker         : 'Pacemaker/ICD — NOT MR-conditional',
+  cochlear_implant_unknown             : 'Cochlear implant — type unknown',
+  deep_brain_stimulator                : 'Deep brain stimulator',
+  aneurysm_clip_unknown                : 'Aneurysm clip — type unknown',
+  spinal_cord_stimulator               : 'Spinal cord stimulator',
+  metallic_ocular_foreign_body         : 'Metallic ocular foreign body (uncleared)',
+  on_dialysis                          : 'Currently on dialysis',
+  prior_severe_contrast_reaction       : 'Prior severe contrast reaction',
+  // T2
+  pacemaker_unknown_mr_status          : 'Pacemaker/ICD — MR status unknown',
+  mr_conditional_pacemaker             : 'MR-conditional pacemaker/ICD',
+  implanted_cardiac_monitor            : 'Implanted cardiac monitor',
+  prosthetic_heart_valve               : 'Prosthetic heart valve',
+  vascular_coil_clip_stent_graft       : 'Vascular coil / clip / stent graft',
+  mr_conditional_cochlear_implant      : 'MR-conditional cochlear implant',
+  csf_vp_shunt                         : 'CSF / VP shunt',
+  orthopaedic_hardware_under_6_weeks   : 'Orthopaedic hardware < 6 weeks post-op',
+  insulin_pump                         : 'Insulin pump',
+  infusion_port                        : 'Infusion port',
+  drug_pump                            : 'Implanted drug pump',
+  ckd_reduced_renal_function           : 'CKD / reduced renal function',
+  single_kidney                        : 'Single kidney',
+  prior_moderate_contrast_reaction     : 'Prior moderate contrast reaction',
+  pregnancy                            : 'Possible pregnancy',
+  first_trimester_pregnancy_with_gadolinium : 'Possible first-trimester pregnancy + gadolinium',
+  claustrophobia                        : 'Severe claustrophobia',
+  // T3
+  coronary_stent                        : 'Coronary stent',
+  aneurysm_clip_mr_safe                 : 'MR-safe aneurysm clip',
+  ocular_foreign_body_cleared           : 'Prior ocular foreign body (cleared by X-ray)',
+  orthopaedic_hardware_over_6_weeks     : 'Orthopaedic hardware > 6 weeks post-op',
+  copper_iud                            : 'Copper IUD',
+  hormonal_iud                          : 'Hormonal IUD',
+  prior_mild_contrast_reaction          : 'Prior mild contrast reaction',
+  prior_surgery_undocumented_implants   : 'Prior surgery — undocumented implant risk',
+  permanent_tattoos_or_makeup           : 'Permanent tattoos or make-up',
+  transdermal_medication_patch          : 'Transdermal medication patch',
+};
+
+/* ── Submit screening results to backend ─────────────────────  */
+async function mriScrSubmit() {
+  const btn = document.getElementById('scr-submit-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Saving…`; }
+
+  const { screening, tier1, tier2, tier3 } = mriScrComputeResults();
+  const consent = mriScrState.consent;
+
+  try {
+    const updated = await api('PUT', `/consents/${consent.id}/screening`, {
+      screening,
+      tierFlags: { tier1, tier2, tier3 },
+    });
+    if (!updated) return;
+    // Reset state so next visit to same page re-inits
+    mriScrState.consent = null;
+    navigate('consent-declaration', { consent: updated });
+  } catch (err) {
+    toast(err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Proceed to Consent Declaration →'; }
+  }
+}
+
+/* ── Render helper: one question step ────────────────────────  */
+function renderMriStep(step, stepNum, totalSteps) {
+  const pct = Math.round((stepNum / totalSteps) * 100);
+
+  const progressBar = `
+    <div class="scr-progress-wrap">
+      <div class="scr-step-label">
+        <span>Domain ${step.domain} — ${esc(step.domainName)}</span>
+        <span>Step ${stepNum} of ${totalSteps}</span>
+      </div>
+      <div class="scr-progress-bar"><div class="scr-progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+
+  let body = '';
+
+  if (step.type === 'yesno') {
+    body = `
+      <div class="scr-question">${esc(step.question)}</div>
+      ${step.hint ? `<div class="scr-question-hint">${esc(step.hint)}</div>` : ''}
+      <div class="scr-choice-grid two-col">
+        <button class="scr-choice-btn" onclick="mriScrAnswer('${step.id}','yes')">
+          <span class="scr-choice-label">Yes</span>
+        </button>
+        <button class="scr-choice-btn" onclick="mriScrAnswer('${step.id}','no')">
+          <span class="scr-choice-label">No</span>
+        </button>
+      </div>`;
+
+  } else if (step.type === 'radio') {
+    const opts = step.options.map(o => `
+      <button class="scr-choice-btn" onclick="mriScrAnswer('${step.id}','${o.id}')">
+        <span class="scr-choice-label">${esc(o.label)}</span>
+        ${o.desc ? `<span class="scr-choice-desc">${esc(o.desc)}</span>` : ''}
+        <span class="scr-choice-desc" style="margin-top:4px">${esc(o.tierLabel)}</span>
+      </button>`).join('');
+    body = `
+      <div class="scr-question">${esc(step.question)}</div>
+      ${step.hint ? `<div class="scr-question-hint">${esc(step.hint)}</div>` : ''}
+      <div class="scr-choice-grid">${opts}</div>`;
+
+  } else if (step.type === 'multicheck') {
+    const opts = step.options.map(o => `
+      <label class="scr-check-option">
+        <input type="checkbox" value="${o.id}" data-scr-check="${step.id}">
+        <div class="scr-check-option-text">
+          <div class="scr-check-label">${esc(o.label)}</div>
+          <div class="scr-check-tier">${esc(o.tierLabel)}</div>
+        </div>
+      </label>`).join('');
+    body = `
+      <div class="scr-question">${esc(step.question)}</div>
+      ${step.hint ? `<div class="scr-question-hint">${esc(step.hint)}</div>` : ''}
+      <div class="scr-check-list">${opts}</div>
+      <div class="scr-continue-row">
+        <button class="btn btn-secondary btn-sm" onclick="mriScrBack()">← Back</button>
+        <button class="btn btn-primary" onclick="mriScrMultiNext('${step.id}')">Continue →</button>
+      </div>`;
+  }
+
+  return `${progressBar}<div class="card"><div class="card-body" style="padding:28px">${body}</div></div>`;
+}
+
+/* ── Render results page ─────────────────────────────────────  */
+function renderMriResults() {
+  const { tier1, tier2, tier3, screening } = mriScrComputeResults();
+  const consent = mriScrState.consent;
+
+  // Overall tier
+  const overallTier = tier1.length > 0 ? 1 : tier2.length > 0 ? 2 : tier3.length > 0 ? 3 : 0;
+  const overallBadge = overallTier === 0 ? `<span class="badge badge-green">Clear — No flags</span>`
+    : overallTier === 1 ? `<span class="badge badge-tier1">Tier 1 — Absolute Contraindication</span>`
+    : overallTier === 2 ? `<span class="badge badge-tier2">Tier 2 — Radiologist Review Required</span>`
+    : `<span class="badge badge-tier3">Tier 3 — Awareness Flags Only</span>`;
+
+  // Alert banner
+  let alertHtml = '';
+  if (overallTier === 1) {
+    alertHtml = `<div class="scr-alert scr-alert-tier1">${IC.warning}
+      <div><div class="scr-alert-title">Procedure cannot proceed without radiologist sign-off</div>
+      <div class="scr-alert-body">One or more absolute contraindications were identified. The MRI scan must not proceed until a radiologist has reviewed this record and provided written authorisation.</div>
+      </div></div>`;
+  } else if (overallTier === 2) {
+    alertHtml = `<div class="scr-alert scr-alert-tier2">${IC.warning}
+      <div><div class="scr-alert-title">Radiologist review required before procedure commences</div>
+      <div class="scr-alert-body">One or more conditional risk factors were identified. The radiologist must review and approve this record before the procedure may proceed.</div>
+      </div></div>`;
+  } else {
+    alertHtml = `<div class="scr-alert scr-alert-clear">${IC.check}
+      <div><div class="scr-alert-title">${overallTier === 0 ? 'No safety concerns identified' : 'Awareness flags noted — no contraindications'}</div>
+      <div class="scr-alert-body">${overallTier === 0 ? 'The patient has no identified MRI safety flags. The procedure may proceed.' : 'The flagged items are noted for awareness. No contraindication to MRI was identified.'}</div>
+      </div></div>`;
+  }
+
+  // Flag list
+  function flagGroup(tierKey, tierNum, label) {
+    const arr = tierKey === 'tier1' ? tier1 : tierKey === 'tier2' ? tier2 : tier3;
+    if (!arr.length) return '';
+    const items = arr.map(f => `
+      <div class="scr-flag-item">
+        <span class="badge badge-tier${tierNum}" style="flex-shrink:0">${label}</span>
+        ${esc(SCR_FLAG_LABELS[f] || f)}
+      </div>`).join('');
+    return `<div class="scr-flag-group">
+      <div class="scr-flag-group-title">${label} Flags</div>
+      ${items}
+    </div>`;
+  }
+
+  const flagsHtml = (tier1.length + tier2.length + tier3.length) === 0
+    ? `<p class="text-sm" style="color:var(--c-text-muted);padding:8px 0">No flags raised.</p>`
+    : flagGroup('tier1', 1, 'Tier 1') + flagGroup('tier2', 2, 'Tier 2') + flagGroup('tier3', 3, 'Tier 3');
+
+  const totalFlags = tier1.length + tier2.length + tier3.length;
+  const now = new Date().toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  return `
+    <div class="card mb-4">
+      <div class="card-header">
+        <h3>${IC.shield}&nbsp; Screening Results</h3>
+        ${overallBadge}
+      </div>
+      <div class="card-body">
+        ${alertHtml}
+        <div class="divider"></div>
+        <div class="section-label">Safety Flags (${totalFlags} total)</div>
+        ${flagsHtml}
+        <div class="divider"></div>
+        <div class="section-label">Summary</div>
+        <div class="scr-meta-grid">
+          <div class="scr-meta-item"><div class="scr-meta-label">Patient</div><div class="scr-meta-value">${esc(consent.patient?.name)}</div></div>
+          <div class="scr-meta-item"><div class="scr-meta-label">Modality</div><div class="scr-meta-value">${esc(MODALITY_LABELS[consent.modality] || consent.modality)}</div></div>
+          <div class="scr-meta-item"><div class="scr-meta-label">Screened</div><div class="scr-meta-value">${now}</div></div>
+          <div class="scr-meta-item"><div class="scr-meta-label">Total Flags</div><div class="scr-meta-value">${totalFlags} (${tier1.length} T1 · ${tier2.length} T2 · ${tier3.length} T3)</div></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-secondary btn-sm" onclick="mriScrBack()">← Back</button>
+        <button id="scr-submit-btn" class="btn btn-primary" onclick="mriScrSubmit()">
+          Proceed to Consent Declaration →
+        </button>
+      </div>
+    </div>`;
+}
+
+/* ── Main render function ─────────────────────────────────────  */
+function renderMriScreening() {
+  const consent = state.pageData.consent;
+  mriScrInit(consent);
+
+  const { steps, stepIdx } = mriScrState;
+  const isResults = stepIdx >= steps.length;
+
+  const subtitle = consent
+    ? esc(consent.patient?.name) + ' · ' + esc(MODALITY_LABELS[consent.modality] || consent.modality)
+    : 'New session';
+
+  const backTarget = isResults ? 'mriScrBack()' : (stepIdx === 0 ? "navigate('new-consent')" : 'mriScrBack()');
+
+  const header = `
+    <div class="page-header">
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="${backTarget}"
+          style="margin-bottom:6px;margin-left:-6px">← Back</button>
+        <div class="page-title">MRI Safety Screening</div>
+        <div class="page-subtitle">${subtitle}</div>
+      </div>
+    </div>`;
+
+  const body = isResults
+    ? renderMriResults()
+    : renderMriStep(steps[stepIdx], stepIdx + 1, steps.length + 1);
+
+  return header + body;
+}
+
+/* ── Post-submit destination placeholders (replaced in later steps) ── */
+function renderMriScreeningPlaceholder() {
+  const c = state.pageData.consent;
+  return `
+    <div class="page-header">
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')"
+          style="margin-bottom:6px;margin-left:-6px">← Back</button>
+        <div class="page-title">MRI Safety Screening</div>
+        <div class="page-subtitle">${c ? esc(c.patient?.name) + ' · ' + esc(MODALITY_LABELS[c.modality] || c.modality) : 'New session'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="empty-state">
+          ${IC.shield}
+          <h3>MRI Safety Screening</h3>
+          <p>The 12-domain screening questionnaire will be built in the next step.</p>
+          ${c ? `<p class="mt-2 text-sm"><strong>Session ID:</strong> ${esc(c.id)}</p>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONSENT DECLARATION — STAGE 1
+═══════════════════════════════════════════════════════════════ */
+
+const MODALITY_RISKS = {
+  mri_without_contrast: [
+    'The scanner produces loud repetitive knocking noises throughout the scan — ear protection will be provided.',
+    'The strong magnetic field can interact with metallic implants — this has been assessed during your safety screening.',
+    'Some patients experience mild dizziness or a feeling of warmth. If at any point you feel unwell, you can alert staff immediately.',
+    'MRI does not use ionising radiation.',
+  ],
+  mri_with_gadolinium: [
+    'The scanner produces loud repetitive knocking noises throughout the scan — ear protection will be provided.',
+    'The strong magnetic field can interact with metallic implants — this has been assessed during your safety screening.',
+    'Gadolinium contrast will be given by intravenous injection. Rare risks include mild allergic reaction (nausea, hives), and — very rarely — a severe reaction. Staff are trained to respond immediately.',
+    'In patients with severely reduced kidney function, gadolinium may cause a rare condition called NSF — your renal function has been checked during screening.',
+    'Some patients experience mild dizziness or claustrophobia. You may alert staff at any time.',
+    'MRI does not use ionising radiation.',
+  ],
+  ct_without_contrast: [
+    'CT uses a low dose of ionising X-ray radiation. The diagnostic benefit of the scan outweighs this small risk.',
+    'You will be asked to remain still and may be asked to hold your breath briefly during the scan.',
+    'Some patients experience mild discomfort lying on the scan table. Please inform staff of any pain or mobility issues.',
+  ],
+  ct_with_iv_contrast: [
+    'CT uses a low dose of ionising X-ray radiation. The diagnostic benefit outweighs this small risk.',
+    'Iodinated contrast will be given by intravenous injection. Common side effects include a warm flushing sensation and a metallic taste — both are brief and harmless.',
+    'Rare risks include allergic reaction (hives, nausea) and, very rarely, anaphylaxis. Staff are trained and equipped to respond.',
+    'Contrast may transiently affect kidney function — your renal history has been checked.',
+    'You will be asked to remain still and may be asked to hold your breath briefly.',
+  ],
+  mammography: [
+    'Mammography uses a very low dose of ionising X-ray radiation specifically calibrated for breast imaging.',
+    'Breast compression is applied during the scan to improve image quality and minimise radiation dose. This causes brief, mild discomfort — please tell the radiographer if it becomes painful.',
+    'The procedure typically takes 10–15 minutes. You will be asked to remove clothing from the waist up.',
+    'Mammography detects abnormalities but is not 100% conclusive — further imaging or tests may be recommended.',
+  ],
+};
+
+const CONSENT_TEXT = {
+  en: 'I confirm that I have read and understood the information provided about my procedure. I have had the opportunity to ask questions. I consent to the procedure described above and understand I may withdraw my consent at any time before the procedure begins.',
+  yo: 'I confirm that I have read and understood the information provided about my procedure. I have had the opportunity to ask questions. I consent to the procedure described above and understand I may withdraw my consent at any time before the procedure begins.',
+  ig: 'I confirm that I have read and understood the information provided about my procedure. I have had the opportunity to ask questions. I consent to the procedure described above and understand I may withdraw my consent at any time before the procedure begins.',
+  ha: 'I confirm that I have read and understood the information provided about my procedure. I have had the opportunity to ask questions. I consent to the procedure described above and understand I may withdraw my consent at any time before the procedure begins.',
+};
+
+function consentDeclInit(consent) {
+  if (consentDeclState.consent?.id === consent.id) return;
+  consentDeclState = {
+    consent,
+    lang        : consent.language || 'en',
+    signed      : false,
+    signedResult: null,
+  };
+}
+
+function consentDeclSetLang(lang) {
+  consentDeclState.lang = lang;
+  render();
+}
+
+function consentDeclCheckSubmit() {
+  const sig = (document.getElementById('cdecl-sig')?.value || '').trim();
+  const btn = document.getElementById('cdecl-submit-btn');
+  if (btn) btn.disabled = !sig;
+}
+
+async function consentDeclSubmit() {
+  const sig = (document.getElementById('cdecl-sig')?.value || '').trim();
+  if (!sig) { toast('Please type your full name to sign.', 'warning'); return; }
+
+  const btn = document.getElementById('cdecl-submit-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
+
+  const witnessName = (document.getElementById('cdecl-witness')?.value || '').trim();
+  const consent = consentDeclState.consent;
+
+  try {
+    const result = await api('PUT', `/consents/${consent.id}/sign`, {
+      patientSignature : sig,
+      witnessName      : witnessName || null,
+      language         : consentDeclState.lang,
+    });
+    if (!result) return;
+    consentDeclState.signed      = true;
+    consentDeclState.signedResult = result;
+    render();
+  } catch (err) {
+    toast(err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit Consent & Sign'; }
+  }
+}
+
+function renderConsentDeclaration() {
+  const consent = state.pageData.consent;
+  consentDeclInit(consent);
+
+  // ── Confirmation screen ────────────────────────────────────
+  if (consentDeclState.signed && consentDeclState.signedResult) {
+    const r   = consentDeclState.signedResult;
+    const ts  = r.stage1?.completedAt
+      ? new Date(r.stage1.completedAt).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+      : '—';
+    return `
+      <div class="page-header"><div>
+        <div class="page-title">Consent Declaration</div>
+        <div class="page-subtitle">${esc(r.patient?.name)} · ${esc(MODALITY_LABELS[r.modality] || r.modality)}</div>
+      </div></div>
+      <div class="card">
+        <div class="card-body" style="text-align:center;padding:52px 32px">
+          <div style="width:60px;height:60px;border-radius:50%;background:var(--c-success-light);border:2px solid var(--c-success-border);display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+            ${IC.check.replace('stroke="currentColor"','stroke="#16A34A" stroke-width="2.5"').replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="28" height="28"')}
+          </div>
+          <div style="font-size:19px;font-weight:700;color:var(--c-text);margin-bottom:6px">Consent Recorded</div>
+          <div style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:28px">Stage 1 complete. The patient has signed the consent declaration.</div>
+          <div style="display:inline-grid;grid-template-columns:auto auto;gap:8px 28px;text-align:left;background:var(--c-bg);border:1px solid var(--c-border);border-radius:var(--radius);padding:18px 24px;margin-bottom:32px;min-width:320px">
+            <span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px;line-height:1.8">Record ID</span>
+            <span style="font-size:12px;font-weight:500;font-family:monospace;color:var(--c-text-sec)">${esc(r.id)}</span>
+            <span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px;line-height:1.8">Signed by</span>
+            <span style="font-size:13px;font-weight:600">${esc(r.stage1?.patientSignature)}</span>
+            <span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px;line-height:1.8">Timestamp</span>
+            <span style="font-size:13px;font-weight:500">${ts}</span>
+            <span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px;line-height:1.8">Status</span>
+            <span class="badge badge-${r.status}">${esc(STATUS_LABELS[r.status] || r.status)}</span>
+          </div>
+          <div>
+            <button class="btn btn-primary btn-lg" onclick="navigate('dashboard')">Done — Return to Dashboard</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── Declaration form ───────────────────────────────────────
+  const { lang } = consentDeclState;
+  const risks       = MODALITY_RISKS[consent.modality] || [];
+  const consentText = CONSENT_TEXT[lang] || CONSENT_TEXT.en;
+  const now         = new Date().toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  return `
+    <div class="page-header">
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')"
+          style="margin-bottom:6px;margin-left:-6px">← Back</button>
+        <div class="page-title">Consent Declaration</div>
+        <div class="page-subtitle">${esc(consent.patient?.name)} · ${esc(MODALITY_LABELS[consent.modality] || consent.modality)}</div>
+      </div>
+    </div>
+
+    <!-- Card 1: Procedure information & language -->
+    <div class="card mb-4">
+      <div class="card-header"><h3>${IC.medical}&nbsp; Procedure Information</h3></div>
+      <div class="card-body">
+        <div class="form-row mb-4" style="align-items:start">
+          <div>
+            <div class="form-label">Procedure</div>
+            <div style="font-size:15px;font-weight:600;color:var(--c-text)">${esc(MODALITY_LABELS[consent.modality] || consent.modality)}</div>
+          </div>
+          ${consent.bodyPart ? `<div>
+            <div class="form-label">Body Part / Region</div>
+            <div style="font-size:15px;font-weight:600;color:var(--c-text)">${esc(consent.bodyPart)}</div>
+          </div>` : ''}
+        </div>
+
+        ${risks.length ? `<div class="divider"></div>
+        <div class="section-label">Risks &amp; What to Expect</div>
+        <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px">
+          ${risks.map(r => `<li style="font-size:13.5px;color:var(--c-text-sec);line-height:1.5">${esc(r)}</li>`).join('')}
+        </ul>` : ''}
+
+        <div class="divider"></div>
+        <div class="section-label">Language / Lugha / Asụsụ / Harshe</div>
+        <div class="lang-btn-group">
+          <button class="lang-btn${lang==='en'?' selected':''}" onclick="consentDeclSetLang('en')">
+            <span class="lang-flag">🇬🇧</span><span class="lang-code">English</span>
+          </button>
+          <button class="lang-btn${lang==='yo'?' selected':''}" onclick="consentDeclSetLang('yo')">
+            <span class="lang-flag">🟢</span><span class="lang-code">Yorùbá</span><span class="lang-phase">EN only</span>
+          </button>
+          <button class="lang-btn${lang==='ig'?' selected':''}" onclick="consentDeclSetLang('ig')">
+            <span class="lang-flag">🔴</span><span class="lang-code">Igbo</span><span class="lang-phase">EN only</span>
+          </button>
+          <button class="lang-btn${lang==='ha'?' selected':''}" onclick="consentDeclSetLang('ha')">
+            <span class="lang-flag">🔵</span><span class="lang-code">Hausa</span><span class="lang-phase">EN only</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Consent statement -->
+    <div class="card mb-4">
+      <div class="card-header"><h3>${IC.clipboard}&nbsp; Consent Statement</h3></div>
+      <div class="card-body">
+        <div style="background:var(--c-bg);border:1px solid var(--c-border);border-left:3px solid var(--c-accent);border-radius:var(--radius);padding:20px 22px;font-size:15px;line-height:1.8;color:var(--c-text)">
+          "${esc(consentText)}"
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Patient signature -->
+    <div class="card">
+      <div class="card-header"><h3>${IC.edit}&nbsp; Patient Signature</h3></div>
+      <div class="card-body">
+        <div class="form-row mb-4">
+          <div>
+            <label class="form-label" for="cdecl-sig">Full Name <span class="req">*</span></label>
+            <input class="form-control" type="text" id="cdecl-sig"
+              placeholder="Type your full name to sign" autocomplete="off"
+              oninput="consentDeclCheckSubmit()" />
+            <div class="form-hint">Typing your full name constitutes a valid electronic signature.</div>
+          </div>
+          <div>
+            <label class="form-label" for="cdecl-date">Date &amp; Time</label>
+            <input class="form-control" type="text" id="cdecl-date" value="${now}" readonly
+              style="background:var(--c-bg);color:var(--c-text-sec);cursor:default" />
+          </div>
+        </div>
+        <div>
+          <label class="form-label" for="cdecl-witness">Witnessed By <span style="font-weight:400;color:var(--c-text-muted)">(optional)</span></label>
+          <input class="form-control" type="text" id="cdecl-witness"
+            placeholder="Staff name if present during signing" autocomplete="off"
+            style="max-width:340px" />
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('dashboard')">Cancel</button>
+        <button id="cdecl-submit-btn" class="btn btn-primary" onclick="consentDeclSubmit()" disabled>
+          Submit Consent &amp; Sign
+        </button>
+      </div>
+    </div>`;
+}
+
+function renderConsentDeclarationPlaceholder() {
+  const c = state.pageData.consent;
+  return `
+    <div class="page-header">
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')"
+          style="margin-bottom:6px;margin-left:-6px">← Back</button>
+        <div class="page-title">Consent Declaration</div>
+        <div class="page-subtitle">${c ? esc(c.patient?.name) + ' · ' + esc(MODALITY_LABELS[c.modality] || c.modality) : 'New session'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="empty-state">
+          ${IC.clipboard}
+          <h3>Consent Declaration</h3>
+          <p>The consent text and patient signature form will be built in the next step.</p>
+          ${c ? `<p class="mt-2 text-sm"><strong>Session ID:</strong> ${esc(c.id)}</p>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — MAIN ENTRY POINT
+═══════════════════════════════════════════════════════════════ */
+function render() {
+  const app = document.getElementById('app');
+
+  if (!state.user || state.page === 'login') {
+    app.innerHTML = renderLogin();
+    bindLoginEvents();
+    return;
+  }
+
+  app.innerHTML = renderShell(renderPage());
+  bindPageEvents();
+}
+
+/*
+ * bindPageEvents() — called after every shell render.
+ * Add page-specific event listeners here as pages are built.
+ */
+function bindPageEvents() {
+  bindNewConsentEvents();
+  bindMriScreeningEvents();
+}
+
+function bindMriScreeningEvents() {
+  // MRI screening uses inline onclick handlers; nothing to bind dynamically.
+}
+
+function bindNewConsentEvents() {
+  const nameEl = document.getElementById('nc-name');
+  if (!nameEl) return; // not on the new-consent page
+  nameEl.addEventListener('input', updateNcSubmit);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT — Session restore from localStorage
+═══════════════════════════════════════════════════════════════ */
+(function init() {
+  const savedToken = localStorage.getItem('radconsent_token');
+  const savedUser  = localStorage.getItem('radconsent_user');
+
+  if (savedToken && savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      if (user && user.id && user.role) {
+        state.token = savedToken;
+        state.user  = user;
+        navigate('dashboard');
+        return;
+      }
+    } catch { /* malformed — fall through to login */ }
+  }
+  navigate('login');
+}());
+  </script>
+</body>
+</html>
