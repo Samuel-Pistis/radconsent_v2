@@ -866,7 +866,15 @@ body.dark {
 body.dark select,
 body.dark select option { color-scheme: dark; background: #1E293B; color: #F1F5F9; }
 body.dark input[type="checkbox"] { accent-color: var(--c-accent); }
+/* ── Signature pad ── */
+.sig-pad-wrap { border: 2px solid var(--c-border); border-radius: var(--radius); background: #fff; overflow: hidden; transition: border-color var(--t); }
+.sig-pad-wrap.sig-pad-filled { border-color: var(--c-accent); }
+#cdecl-sigpad { display: block; width: 100%; height: 160px; touch-action: none; cursor: crosshair; }
+.sig-pad-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-top: 1px solid var(--c-border); background: var(--c-bg); }
+.sig-pad-hint { font-size: 11px; color: var(--c-text-muted); font-style: italic; }
+.sig-img { display: block; border: 1px solid var(--c-border); border-radius: var(--radius); background: #fff; max-width: 320px; margin-top: 6px; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head>
 <body>
   <div id="app"></div>
@@ -935,6 +943,7 @@ let mriScrState = { steps: [], stepIdx: 0, answers: {}, consent: null };
 
 /* Consent Declaration state */
 let consentDeclState = { lang: 'en', consent: null, signed: false, signedResult: null };
+let sigPadInstance = null;
 
 /* Records archive + detail state */
 let recordsState      = { records: null, loading: false, search: '', statusFilter: 'all' };
@@ -2411,11 +2420,16 @@ function renderRecordDetail() {
       <div class="card-body">
         ${s1done ? `
           <div class="scr-meta-grid">
-            ${metaRow('Patient Signature',   esc(s1.patientSignature))}
-            ${metaRow('Signed',              fmtDateTime(s1.completedAt))}
-            ${metaRow('Witnessed By',        esc(s1.witnessName))}
-            ${metaRow('Consent Version',     esc(s1.consentVersion))}
-            ${metaRow('Screening Completed', s1.screeningCompletedAt ? fmtDateTime(s1.screeningCompletedAt) : null)}
+            ${metaRow('Patient Name (printed)',   esc(s1.patientSignature))}
+            ${metaRow('Signed',                   fmtDateTime(s1.completedAt))}
+            ${metaRow('Witnessed By',             esc(s1.witnessName))}
+            ${metaRow('Consent Version',          esc(s1.consentVersion))}
+            ${metaRow('Screening Completed',      s1.screeningCompletedAt ? fmtDateTime(s1.screeningCompletedAt) : null)}
+            ${s1.patientSignatureImage ? `
+            <div class="scr-meta-item" style="grid-column:1/-1">
+              <div class="scr-meta-label">Drawn Signature</div>
+              <img class="sig-img" src="${s1.patientSignatureImage}" alt="Patient signature" />
+            </div>` : ''}
           </div>` : pendingBanner('Patient / Staff', 'Consent declaration signature required')}
       </div>
     </div>`;
@@ -3774,27 +3788,55 @@ function consentDeclSetLang(lang) {
   render();
 }
 
+function initSigPad() {
+  const canvas = document.getElementById('cdecl-sigpad');
+  if (!canvas || typeof SignaturePad === 'undefined') return;
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  canvas.width  = canvas.offsetWidth  * ratio;
+  canvas.height = canvas.offsetHeight * ratio;
+  canvas.getContext('2d').scale(ratio, ratio);
+  sigPadInstance = new SignaturePad(canvas, {
+    penColor: '#0F172A', backgroundColor: '#ffffff', minWidth: 0.5, maxWidth: 2.5,
+  });
+  sigPadInstance.addEventListener('endStroke', () => {
+    canvas.closest('.sig-pad-wrap')?.classList.toggle('sig-pad-filled', !sigPadInstance.isEmpty());
+    consentDeclCheckSubmit();
+  });
+}
+
+function consentDeclClearSig() {
+  if (sigPadInstance) sigPadInstance.clear();
+  document.getElementById('cdecl-sigpad')?.closest('.sig-pad-wrap')?.classList.remove('sig-pad-filled');
+  consentDeclCheckSubmit();
+}
+
 function consentDeclCheckSubmit() {
-  const sig = (document.getElementById('cdecl-sig')?.value || '').trim();
-  const btn = document.getElementById('cdecl-submit-btn');
-  if (btn) btn.disabled = !sig;
+  const sig   = (document.getElementById('cdecl-sig')?.value || '').trim();
+  const padOk = sigPadInstance && !sigPadInstance.isEmpty();
+  const btn   = document.getElementById('cdecl-submit-btn');
+  if (btn) btn.disabled = !(sig && padOk);
 }
 
 async function consentDeclSubmit() {
   const sig = (document.getElementById('cdecl-sig')?.value || '').trim();
-  if (!sig) { toast('Please type your full name to sign.', 'warning'); return; }
+  if (!sig) { toast('Please print your full name to sign.', 'warning'); return; }
+  if (!sigPadInstance || sigPadInstance.isEmpty()) {
+    toast('Please draw your signature before submitting.', 'warning'); return;
+  }
 
   const btn = document.getElementById('cdecl-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
 
-  const witnessName = (document.getElementById('cdecl-witness')?.value || '').trim();
+  const witnessName          = (document.getElementById('cdecl-witness')?.value || '').trim();
+  const patientSignatureImage = sigPadInstance.toDataURL('image/png');
   const consent = consentDeclState.consent;
 
   try {
     const result = await api('PUT', `/consents/${consent.id}/sign`, {
-      patientSignature : sig,
-      witnessName      : witnessName || null,
-      language         : consentDeclState.lang,
+      patientSignature      : sig,
+      patientSignatureImage : patientSignatureImage,
+      witnessName           : witnessName || null,
+      language              : consentDeclState.lang,
     });
     if (!result) return;
     consentDeclState.signed      = true;
@@ -3837,6 +3879,9 @@ function renderConsentDeclaration() {
             <span style="font-size:13px;font-weight:500">${ts}</span>
             <span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px;line-height:1.8">Status</span>
             <span class="badge badge-${r.status}">${esc(STATUS_LABELS[r.status] || r.status)}</span>
+            ${r.stage1?.patientSignatureImage ? `
+            <span style="font-size:11px;color:var(--c-text-muted);text-transform:uppercase;letter-spacing:.5px;line-height:1.8">Signature</span>
+            <img class="sig-img" src="${r.stage1.patientSignatureImage}" alt="Patient signature" style="max-width:220px" />` : ''}
           </div>
           <div>
             <button class="btn btn-primary btn-lg" onclick="navigate('dashboard')">Done — Return to Dashboard</button>
@@ -3915,13 +3960,25 @@ function renderConsentDeclaration() {
     <div class="card">
       <div class="card-header"><h3>${IC.edit}&nbsp; Patient Signature</h3></div>
       <div class="card-body">
+        <!-- Signature pad (full width) -->
+        <div class="mb-4">
+          <div class="form-label">Draw your signature <span class="req">*</span></div>
+          <div class="sig-pad-wrap">
+            <canvas id="cdecl-sigpad"></canvas>
+            <div class="sig-pad-toolbar">
+              <span class="sig-pad-hint">Sign using mouse, finger or stylus</span>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="consentDeclClearSig()">Clear</button>
+            </div>
+          </div>
+        </div>
+        <!-- Typed name + date row -->
         <div class="form-row mb-4">
           <div>
-            <label class="form-label" for="cdecl-sig">Full Name <span class="req">*</span></label>
+            <label class="form-label" for="cdecl-sig">Print your full name <span class="req">*</span></label>
             <input class="form-control" type="text" id="cdecl-sig"
-              placeholder="Type your full name to sign" autocomplete="off"
+              placeholder="Full name (for identification)" autocomplete="off"
               oninput="consentDeclCheckSubmit()" />
-            <div class="form-hint">Typing your full name constitutes a valid electronic signature.</div>
+            <div class="form-hint">Both a drawn signature and printed name are required.</div>
             <div class="form-hint" style="margin-top:6px;font-style:italic">(Parent or Guardian on behalf of patient under 16 years of age)</div>
           </div>
           <div>
@@ -3992,6 +4049,9 @@ function render() {
 function bindPageEvents() {
   bindNewConsentEvents();
   bindMriScreeningEvents();
+  if (state.page === 'consent-declaration' && !consentDeclState.signed) {
+    initSigPad();
+  }
 }
 
 function bindMriScreeningEvents() {

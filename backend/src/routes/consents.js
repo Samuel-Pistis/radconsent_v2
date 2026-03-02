@@ -97,7 +97,7 @@ router.put('/:id/screening', (req, res) => {
 
 // PUT /api/consents/:id/sign — patient signs the consent declaration (Stage 1)
 router.put('/:id/sign', (req, res) => {
-  const { patientSignature, witnessName, language } = req.body || {};
+  const { patientSignature, patientSignatureImage, witnessName, language } = req.body || {};
   if (!patientSignature?.trim()) {
     return res.status(400).json({ error: 'Patient signature is required.' });
   }
@@ -118,11 +118,12 @@ router.put('/:id/sign', (req, res) => {
     language: lang,
     stage1  : {
       ...(existing.stage1 || {}),
-      consentVersion      : `v1.0-${lang}`,
-      consentAcknowledged : true,
-      patientSignature    : patientSignature.trim(),
-      witnessName         : witnessName || null,
-      completedAt         : now,
+      consentVersion        : `v1.0-${lang}`,
+      consentAcknowledged   : true,
+      patientSignature      : patientSignature.trim(),
+      patientSignatureImage : patientSignatureImage || null,
+      witnessName           : witnessName || null,
+      completedAt           : now,
     },
   });
   return res.json(updated);
@@ -376,6 +377,7 @@ router.get('/:id/pdf', (req, res) => {
   out += hr;
   out += line('Patient Name',      p.name);
   out += line('Patient Signature', s1.patientSignature);
+  out += line('Digital Signature', s1.patientSignatureImage ? 'Captured — image stored in system record' : 'Not captured');
   out += line('Witness',           s1.witnessName);
   out += line('Consent Version',   s1.consentVersion);
   out += line('Signed At',         fmt(s1.completedAt));
