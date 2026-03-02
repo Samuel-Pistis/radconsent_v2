@@ -873,6 +873,14 @@ body.dark input[type="checkbox"] { accent-color: var(--c-accent); }
 .sig-pad-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-top: 1px solid var(--c-border); background: var(--c-bg); }
 .sig-pad-hint { font-size: 11px; color: var(--c-text-muted); font-style: italic; }
 .sig-img { display: block; border: 1px solid var(--c-border); border-radius: var(--radius); background: #fff; max-width: 320px; margin-top: 6px; }
+/* ── Signature mode tabs ── */
+.sig-mode-tabs { display: flex; border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; width: fit-content; margin-bottom: 12px; }
+.sig-mode-tab { padding: 7px 16px; border: none; background: var(--c-surface); color: var(--c-text-sec); font-size: 13px; font-weight: 500; cursor: pointer; transition: background var(--t), color var(--t); }
+.sig-mode-tab + .sig-mode-tab { border-left: 1px solid var(--c-border); }
+.sig-mode-tab.sig-tab-active { background: var(--c-accent); color: #fff; }
+/* ── Upload area ── */
+.sig-upload-area { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 120px; border: 2px dashed var(--c-border); border-radius: var(--radius); cursor: pointer; color: var(--c-text-muted); font-size: 13.5px; transition: border-color var(--t), color var(--t), background var(--t); }
+.sig-upload-area:hover { border-color: var(--c-accent); color: var(--c-accent); background: var(--c-info-light); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head>
@@ -943,7 +951,9 @@ let mriScrState = { steps: [], stepIdx: 0, answers: {}, consent: null };
 
 /* Consent Declaration state */
 let consentDeclState = { lang: 'en', consent: null, signed: false, signedResult: null };
-let sigPadInstance = null;
+let sigPadInstance      = null;
+let sigMode             = 'draw';   // 'draw' | 'upload'
+let sigUploadedDataUrl  = null;
 
 /* Records archive + detail state */
 let recordsState      = { records: null, loading: false, search: '', statusFilter: 'all' };
@@ -3781,6 +3791,9 @@ function consentDeclInit(consent) {
     signed      : false,
     signedResult: null,
   };
+  sigMode            = 'draw';
+  sigUploadedDataUrl = null;
+  sigPadInstance     = null;
 }
 
 function consentDeclSetLang(lang) {
@@ -3791,9 +3804,10 @@ function consentDeclSetLang(lang) {
 function initSigPad() {
   const canvas = document.getElementById('cdecl-sigpad');
   if (!canvas || typeof SignaturePad === 'undefined') return;
+  if (sigPadInstance) sigPadInstance.off(); // clean up previous instance
   const ratio = Math.max(window.devicePixelRatio || 1, 1);
-  canvas.width  = canvas.offsetWidth  * ratio;
-  canvas.height = canvas.offsetHeight * ratio;
+  canvas.width  = (canvas.offsetWidth  || 600) * ratio;
+  canvas.height = (canvas.offsetHeight || 160) * ratio;
   canvas.getContext('2d').scale(ratio, ratio);
   sigPadInstance = new SignaturePad(canvas, {
     penColor: '#0F172A', backgroundColor: '#ffffff', minWidth: 0.5, maxWidth: 2.5,
@@ -3810,25 +3824,56 @@ function consentDeclClearSig() {
   consentDeclCheckSubmit();
 }
 
+function sigSwitchMode(mode) {
+  sigMode = mode;
+  document.getElementById('sig-draw-pane')?.style.setProperty('display', mode === 'draw' ? '' : 'none');
+  document.getElementById('sig-upload-pane')?.style.setProperty('display', mode === 'upload' ? '' : 'none');
+  document.getElementById('sig-tab-draw')?.classList.toggle('sig-tab-active', mode === 'draw');
+  document.getElementById('sig-tab-upload')?.classList.toggle('sig-tab-active', mode === 'upload');
+  if (mode === 'draw') initSigPad(); // re-init now that canvas is visible
+  consentDeclCheckSubmit();
+}
+
+function sigHandleUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    sigUploadedDataUrl = e.target.result;
+    const preview = document.getElementById('sig-upload-preview');
+    if (preview) { preview.src = sigUploadedDataUrl; preview.style.display = 'block'; }
+    consentDeclCheckSubmit();
+  };
+  reader.readAsDataURL(file);
+}
+
 function consentDeclCheckSubmit() {
-  const sig   = (document.getElementById('cdecl-sig')?.value || '').trim();
-  const padOk = sigPadInstance && !sigPadInstance.isEmpty();
-  const btn   = document.getElementById('cdecl-submit-btn');
-  if (btn) btn.disabled = !(sig && padOk);
+  const sig      = (document.getElementById('cdecl-sig')?.value || '').trim();
+  const sigOk    = sigMode === 'upload' ? !!sigUploadedDataUrl
+                 : (sigPadInstance && !sigPadInstance.isEmpty());
+  const btn      = document.getElementById('cdecl-submit-btn');
+  if (btn) btn.disabled = !(sig && sigOk);
 }
 
 async function consentDeclSubmit() {
   const sig = (document.getElementById('cdecl-sig')?.value || '').trim();
   if (!sig) { toast('Please print your full name to sign.', 'warning'); return; }
-  if (!sigPadInstance || sigPadInstance.isEmpty()) {
-    toast('Please draw your signature before submitting.', 'warning'); return;
+
+  let patientSignatureImage = null;
+  if (sigMode === 'upload') {
+    if (!sigUploadedDataUrl) { toast('Please upload a signature image.', 'warning'); return; }
+    patientSignatureImage = sigUploadedDataUrl;
+  } else {
+    if (!sigPadInstance || sigPadInstance.isEmpty()) {
+      toast('Please draw your signature before submitting.', 'warning'); return;
+    }
+    patientSignatureImage = sigPadInstance.toDataURL('image/png');
   }
 
   const btn = document.getElementById('cdecl-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
 
-  const witnessName          = (document.getElementById('cdecl-witness')?.value || '').trim();
-  const patientSignatureImage = sigPadInstance.toDataURL('image/png');
+  const witnessName = (document.getElementById('cdecl-witness')?.value || '').trim();
   const consent = consentDeclState.consent;
 
   try {
@@ -3960,15 +4005,32 @@ function renderConsentDeclaration() {
     <div class="card">
       <div class="card-header"><h3>${IC.edit}&nbsp; Patient Signature</h3></div>
       <div class="card-body">
-        <!-- Signature pad (full width) -->
+        <!-- Signature section with mode tabs -->
         <div class="mb-4">
-          <div class="form-label">Draw your signature <span class="req">*</span></div>
-          <div class="sig-pad-wrap">
-            <canvas id="cdecl-sigpad"></canvas>
-            <div class="sig-pad-toolbar">
-              <span class="sig-pad-hint">Sign using mouse, finger or stylus</span>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="consentDeclClearSig()">Clear</button>
+          <div class="form-label">Signature <span class="req">*</span></div>
+          <div class="sig-mode-tabs">
+            <button id="sig-tab-draw" type="button" class="sig-mode-tab${sigMode==='draw'?' sig-tab-active':''}" onclick="sigSwitchMode('draw')">&#9998; Draw</button>
+            <button id="sig-tab-upload" type="button" class="sig-mode-tab${sigMode==='upload'?' sig-tab-active':''}" onclick="sigSwitchMode('upload')">&#8593; Upload image</button>
+          </div>
+          <!-- Draw pane -->
+          <div id="sig-draw-pane"${sigMode==='upload'?' style="display:none"':''}>
+            <div class="sig-pad-wrap">
+              <canvas id="cdecl-sigpad"></canvas>
+              <div class="sig-pad-toolbar">
+                <span class="sig-pad-hint">Sign using mouse, finger or stylus</span>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="consentDeclClearSig()">Clear</button>
+              </div>
             </div>
+          </div>
+          <!-- Upload pane -->
+          <div id="sig-upload-pane"${sigMode==='draw'?' style="display:none"':''}>
+            <label class="sig-upload-area" for="sig-upload-input">
+              <span style="font-size:22px">&#8593;</span>
+              <span>Click to select a signature image</span>
+              <span style="font-size:11px">JPG, PNG or GIF accepted</span>
+            </label>
+            <input type="file" id="sig-upload-input" accept="image/*" style="display:none" onchange="sigHandleUpload(this)" />
+            ${sigUploadedDataUrl ? `<img id="sig-upload-preview" class="sig-img" src="${sigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
           </div>
         </div>
         <!-- Typed name + date row -->
@@ -4049,7 +4111,7 @@ function render() {
 function bindPageEvents() {
   bindNewConsentEvents();
   bindMriScreeningEvents();
-  if (state.page === 'consent-declaration' && !consentDeclState.signed) {
+  if (state.page === 'consent-declaration' && !consentDeclState.signed && sigMode === 'draw') {
     initSigPad();
   }
 }
