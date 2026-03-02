@@ -881,6 +881,17 @@ body.dark input[type="checkbox"] { accent-color: var(--c-accent); }
 /* ── Upload area ── */
 .sig-upload-area { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 120px; border: 2px dashed var(--c-border); border-radius: var(--radius); cursor: pointer; color: var(--c-text-muted); font-size: 13.5px; transition: border-color var(--t), color var(--t), background var(--t); }
 .sig-upload-area:hover { border-color: var(--c-accent); color: var(--c-accent); background: var(--c-info-light); }
+/* ── Topaz pad pane ── */
+.sig-topaz-pane { border: 2px solid var(--c-border); border-radius: var(--radius); padding: 16px; background: var(--c-surface); display: flex; flex-direction: column; gap: 12px; }
+.sig-topaz-status { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--c-text-sec); padding: 6px 0; }
+.sig-topaz-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c-text-muted); flex-shrink: 0; transition: background .3s; }
+.sig-topaz-dot.dot-ready     { background: #22c55e; }
+.sig-topaz-dot.dot-capturing { background: #22c55e; animation: pulse-dot 1.2s ease-in-out infinite; }
+.sig-topaz-dot.dot-captured  { background: var(--c-accent); }
+.sig-topaz-dot.dot-error     { background: #ef4444; }
+.sig-topaz-dot.dot-loading   { background: #f59e0b; animation: pulse-dot 1.2s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+.sig-topaz-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head>
@@ -952,8 +963,11 @@ let mriScrState = { steps: [], stepIdx: 0, answers: {}, consent: null };
 /* Consent Declaration state */
 let consentDeclState = { lang: 'en', consent: null, signed: false, signedResult: null };
 let sigPadInstance      = null;
-let sigMode             = 'draw';   // 'draw' | 'upload'
+let sigMode             = 'draw';   // 'draw' | 'upload' | 'topaz'
 let sigUploadedDataUrl  = null;
+let sigTopazStatus      = 'idle';   // 'idle' | 'loading' | 'capturing' | 'captured' | 'error'
+let sigTopazPreviewUrl  = null;
+let sigTopazLoaded      = false;
 
 /* Records archive + detail state */
 let recordsState      = { records: null, loading: false, search: '', statusFilter: 'all' };
@@ -3794,6 +3808,8 @@ function consentDeclInit(consent) {
   sigMode            = 'draw';
   sigUploadedDataUrl = null;
   sigPadInstance     = null;
+  sigTopazStatus     = 'idle';
+  sigTopazPreviewUrl = null;
 }
 
 function consentDeclSetLang(lang) {
@@ -3825,12 +3841,19 @@ function consentDeclClearSig() {
 }
 
 function sigSwitchMode(mode) {
+  // Turn off topaz capture if leaving topaz mode
+  if (sigMode === 'topaz' && mode !== 'topaz') {
+    try { if (typeof SetTabletState !== 'undefined' && typeof wsq !== 'undefined') SetTabletState(0, wsq); } catch(e) {}
+  }
   sigMode = mode;
   document.getElementById('sig-draw-pane')?.style.setProperty('display', mode === 'draw' ? '' : 'none');
   document.getElementById('sig-upload-pane')?.style.setProperty('display', mode === 'upload' ? '' : 'none');
+  document.getElementById('sig-topaz-pane')?.style.setProperty('display', mode === 'topaz' ? '' : 'none');
   document.getElementById('sig-tab-draw')?.classList.toggle('sig-tab-active', mode === 'draw');
   document.getElementById('sig-tab-upload')?.classList.toggle('sig-tab-active', mode === 'upload');
+  document.getElementById('sig-tab-topaz')?.classList.toggle('sig-tab-active', mode === 'topaz');
   if (mode === 'draw') initSigPad(); // re-init now that canvas is visible
+  if (mode === 'topaz') sigLoadTopaz();
   consentDeclCheckSubmit();
 }
 
@@ -3847,9 +3870,81 @@ function sigHandleUpload(input) {
   reader.readAsDataURL(file);
 }
 
+// ── Topaz SigWeb helpers ──────────────────────────────────────────────────────
+function sigTopazRenderStatus(status, msg) {
+  sigTopazStatus = status;
+  const el = document.getElementById('sig-topaz-status-text');
+  const dot = document.getElementById('sig-topaz-dot');
+  if (el) el.textContent = msg;
+  if (dot) {
+    dot.className = 'sig-topaz-dot';
+    if (status === 'loading')   dot.classList.add('dot-loading');
+    if (status === 'capturing') dot.classList.add('dot-capturing');
+    if (status === 'captured')  dot.classList.add('dot-captured');
+    if (status === 'error')     dot.classList.add('dot-error');
+  }
+}
+
+function sigLoadTopaz() {
+  if (sigTopazLoaded) { sigTopazActivate(); return; }
+  sigTopazRenderStatus('loading', 'Connecting to Topaz SigWeb service…');
+  const script = document.createElement('script');
+  script.src = 'http://localhost:47289/SigWebTablet.js';
+  script.onload = () => { sigTopazLoaded = true; setTimeout(sigTopazActivate, 300); };
+  script.onerror = () => sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
+  document.head.appendChild(script);
+}
+
+function sigTopazActivate() {
+  try {
+    SetDisplayXSize(500);
+    SetDisplayYSize(100);
+    SetTabletOutputMode(1);
+    ClearTablet();
+    SetTabletState(1, wsq);
+    sigTopazRenderStatus('capturing', 'Sign on the Topaz pad now…');
+    const acceptBtn = document.getElementById('sig-topaz-accept');
+    const clearBtn  = document.getElementById('sig-topaz-clear');
+    if (acceptBtn) acceptBtn.disabled = false;
+    if (clearBtn)  clearBtn.disabled  = false;
+  } catch(e) {
+    sigTopazRenderStatus('error', 'Topaz pad not responding. Check USB and SigWeb installation.');
+  }
+}
+
+function sigTopazAccept() {
+  try {
+    const pts = NumberOfTabletPoints();
+    if (!pts || pts < 5) { toast('Signature appears empty. Please sign on the Topaz pad first.', 'warning'); return; }
+    GetSigImageB64('image/png', function(data) {
+      if (!data) { sigTopazRenderStatus('error', 'Failed to capture image. Try again.'); return; }
+      sigTopazPreviewUrl = data.startsWith('data:') ? data : 'data:image/png;base64,' + data;
+      const preview = document.getElementById('sig-topaz-preview');
+      if (preview) { preview.src = sigTopazPreviewUrl; preview.style.display = 'block'; }
+      try { SetTabletState(0, wsq); } catch(e) {}
+      sigTopazRenderStatus('captured', 'Signature captured successfully.');
+      consentDeclCheckSubmit();
+    });
+  } catch(e) {
+    sigTopazRenderStatus('error', 'Error reading pad. Ensure SigWeb is running.');
+  }
+}
+
+function sigTopazClear() {
+  try { ClearTablet(); } catch(e) {}
+  sigTopazPreviewUrl = null;
+  const preview = document.getElementById('sig-topaz-preview');
+  if (preview) preview.style.display = 'none';
+  // re-start capture
+  try { SetTabletState(1, wsq); sigTopazRenderStatus('capturing', 'Sign on the Topaz pad now…'); }
+  catch(e) { sigTopazRenderStatus('error', 'Pad not responding.'); }
+  consentDeclCheckSubmit();
+}
+
 function consentDeclCheckSubmit() {
   const sig      = (document.getElementById('cdecl-sig')?.value || '').trim();
   const sigOk    = sigMode === 'upload' ? !!sigUploadedDataUrl
+                 : sigMode === 'topaz'  ? !!sigTopazPreviewUrl
                  : (sigPadInstance && !sigPadInstance.isEmpty());
   const btn      = document.getElementById('cdecl-submit-btn');
   if (btn) btn.disabled = !(sig && sigOk);
@@ -3863,6 +3958,9 @@ async function consentDeclSubmit() {
   if (sigMode === 'upload') {
     if (!sigUploadedDataUrl) { toast('Please upload a signature image.', 'warning'); return; }
     patientSignatureImage = sigUploadedDataUrl;
+  } else if (sigMode === 'topaz') {
+    if (!sigTopazPreviewUrl) { toast('Please capture a signature on the Topaz pad.', 'warning'); return; }
+    patientSignatureImage = sigTopazPreviewUrl;
   } else {
     if (!sigPadInstance || sigPadInstance.isEmpty()) {
       toast('Please draw your signature before submitting.', 'warning'); return;
@@ -4011,9 +4109,10 @@ function renderConsentDeclaration() {
           <div class="sig-mode-tabs">
             <button id="sig-tab-draw" type="button" class="sig-mode-tab${sigMode==='draw'?' sig-tab-active':''}" onclick="sigSwitchMode('draw')">&#9998; Draw</button>
             <button id="sig-tab-upload" type="button" class="sig-mode-tab${sigMode==='upload'?' sig-tab-active':''}" onclick="sigSwitchMode('upload')">&#8593; Upload image</button>
+            <button id="sig-tab-topaz" type="button" class="sig-mode-tab${sigMode==='topaz'?' sig-tab-active':''}" onclick="sigSwitchMode('topaz')">&#128394; Topaz Pad</button>
           </div>
           <!-- Draw pane -->
-          <div id="sig-draw-pane"${sigMode==='upload'?' style="display:none"':''}>
+          <div id="sig-draw-pane"${sigMode!=='draw'?' style="display:none"':''}>
             <div class="sig-pad-wrap">
               <canvas id="cdecl-sigpad"></canvas>
               <div class="sig-pad-toolbar">
@@ -4023,7 +4122,7 @@ function renderConsentDeclaration() {
             </div>
           </div>
           <!-- Upload pane -->
-          <div id="sig-upload-pane"${sigMode==='draw'?' style="display:none"':''}>
+          <div id="sig-upload-pane"${sigMode!=='upload'?' style="display:none"':''}>
             <label class="sig-upload-area" for="sig-upload-input">
               <span style="font-size:22px">&#8593;</span>
               <span>Click to select a signature image</span>
@@ -4031,6 +4130,20 @@ function renderConsentDeclaration() {
             </label>
             <input type="file" id="sig-upload-input" accept="image/*" style="display:none" onchange="sigHandleUpload(this)" />
             ${sigUploadedDataUrl ? `<img id="sig-upload-preview" class="sig-img" src="${sigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
+          </div>
+          <!-- Topaz pad pane -->
+          <div id="sig-topaz-pane" class="sig-topaz-pane"${sigMode!=='topaz'?' style="display:none"':''}>
+            <div class="sig-topaz-status">
+              <span id="sig-topaz-dot" class="sig-topaz-dot${sigTopazStatus==='capturing'?' dot-capturing':sigTopazStatus==='captured'?' dot-captured':sigTopazStatus==='error'?' dot-error':sigTopazStatus==='loading'?' dot-loading':''}"></span>
+              <span id="sig-topaz-status-text">${sigTopazStatus==='idle'?'Click &ldquo;Start Capture&rdquo; to activate the pad':sigTopazStatus==='loading'?'Connecting to SigWeb&hellip;':sigTopazStatus==='capturing'?'Sign on the Topaz pad now&hellip;':sigTopazStatus==='captured'?'Signature captured successfully.':'Cannot connect to SigWeb. Is it installed and running?'}</span>
+            </div>
+            <div class="sig-topaz-actions">
+              <button type="button" class="btn btn-primary btn-sm" onclick="sigLoadTopaz()"${sigTopazStatus==='capturing'||sigTopazStatus==='captured'?' disabled':''}>Start Capture</button>
+              <button type="button" id="sig-topaz-accept" class="btn btn-success btn-sm" onclick="sigTopazAccept()"${sigTopazStatus!=='capturing'?' disabled':''}>Accept Signature</button>
+              <button type="button" id="sig-topaz-clear"  class="btn btn-ghost btn-sm"   onclick="sigTopazClear()"${sigTopazStatus!=='capturing'&&sigTopazStatus!=='captured'?' disabled':''}>Clear</button>
+            </div>
+            ${sigTopazPreviewUrl ? `<img id="sig-topaz-preview" class="sig-img" src="${sigTopazPreviewUrl}" alt="Topaz signature" />` : `<img id="sig-topaz-preview" class="sig-img" style="display:none" alt="Topaz signature" />`}
+            <div class="form-hint" style="margin-top:4px">Requires <a href="https://www.topazsystems.com/software/sigweb.exe" target="_blank" rel="noopener">Topaz SigWeb</a> to be installed and the L460 pad connected via USB.</div>
           </div>
         </div>
         <!-- Typed name + date row -->
