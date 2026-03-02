@@ -1778,90 +1778,70 @@ function scrDomainSummary(scr) {
   if (!scr) return [];
   const out = [];
 
-  const c = scr.cardiac || {};
-  const cF = [
-    c.hasPacemaker        && `Pacemaker/ICD — MR status: ${c.pacemakerMRStatus || 'unknown'}`,
-    c.hasCardiacMonitor   && 'Implanted cardiac monitor (loop recorder)',
-    c.hasCoronaryStent    && 'Coronary stent',
-    c.hasHeartValve       && 'Prosthetic heart valve',
-    c.hasVascularClipsCoils && 'Vascular coil / clip / stent graft',
-  ].filter(Boolean);
-  if (cF.length) out.push({ domain: 'Cardiac & Vascular', findings: cF });
+  // Hearing
+  const h = scr.hearing || {};
+  if (h.hasHearingAid) {
+    out.push({ domain: 'Hearing', findings: [
+      h.aidsRemoved === true  ? 'Hearing aids — confirmed removed' :
+      h.aidsRemoved === false ? 'Hearing aids — NOT confirmed removed' :
+      'Hearing aids reported',
+    ]});
+  }
 
-  const n = scr.neurological || {};
-  const nF = [
-    n.hasCochlearImplant      && `Cochlear implant — type: ${n.cochlearImplantType || 'unknown'}`,
-    n.hasDeepBrainStimulator  && 'Deep brain stimulator (DBS)',
-    n.hasAneurysmClip         && `Aneurysm clip — type: ${n.aneurysmClipType || 'unknown'}`,
-    n.hasSpinalCordStimulator && 'Spinal cord stimulator (SCS)',
-    n.hasVPShunt              && 'CSF / VP shunt',
+  // Implanted devices
+  const im = scr.implants || {};
+  const imF = [
+    im.hasPacemakerICD          && 'Cardiac pacemaker or ICD',
+    im.hasHeartValve            && 'Artificial heart valve or REVEAL device',
+    im.hasAneurysmClip          && 'Aneurysm clip (brain)',
+    im.hasHydroShunt            && 'Programmable hydrocephalus shunt',
+    im.hasCochlearEarImplant    && 'Cochlear or ear implant',
+    im.hasStent                 && 'Stent in body',
+    im.hasPainDrugDevice        && 'Implanted pain control or drug infusion device',
+    im.hasClipsPinsPlates       && 'Clips, pins, plates, joint replacements or coils',
+    im.recentSurgeryUnder6Weeks && 'Operation in last 6 weeks',
   ].filter(Boolean);
-  if (nF.length) out.push({ domain: 'Neurological', findings: nF });
+  if (imF.length) out.push({ domain: 'Implanted Devices', findings: imF });
 
+  // Ocular
   const oc = scr.ocular || {};
-  if (oc.hasMetallicForeignBody) {
-    out.push({ domain: 'Ocular', findings: [
-      oc.foreignBodyClearedByXray === true  ? 'Prior metallic foreign body — cleared by X-ray' :
-      oc.foreignBodyClearedByXray === false ? 'Metallic foreign body — NOT cleared by X-ray' :
-      'Metallic foreign body — clearance unknown',
+  if (oc.hasMetalFragments) {
+    out.push({ domain: 'Metal in Eyes', findings: [
+      oc.completelyRemoved === true  ? 'Metal fragment in eyes — confirmed removed' :
+      oc.completelyRemoved === false ? 'Metal fragment in eyes — NOT confirmed removed' :
+      'Metal fragment in eyes — removal status unknown',
     ]});
   }
 
-  const ort = scr.orthopaedic || {};
-  if (ort.hasScrewsPlatesRods) {
-    out.push({ domain: 'Orthopaedic', findings: [
-      ort.isLessThan6WeeksAgo === true  ? 'Metal implant — surgery < 6 weeks ago' :
-      ort.isLessThan6WeeksAgo === false ? 'Metal implant — surgery > 6 weeks ago' :
-      'Orthopaedic hardware — timing unknown',
-    ]});
-  }
+  // Surgical history
+  const su = scr.surgicalHistory || {};
+  if (su.hadOtherSurgery) out.push({ domain: 'Surgical History', findings: ['Prior surgery — possible undocumented implants'] });
 
-  const oi = scr.otherImplants || {};
-  const oiF = [
-    oi.hasInsulinPump  && 'Insulin pump',
-    oi.hasIUD          && `IUD (${oi.iudType || 'type unknown'})`,
-    oi.hasInfusionPort && 'Infusion port',
-    oi.hasDrugPump     && 'Implanted drug pump',
-  ].filter(Boolean);
-  if (oiF.length) out.push({ domain: 'Other Implants', findings: oiF });
+  // Shrapnel
+  const sh = scr.shrapnel || {};
+  if (sh.hasShrapnelBlastInjury) out.push({ domain: 'Shrapnel / Blast Injuries', findings: ['Shrapnel or gunshot / bomb blast injury history'] });
 
-  const r = scr.renal || {};
-  const rF = [
-    r.onDialysis      && 'Currently on dialysis',
-    r.hasCKD          && 'CKD / reduced renal function',
-    r.hasSingleKidney && 'Single kidney',
-  ].filter(Boolean);
-  if (rF.length) out.push({ domain: 'Renal Function', findings: rF });
-
-  const al = scr.allergy || {};
-  if (al.hasPriorContrastReaction) {
-    out.push({ domain: 'Allergy / Contrast', findings: [
-      `Prior contrast reaction — severity: ${al.reactionSeverity || 'unknown'}`,
-    ]});
-  }
-
+  // Pregnancy / breastfeeding
   const pr = scr.pregnancy || {};
-  if (pr.isPossiblyPregnant) {
-    out.push({ domain: 'Pregnancy', findings: [
-      `Possible pregnancy — ${pr.trimester === 1 ? '1st trimester or unsure' : '2nd or 3rd trimester'}`,
-    ]});
-  }
+  const prF = [
+    pr.isPossiblyPregnant && 'Possible pregnancy',
+    pr.isBreastfeeding    && 'Currently breastfeeding',
+  ].filter(Boolean);
+  if (prF.length) out.push({ domain: 'Pregnancy / Breastfeeding', findings: prF });
 
-  const cl = scr.claustrophobia || {};
-  if (cl.hasClaustrophobia) {
-    out.push({ domain: 'Claustrophobia', findings: [
-      cl.hadPriorMRIFailure ? 'Severe claustrophobia — prior MRI scan abandoned' : 'Severe claustrophobia',
-    ]});
-  }
+  // Medical conditions
+  const co = scr.conditions || {};
+  const coF = [
+    co.epilepsy  && 'Epilepsy',
+    co.blackouts && 'Blackouts',
+    co.angina    && 'Angina',
+    co.asthma    && 'Asthma',
+  ].filter(Boolean);
+  if (coF.length) out.push({ domain: 'Medical Conditions', findings: coF });
 
-  const su = scr.surgical || {};
-  if (su.hadPriorSurgery) out.push({ domain: 'Surgical History', findings: ['Prior surgery — possible undocumented implants'] });
-
-  const ta = scr.tattoosPiercings || {};
-  if (ta.hasPermanentTattoos) out.push({ domain: 'Tattoos & Make-up', findings: ['Permanent tattoos or permanent make-up'] });
-
-  const tp = scr.transdermalPatches || {};
-  if (tp.hasTransdermalPatch) out.push({ domain: 'Transdermal Patches', findings: ['Currently wearing transdermal medication patch'] });
+  // Tattoos
+  const ta = scr.tattoos || {};
+  if (ta.hasTattoos) out.push({ domain: 'Tattoos', findings: ['Tattoos — possible metallic ink'] });
 
   return out;
 }
@@ -3202,201 +3182,119 @@ function renderNewConsent() {
 
 /* ── Step definitions ─────────────────────────────────────── */
 const SCR_STEPS = [
-  // D1 — Cardiac & Vascular
+
+  // Info — remove metal items before scan
   {
-    id: 'd1_main', domain: 1, domainName: 'Cardiac & Vascular', type: 'yesno',
-    question: 'Do you have any device implanted in or around your heart or blood vessels?',
-    hint: 'This includes pacemakers, ICDs, stents, heart valves, and similar devices.',
-    options: null, showIf: null,
-  },
-  {
-    id: 'd1_type', domain: 1, domainName: 'Cardiac & Vascular', type: 'multicheck',
-    question: 'Which cardiac or vascular device(s) do you have?',
-    hint: 'Select all that apply.',
-    showIf: (a) => a.d1_main === 'yes',
-    options: [
-      { id: 'pacemaker_unknown',    label: 'Pacemaker / ICD — type unknown',                    tier: 'tier2', tierLabel: 'Tier 2' },
-      { id: 'pacemaker_non_mr',     label: 'Pacemaker / ICD — confirmed NOT MR-conditional',    tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
-      { id: 'pacemaker_mr_cond',    label: 'Pacemaker / ICD — confirmed MR-conditional',        tier: 'tier2', tierLabel: 'Tier 2' },
-      { id: 'cardiac_monitor',      label: 'Implanted cardiac monitor (loop recorder)',          tier: 'tier2', tierLabel: 'Tier 2' },
-      { id: 'coronary_stent',       label: 'Coronary stent',                                    tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
-      { id: 'heart_valve',          label: 'Prosthetic heart valve',                            tier: 'tier2', tierLabel: 'Tier 2' },
-      { id: 'vascular_coil',        label: 'Vascular coil, clip, or stent graft',               tier: 'tier2', tierLabel: 'Tier 2' },
-    ],
+    id: 'info_metal', domain: 0, domainName: 'Important Information', type: 'info',
+    title: 'Before your MRI scan',
+    body: 'Prior to your MRI scan you will be asked to remove any metal items from your body. This will include such items as hearing aids, jewellery, tinted contact lenses, removable metal dentures, body piercings, false eye, skin patches (nicotine, angina, hormone etc.), artificial limbs and calipers.',
+    showIf: null,
   },
 
-  // D2 — Neurological
+  // Q1 — Hearing aids
   {
-    id: 'd2_main', domain: 2, domainName: 'Neurological', type: 'yesno',
-    question: 'Do you have any implant inside your skull, spine, or nervous system?',
-    hint: 'Includes cochlear implants, brain stimulators, aneurysm clips, and spinal cord stimulators.',
-    options: null, showIf: null,
+    id: 'q1_hearing', domain: 1, domainName: 'Hearing', type: 'yesno',
+    question: 'Do you wear hearing aids or do you have hearing difficulties?',
+    showIf: null,
   },
   {
-    id: 'd2_type', domain: 2, domainName: 'Neurological', type: 'multicheck',
-    question: 'Which neurological implant(s) do you have?',
-    hint: 'Select all that apply.',
-    showIf: (a) => a.d2_main === 'yes',
-    options: [
-      { id: 'cochlear_unknown',    label: 'Cochlear implant — type unknown',                   tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
-      { id: 'cochlear_mr_cond',    label: 'Cochlear implant — confirmed MR-conditional',       tier: 'tier2', tierLabel: 'Tier 2' },
-      { id: 'deep_brain_stim',     label: 'Deep brain stimulator (DBS)',                       tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
-      { id: 'aneurysm_unknown',    label: 'Aneurysm / surgical clip — type unknown',           tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
-      { id: 'aneurysm_mr_safe',    label: 'Aneurysm clip — confirmed MR-safe',                tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
-      { id: 'spinal_cord_stim',    label: 'Spinal cord stimulator (SCS)',                      tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
-      { id: 'vp_shunt',            label: 'CSF / VP shunt',                                    tier: 'tier2', tierLabel: 'Tier 2' },
-    ],
+    id: 'q1_removed', domain: 1, domainName: 'Hearing', type: 'yesno',
+    question: 'Have your hearing aids been removed?',
+    showIf: (a) => a.q1_hearing === 'yes',
   },
 
-  // D3 — Ocular
+  // Q2 — Implants
   {
-    id: 'd3_main', domain: 3, domainName: 'Ocular', type: 'yesno',
-    question: 'Have you ever had metal enter your eye from welding, grinding, or machining?',
-    hint: 'Even small metallic particles can be dangerous in an MRI scanner.',
-    options: null, showIf: null,
-  },
-  {
-    id: 'd3_xray', domain: 3, domainName: 'Ocular', type: 'radio',
-    question: 'Was the metallic foreign body cleared by X-ray or scan?',
-    hint: 'Cleared means a radiologist confirmed no residual metallic fragment was present.',
-    showIf: (a) => a.d3_main === 'yes',
+    id: 'q2_implants', domain: 2, domainName: 'Implanted Devices', type: 'multicheck',
+    question: 'Do you have any of the following implants?',
+    hint: 'Select all that apply. Choose "None of the above" if none apply.',
+    showIf: null,
     options: [
-      { id: 'cleared',   label: 'Yes — cleared by X-ray or scan', tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
-      { id: 'not_cleared', label: 'No, or unsure', tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'pacemaker_icd',     label: 'Cardiac (heart) pacemaker and/or internal cardiac defibrillator', tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'heart_valve',       label: 'Artificial heart valve or REVEAL device',                         tierLabel: 'Tier 2 — Review required' },
+      { id: 'aneurysm_clip',     label: 'Aneurysm clips in your brain',                                    tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'hydro_shunt',       label: 'Programmable hydrocephalus shunt',                                tierLabel: 'Tier 2 — Review required' },
+      { id: 'cochlear_ear',      label: 'Cochlear or other ear implant',                                   tierLabel: 'Tier 1 — Absolute contraindication' },
+      { id: 'stent',             label: 'A stent inserted in any part of your body',                       tierLabel: 'Tier 2 — Review required' },
+      { id: 'pain_drug_device',  label: 'Implanted pain control or drug infusion device',                  tierLabel: 'Tier 2 — Review required' },
+      { id: 'clips_pins_plates', label: 'Clips, pins, plates, joint replacements or embolisation coils',   tierLabel: 'Tier 2 — Review required' },
+      { id: 'none',              label: 'None of the above',                                               tierLabel: '' },
     ],
   },
-
-  // D4 — Orthopaedic
   {
-    id: 'd4_main', domain: 4, domainName: 'Orthopaedic', type: 'yesno',
-    question: 'Do you have any metal implants from orthopaedic surgery?',
-    hint: 'Includes joint replacements, screws, plates, rods, or fixation devices.',
-    options: null, showIf: null,
-  },
-  {
-    id: 'd4_timing', domain: 4, domainName: 'Orthopaedic', type: 'radio',
-    question: 'How long ago was the orthopaedic surgery?',
-    hint: 'Recent implants may not be fully integrated with surrounding tissue.',
-    showIf: (a) => a.d4_main === 'yes',
-    options: [
-      { id: 'lt6wks', label: 'Less than 6 weeks ago', desc: 'Recent surgery', tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
-      { id: 'gt6wks', label: 'More than 6 weeks ago', desc: 'Well-established implant', tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
-    ],
+    id: 'q2_surgery_6wks', domain: 2, domainName: 'Implanted Devices', type: 'yesno',
+    question: 'Have you had any operations in the last 6 weeks?',
+    showIf: null,
   },
 
-  // D5 — Other Implanted Devices
+  // Q3 — Metal in eyes
   {
-    id: 'd5_main', domain: 5, domainName: 'Other Implanted Devices', type: 'yesno',
-    question: 'Do you have any other implanted device not already mentioned?',
-    hint: 'Includes insulin pumps, IUDs, infusion ports, and drug pumps.',
-    options: null, showIf: null,
+    id: 'q3_metal_eyes', domain: 3, domainName: 'Metal in Eyes', type: 'yesno',
+    question: 'Have you ever had any metal fragments go into your eyes?',
+    showIf: null,
   },
   {
-    id: 'd5_type', domain: 5, domainName: 'Other Implanted Devices', type: 'multicheck',
-    question: 'Which other implanted device(s) do you have?',
-    hint: 'Select all that apply.',
-    showIf: (a) => a.d5_main === 'yes',
-    options: [
-      { id: 'insulin_pump',  label: 'Insulin pump',          tier: 'tier2', tierLabel: 'Tier 2' },
-      { id: 'copper_iud',    label: 'Copper IUD',            tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
-      { id: 'hormonal_iud',  label: 'Hormonal IUD',          tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
-      { id: 'infusion_port', label: 'Infusion port',         tier: 'tier2', tierLabel: 'Tier 2' },
-      { id: 'drug_pump',     label: 'Implanted drug pump',   tier: 'tier2', tierLabel: 'Tier 2' },
-    ],
+    id: 'q3_medical_advice', domain: 3, domainName: 'Metal in Eyes', type: 'yesno',
+    question: 'Did you receive medical advice from a Doctor?',
+    showIf: (a) => a.q3_metal_eyes === 'yes',
+  },
+  {
+    id: 'q3_removed', domain: 3, domainName: 'Metal in Eyes', type: 'yesno',
+    question: 'Was everything completely removed?',
+    showIf: (a) => a.q3_metal_eyes === 'yes',
   },
 
-  // D6 — Renal Function (contrast only)
+  // Q4 — Other surgery
   {
-    id: 'd6_main', domain: 6, domainName: 'Renal Function', type: 'yesno',
-    question: 'Do you have any history of kidney disease, or are you currently on dialysis?',
-    hint: 'Gadolinium contrast may be restricted in patients with reduced renal function.',
-    options: null, showIf: (_, c) => c.modality === 'mri_with_gadolinium',
-  },
-  {
-    id: 'd6_type', domain: 6, domainName: 'Renal Function', type: 'multicheck',
-    question: 'Which renal condition(s) apply to you?',
-    hint: 'Select all that apply.',
-    showIf: (a, c) => a.d6_main === 'yes' && c.modality === 'mri_with_gadolinium',
-    options: [
-      { id: 'dialysis',       label: 'Currently on dialysis',              tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
-      { id: 'ckd',            label: 'CKD or reduced kidney function',     tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
-      { id: 'single_kidney',  label: 'Single kidney',                      tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
-    ],
+    id: 'q4_surgery', domain: 4, domainName: 'Surgical History', type: 'yesno',
+    question: 'Have you ever had any other surgery?',
+    hint: 'Includes any surgical procedure not already mentioned above.',
+    showIf: null,
   },
 
-  // D7 — Allergy History (contrast only)
+  // Q5 — Shrapnel / blast
   {
-    id: 'd7_main', domain: 7, domainName: 'Allergy History', type: 'yesno',
-    question: 'Have you ever had a reaction to contrast dye (contrast medium)?',
-    hint: 'Tell us about any past reaction, even if it seemed minor.',
-    options: null, showIf: (_, c) => c.modality === 'mri_with_gadolinium',
-  },
-  {
-    id: 'd7_severity', domain: 7, domainName: 'Allergy History', type: 'radio',
-    question: 'How severe was your contrast reaction?',
-    showIf: (a, c) => a.d7_main === 'yes' && c.modality === 'mri_with_gadolinium',
-    options: [
-      { id: 'mild',     label: 'Mild',     desc: 'Nausea, warmth, flushing',             tier: 'tier3', tierLabel: 'Tier 3 — Awareness' },
-      { id: 'moderate', label: 'Moderate', desc: 'Hives, vomiting, significant distress', tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
-      { id: 'severe',   label: 'Severe',   desc: 'Difficulty breathing, collapse',        tier: 'tier1', tierLabel: 'Tier 1 — Absolute contraindication' },
-    ],
+    id: 'q5_shrapnel', domain: 5, domainName: 'Shrapnel / Blast Injuries', type: 'yesno',
+    question: 'Have you had any shrapnel or gunshot / bomb blast injuries?',
+    showIf: null,
   },
 
-  // D8 — Pregnancy (female only)
+  // Q6 — Pregnancy (female only)
   {
-    id: 'd8_main', domain: 8, domainName: 'Pregnancy', type: 'yesno',
-    question: 'Is there any possibility you could be pregnant?',
+    id: 'q6_pregnant', domain: 6, domainName: 'Pregnancy', type: 'yesno',
+    question: 'Are you, or could you be pregnant?',
     hint: 'MRI is generally avoided in early pregnancy unless the benefit outweighs the risk.',
-    options: null, showIf: (_, c) => c.patient?.gender === 'female',
+    showIf: (_, c) => c.patient?.gender === 'female',
   },
+
+  // Q7 — Breastfeeding (female only)
   {
-    id: 'd8_trimester', domain: 8, domainName: 'Pregnancy', type: 'radio',
-    question: 'How far along is the pregnancy?',
-    showIf: (a, c) => a.d8_main === 'yes' && c.patient?.gender === 'female',
+    id: 'q7_breastfeeding', domain: 7, domainName: 'Breastfeeding', type: 'yesno',
+    question: 'Are you breastfeeding?',
+    showIf: (_, c) => c.patient?.gender === 'female',
+  },
+
+  // Q8 — Medical conditions
+  {
+    id: 'q8_conditions', domain: 8, domainName: 'Medical Conditions', type: 'multicheck',
+    question: 'Do you have any of the following conditions?',
+    hint: 'Select all that apply. Choose "None of the above" if none apply.',
+    showIf: null,
     options: [
-      { id: 'first_or_unsure', label: 'First trimester, or unsure', desc: 'Up to 12 weeks / not confirmed', tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
-      { id: 'second_third',    label: 'Second or third trimester',  desc: '12 weeks or beyond',             tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
+      { id: 'epilepsy',  label: 'Epilepsy',   tierLabel: 'Tier 2 — Review required' },
+      { id: 'blackouts', label: 'Blackouts',   tierLabel: 'Tier 2 — Review required' },
+      { id: 'angina',    label: 'Angina',      tierLabel: 'Tier 2 — Review required' },
+      { id: 'asthma',    label: 'Asthma',      tierLabel: 'Tier 3 — Awareness' },
+      { id: 'none',      label: 'None of the above', tierLabel: '' },
     ],
   },
 
-  // D9 — Claustrophobia
+  // Q9 — Tattoos
   {
-    id: 'd9_main', domain: 9, domainName: 'Claustrophobia', type: 'yesno',
-    question: 'Do you experience severe claustrophobia in enclosed spaces?',
-    options: null, showIf: null,
-  },
-  {
-    id: 'd9_prior_fail', domain: 9, domainName: 'Claustrophobia', type: 'radio',
-    question: 'Have you previously been unable to complete an MRI scan because of claustrophobia?',
-    showIf: (a) => a.d9_main === 'yes',
-    options: [
-      { id: 'yes', label: 'Yes — scan was abandoned', tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
-      { id: 'no',  label: 'No — I managed before',   tier: 'tier2', tierLabel: 'Tier 2 — Review required' },
-    ],
-  },
-
-  // D10 — Surgical History
-  {
-    id: 'd10_main', domain: 10, domainName: 'Surgical History', type: 'yesno',
-    question: 'Have you ever had any surgery anywhere on your body?',
-    hint: 'Undocumented implants may have been placed during prior operations.',
-    options: null, showIf: null,
-  },
-
-  // D11 — Tattoos & Piercings
-  {
-    id: 'd11_main', domain: 11, domainName: 'Tattoos & Permanent Make-up', type: 'yesno',
-    question: 'Do you have any permanent tattoos or permanent make-up?',
+    id: 'q9_tattoos', domain: 9, domainName: 'Tattoos', type: 'yesno',
+    question: 'Do you have any tattoos?',
     hint: 'Some tattoo inks contain metallic pigments that can react to MRI fields.',
-    options: null, showIf: null,
-  },
-
-  // D12 — Transdermal Patches
-  {
-    id: 'd12_main', domain: 12, domainName: 'Transdermal Patches', type: 'yesno',
-    question: 'Are you currently wearing any stick-on medication patches on your skin?',
-    hint: 'Some patches contain metallic backing and must be removed before scanning.',
-    options: null, showIf: null,
+    showIf: null,
   },
 ];
 
@@ -3439,8 +3337,9 @@ function mriScrAnswer(stepId, value) {
 function mriScrMultiNext(stepId) {
   const boxes = document.querySelectorAll(`[data-scr-check="${stepId}"]:checked`);
   const vals  = Array.from(boxes).map(b => b.value);
-  if (vals.length === 0) { toast('Please select at least one option.', 'warning'); return; }
-  mriScrState.answers[stepId] = vals;
+  if (vals.length === 0) { toast('Please select at least one option, or choose "None of the above".', 'warning'); return; }
+  // 'none' sentinel means no items apply — store as empty array
+  mriScrState.answers[stepId] = vals.includes('none') ? [] : vals;
   mriScrRefreshSteps();
   mriScrState.stepIdx++;
   render();
@@ -3467,210 +3366,119 @@ function mriScrComputeResults() {
     else tier3.push(key);
   }
 
-  // D1 — Cardiac
-  const d1types = answers.d1_type || [];
-  if (d1types.includes('pacemaker_unknown'))  flag('tier2', 'pacemaker_unknown_mr_status');
-  if (d1types.includes('pacemaker_non_mr'))   flag('tier1', 'non_mr_conditional_pacemaker');
-  if (d1types.includes('pacemaker_mr_cond'))  flag('tier2', 'mr_conditional_pacemaker');
-  if (d1types.includes('cardiac_monitor'))    flag('tier2', 'implanted_cardiac_monitor');
-  if (d1types.includes('coronary_stent'))     flag('tier3', 'coronary_stent');
-  if (d1types.includes('heart_valve'))        flag('tier2', 'prosthetic_heart_valve');
-  if (d1types.includes('vascular_coil'))      flag('tier2', 'vascular_coil_clip_stent_graft');
-
-  const hasPacemaker = d1types.some(t => t.startsWith('pacemaker'));
-  const hasICD       = d1types.some(t => t.startsWith('pacemaker_non_mr') || t.startsWith('pacemaker_mr_cond') || t.startsWith('pacemaker_unknown'));
-  const pacemakerStatus = d1types.includes('pacemaker_non_mr') ? 'non_mr_conditional'
-                        : d1types.includes('pacemaker_mr_cond') ? 'mr_conditional'
-                        : d1types.includes('pacemaker_unknown') ? 'unknown' : null;
-
-  const cardiac = {
-    hasPacemaker           : d1types.some(t => t.startsWith('pacemaker')),
-    pacemakerMRStatus      : pacemakerStatus,
-    hasICD                 : false,
-    icdMRStatus            : null,
-    hasCardiacMonitor      : d1types.includes('cardiac_monitor'),
-    hasCoronaryStent       : d1types.includes('coronary_stent'),
-    hasHeartValve          : d1types.includes('heart_valve'),
-    hasVascularClipsCoils  : d1types.includes('vascular_coil'),
+  // Q1 — Hearing aids
+  const q1hearing = answers.q1_hearing === 'yes';
+  const q1removed = answers.q1_removed === 'yes';
+  if (q1hearing && !q1removed) flag('tier2', 'hearing_aid_not_removed');
+  const hearing = {
+    hasHearingAid : q1hearing,
+    aidsRemoved   : q1hearing ? q1removed : null,
   };
 
-  // D2 — Neurological
-  const d2types = answers.d2_type || [];
-  if (d2types.includes('cochlear_unknown'))  flag('tier1', 'cochlear_implant_unknown');
-  if (d2types.includes('cochlear_mr_cond'))  flag('tier2', 'mr_conditional_cochlear_implant');
-  if (d2types.includes('deep_brain_stim'))   flag('tier1', 'deep_brain_stimulator');
-  if (d2types.includes('aneurysm_unknown'))  flag('tier1', 'aneurysm_clip_unknown');
-  if (d2types.includes('aneurysm_mr_safe'))  flag('tier3', 'aneurysm_clip_mr_safe');
-  if (d2types.includes('spinal_cord_stim'))  flag('tier1', 'spinal_cord_stimulator');
-  if (d2types.includes('vp_shunt'))          flag('tier2', 'csf_vp_shunt');
+  // Q2 — Implants (filter out 'none' sentinel)
+  const implants = (answers.q2_implants || []).filter(v => v !== 'none');
+  if (implants.includes('pacemaker_icd'))     flag('tier1', 'pacemaker_icd');
+  if (implants.includes('heart_valve'))       flag('tier2', 'heart_valve');
+  if (implants.includes('aneurysm_clip'))     flag('tier1', 'aneurysm_clip');
+  if (implants.includes('hydro_shunt'))       flag('tier2', 'hydro_shunt');
+  if (implants.includes('cochlear_ear'))      flag('tier1', 'cochlear_ear_implant');
+  if (implants.includes('stent'))             flag('tier2', 'body_stent');
+  if (implants.includes('pain_drug_device'))  flag('tier2', 'pain_drug_device');
+  if (implants.includes('clips_pins_plates')) flag('tier2', 'clips_pins_plates');
+  if (answers.q2_surgery_6wks === 'yes')      flag('tier2', 'recent_surgery_under_6wks');
 
-  const neurological = {
-    hasCochlearImplant       : d2types.some(t => t.startsWith('cochlear')),
-    cochlearImplantType      : d2types.includes('cochlear_mr_cond') ? 'mr_conditional' : d2types.includes('cochlear_unknown') ? 'unknown' : null,
-    hasDeepBrainStimulator   : d2types.includes('deep_brain_stim'),
-    hasAneurysmClip          : d2types.some(t => t.startsWith('aneurysm')),
-    aneurysmClipType         : d2types.includes('aneurysm_mr_safe') ? 'mr_safe' : d2types.includes('aneurysm_unknown') ? 'unknown' : null,
-    hasSpinalCordStimulator  : d2types.includes('spinal_cord_stim'),
-    hasVPShunt               : d2types.includes('vp_shunt'),
+  const implantData = {
+    hasPacemakerICD          : implants.includes('pacemaker_icd'),
+    hasHeartValve            : implants.includes('heart_valve'),
+    hasAneurysmClip          : implants.includes('aneurysm_clip'),
+    hasHydroShunt            : implants.includes('hydro_shunt'),
+    hasCochlearEarImplant    : implants.includes('cochlear_ear'),
+    hasStent                 : implants.includes('stent'),
+    hasPainDrugDevice        : implants.includes('pain_drug_device'),
+    hasClipsPinsPlates       : implants.includes('clips_pins_plates'),
+    recentSurgeryUnder6Weeks : answers.q2_surgery_6wks === 'yes',
   };
 
-  // D3 — Ocular
-  const d3yes  = answers.d3_main === 'yes';
-  const d3xray = answers.d3_xray;
-  if (d3yes) {
-    if (d3xray === 'cleared')     flag('tier3', 'ocular_foreign_body_cleared');
-    else if (d3xray === 'not_cleared') flag('tier1', 'metallic_ocular_foreign_body');
+  // Q3 — Metal in eyes
+  const q3eyes    = answers.q3_metal_eyes === 'yes';
+  const q3removed = answers.q3_removed;
+  if (q3eyes) {
+    if (q3removed === 'yes') flag('tier3', 'metallic_ocular_fragment_cleared');
+    else                     flag('tier1', 'metallic_ocular_fragment_unremoved');
   }
   const ocular = {
-    hasWeldingGrindingHistory : d3yes,
-    hasMetallicForeignBody    : d3yes,
-    foreignBodyClearedByXray  : d3yes ? (d3xray === 'cleared') : null,
+    hasMetalFragments    : q3eyes,
+    receivedMedicalAdvice: q3eyes ? (answers.q3_medical_advice === 'yes') : null,
+    completelyRemoved    : q3eyes ? (q3removed === 'yes') : null,
   };
 
-  // D4 — Orthopaedic
-  const d4yes    = answers.d4_main === 'yes';
-  const d4timing = answers.d4_timing;
-  if (d4yes) {
-    if (d4timing === 'lt6wks') flag('tier2', 'orthopaedic_hardware_under_6_weeks');
-    else                       flag('tier3', 'orthopaedic_hardware_over_6_weeks');
-  }
-  const orthopaedic = {
-    hasJointReplacement  : false,
-    hasScrewsPlatesRods  : d4yes,
-    surgeryDescription   : null,
-    isLessThan6WeeksAgo  : d4yes ? (d4timing === 'lt6wks') : null,
-  };
+  // Q4 — Other surgery
+  if (answers.q4_surgery === 'yes') flag('tier3', 'prior_other_surgery');
+  const surgicalHistory = { hadOtherSurgery: answers.q4_surgery === 'yes' };
 
-  // D5 — Other implants
-  const d5types = answers.d5_type || [];
-  if (d5types.includes('insulin_pump'))  flag('tier2', 'insulin_pump');
-  if (d5types.includes('copper_iud'))    flag('tier3', 'copper_iud');
-  if (d5types.includes('hormonal_iud'))  flag('tier3', 'hormonal_iud');
-  if (d5types.includes('infusion_port')) flag('tier2', 'infusion_port');
-  if (d5types.includes('drug_pump'))     flag('tier2', 'drug_pump');
+  // Q5 — Shrapnel / blast
+  if (answers.q5_shrapnel === 'yes') flag('tier1', 'shrapnel_blast_injury');
+  const shrapnel = { hasShrapnelBlastInjury: answers.q5_shrapnel === 'yes' };
 
-  const iudType = d5types.includes('copper_iud') ? 'copper' : d5types.includes('hormonal_iud') ? 'hormonal' : null;
-  const otherImplants = {
-    hasInsulinPump   : d5types.includes('insulin_pump'),
-    hasIUD           : d5types.some(t => t.includes('iud')),
-    iudType,
-    hasInfusionPort  : d5types.includes('infusion_port'),
-    hasPenileImplant : false,
-    hasDrugPump      : d5types.includes('drug_pump'),
-  };
+  // Q6 — Pregnancy (female only)
+  const isFemale = consent.patient?.gender === 'female';
+  if (isFemale && answers.q6_pregnant === 'yes') flag('tier2', 'pregnancy');
 
-  // D6 — Renal
-  const d6types = answers.d6_type || [];
-  if (d6types.includes('dialysis'))      flag('tier1', 'on_dialysis');
-  if (d6types.includes('ckd'))           flag('tier2', 'ckd_reduced_renal_function');
-  if (d6types.includes('single_kidney')) flag('tier2', 'single_kidney');
+  // Q7 — Breastfeeding (female only)
+  if (isFemale && answers.q7_breastfeeding === 'yes') flag('tier2', 'breastfeeding');
 
-  const renal = {
-    onDialysis    : d6types.includes('dialysis'),
-    hasCKD        : d6types.includes('ckd'),
-    ckdStage      : null,
-    hasSingleKidney: d6types.includes('single_kidney'),
-  };
-
-  // D7 — Allergy
-  const d7sev = answers.d7_severity;
-  if (d7sev === 'mild')     flag('tier3', 'prior_mild_contrast_reaction');
-  if (d7sev === 'moderate') flag('tier2', 'prior_moderate_contrast_reaction');
-  if (d7sev === 'severe')   flag('tier1', 'prior_severe_contrast_reaction');
-
-  const allergy = {
-    hasPriorContrastReaction : answers.d7_main === 'yes',
-    reactionSeverity         : d7sev || null,
-  };
-
-  // D8 — Pregnancy
-  const d8yes      = answers.d8_main === 'yes';
-  const d8trimester = answers.d8_trimester;
-  if (d8yes) {
-    const flagKey = (consent.modality === 'mri_with_gadolinium' && d8trimester === 'first_or_unsure')
-      ? 'first_trimester_pregnancy_with_gadolinium'
-      : 'pregnancy';
-    flag('tier2', flagKey);
-  }
   const pregnancy = {
-    isPossiblyPregnant : consent.patient?.gender === 'female' ? d8yes : null,
-    trimester          : d8yes ? (d8trimester === 'first_or_unsure' ? 1 : 2) : null,
-    isBreastfeeding    : null,
+    isPossiblyPregnant : isFemale ? (answers.q6_pregnant === 'yes') : null,
+    isBreastfeeding    : isFemale ? (answers.q7_breastfeeding === 'yes') : null,
   };
 
-  // D9 — Claustrophobia
-  if (answers.d9_main === 'yes') flag('tier2', 'claustrophobia');
-  const claustrophobia = {
-    hasClaustrophobia  : answers.d9_main === 'yes',
-    severity           : answers.d9_main === 'yes' ? 'severe' : null,
-    hadPriorMRIFailure : answers.d9_prior_fail === 'yes',
+  // Q8 — Medical conditions (filter out 'none')
+  const conditions = (answers.q8_conditions || []).filter(v => v !== 'none');
+  if (conditions.includes('epilepsy'))  flag('tier2', 'epilepsy');
+  if (conditions.includes('blackouts')) flag('tier2', 'blackouts');
+  if (conditions.includes('angina'))    flag('tier2', 'angina');
+  if (conditions.includes('asthma'))    flag('tier3', 'asthma');
+  const conditionsData = {
+    epilepsy  : conditions.includes('epilepsy'),
+    blackouts : conditions.includes('blackouts'),
+    angina    : conditions.includes('angina'),
+    asthma    : conditions.includes('asthma'),
   };
 
-  // D10 — Surgical
-  if (answers.d10_main === 'yes') flag('tier3', 'prior_surgery_undocumented_implants');
-  const surgical = {
-    hadPriorSurgery : answers.d10_main === 'yes',
-    surgeryDetails  : null,
-  };
+  // Q9 — Tattoos
+  if (answers.q9_tattoos === 'yes') flag('tier3', 'tattoos');
+  const tattoos = { hasTattoos: answers.q9_tattoos === 'yes' };
 
-  // D11 — Tattoos
-  if (answers.d11_main === 'yes') flag('tier3', 'permanent_tattoos_or_makeup');
-  const tattoosPiercings = {
-    hasPermanentTattoos      : answers.d11_main === 'yes',
-    hasNonRemovablePiercings : false,
-  };
-
-  // D12 — Transdermal patches
-  if (answers.d12_main === 'yes') flag('tier3', 'transdermal_medication_patch');
-  const transdermalPatches = {
-    hasTransdermalPatch : answers.d12_main === 'yes',
-    patchDetails        : null,
-  };
-
-  const screening = { cardiac, neurological, ocular, orthopaedic, otherImplants, renal, allergy, pregnancy, claustrophobia, surgical, tattoosPiercings, transdermalPatches };
+  const screening = { hearing, implants: implantData, ocular, surgicalHistory, shrapnel, pregnancy, conditions: conditionsData, tattoos };
   return { tier1, tier2, tier3, screening };
 }
 
 /* ── Human-readable flag labels ──────────────────────────────  */
 const SCR_FLAG_LABELS = {
   // T1
-  non_mr_conditional_pacemaker         : 'Pacemaker/ICD — NOT MR-conditional',
-  cochlear_implant_unknown             : 'Cochlear implant — type unknown',
-  deep_brain_stimulator                : 'Deep brain stimulator',
-  aneurysm_clip_unknown                : 'Aneurysm clip — type unknown',
-  spinal_cord_stimulator               : 'Spinal cord stimulator',
-  metallic_ocular_foreign_body         : 'Metallic ocular foreign body (uncleared)',
-  on_dialysis                          : 'Currently on dialysis',
-  prior_severe_contrast_reaction       : 'Prior severe contrast reaction',
+  pacemaker_icd                        : 'Cardiac pacemaker or ICD',
+  aneurysm_clip                        : 'Aneurysm clip (brain)',
+  cochlear_ear_implant                 : 'Cochlear or ear implant',
+  shrapnel_blast_injury                : 'Shrapnel / gunshot / bomb blast injury',
+  metallic_ocular_fragment_unremoved   : 'Metal fragment in eyes — not confirmed removed',
   // T2
-  pacemaker_unknown_mr_status          : 'Pacemaker/ICD — MR status unknown',
-  mr_conditional_pacemaker             : 'MR-conditional pacemaker/ICD',
-  implanted_cardiac_monitor            : 'Implanted cardiac monitor',
-  prosthetic_heart_valve               : 'Prosthetic heart valve',
-  vascular_coil_clip_stent_graft       : 'Vascular coil / clip / stent graft',
-  mr_conditional_cochlear_implant      : 'MR-conditional cochlear implant',
-  csf_vp_shunt                         : 'CSF / VP shunt',
-  orthopaedic_hardware_under_6_weeks   : 'Orthopaedic hardware < 6 weeks post-op',
-  insulin_pump                         : 'Insulin pump',
-  infusion_port                        : 'Infusion port',
-  drug_pump                            : 'Implanted drug pump',
-  ckd_reduced_renal_function           : 'CKD / reduced renal function',
-  single_kidney                        : 'Single kidney',
-  prior_moderate_contrast_reaction     : 'Prior moderate contrast reaction',
+  heart_valve                          : 'Artificial heart valve or REVEAL device',
+  hydro_shunt                          : 'Programmable hydrocephalus shunt',
+  body_stent                           : 'Stent in body',
+  pain_drug_device                     : 'Implanted pain control or drug infusion device',
+  clips_pins_plates                    : 'Clips, pins, plates, joint replacements or coils',
+  recent_surgery_under_6wks            : 'Operation in last 6 weeks',
   pregnancy                            : 'Possible pregnancy',
-  first_trimester_pregnancy_with_gadolinium : 'Possible first-trimester pregnancy + gadolinium',
-  claustrophobia                        : 'Severe claustrophobia',
+  breastfeeding                        : 'Currently breastfeeding',
+  epilepsy                             : 'Epilepsy',
+  blackouts                            : 'Blackouts',
+  angina                               : 'Angina',
+  hearing_aid_not_removed              : 'Hearing aids not confirmed removed',
   // T3
-  coronary_stent                        : 'Coronary stent',
-  aneurysm_clip_mr_safe                 : 'MR-safe aneurysm clip',
-  ocular_foreign_body_cleared           : 'Prior ocular foreign body (cleared by X-ray)',
-  orthopaedic_hardware_over_6_weeks     : 'Orthopaedic hardware > 6 weeks post-op',
-  copper_iud                            : 'Copper IUD',
-  hormonal_iud                          : 'Hormonal IUD',
-  prior_mild_contrast_reaction          : 'Prior mild contrast reaction',
-  prior_surgery_undocumented_implants   : 'Prior surgery — undocumented implant risk',
-  permanent_tattoos_or_makeup           : 'Permanent tattoos or make-up',
-  transdermal_medication_patch          : 'Transdermal medication patch',
+  metallic_ocular_fragment_cleared     : 'Metal fragment in eyes — confirmed removed',
+  prior_other_surgery                  : 'Prior surgical history — possible undocumented implants',
+  asthma                               : 'Asthma',
+  tattoos                              : 'Tattoos (possible metallic ink)',
 };
 
 /* ── Submit screening results to backend ─────────────────────  */
@@ -3703,7 +3511,7 @@ function renderMriStep(step, stepNum, totalSteps) {
   const progressBar = `
     <div class="scr-progress-wrap">
       <div class="scr-step-label">
-        <span>Domain ${step.domain} — ${esc(step.domainName)}</span>
+        <span>${esc(step.domainName)}</span>
         <span>Step ${stepNum} of ${totalSteps}</span>
       </div>
       <div class="scr-progress-bar"><div class="scr-progress-fill" style="width:${pct}%"></div></div>
@@ -3711,7 +3519,17 @@ function renderMriStep(step, stepNum, totalSteps) {
 
   let body = '';
 
-  if (step.type === 'yesno') {
+  if (step.type === 'info') {
+    body = `
+      <div style="text-align:center;padding:8px 0 20px">
+        <div style="font-size:22px;font-weight:700;color:var(--c-text);margin-bottom:14px">${esc(step.title)}</div>
+        <div style="font-size:14.5px;line-height:1.75;color:var(--c-text-sec);max-width:560px;margin:0 auto 28px">${esc(step.body)}</div>
+        <button class="btn btn-primary btn-lg" onclick="mriScrAnswer('${step.id}','acknowledged')">
+          I understand — Continue →
+        </button>
+      </div>`;
+
+  } else if (step.type === 'yesno') {
     body = `
       <div class="scr-question">${esc(step.question)}</div>
       ${step.hint ? `<div class="scr-question-hint">${esc(step.hint)}</div>` : ''}
@@ -3742,7 +3560,7 @@ function renderMriStep(step, stepNum, totalSteps) {
         <input type="checkbox" value="${o.id}" data-scr-check="${step.id}">
         <div class="scr-check-option-text">
           <div class="scr-check-label">${esc(o.label)}</div>
-          <div class="scr-check-tier">${esc(o.tierLabel)}</div>
+          ${o.tierLabel ? `<div class="scr-check-tier">${esc(o.tierLabel)}</div>` : ''}
         </div>
       </label>`).join('');
     body = `
@@ -3935,10 +3753,10 @@ const MODALITY_RISKS = {
 };
 
 const CONSENT_TEXT = {
-  en: 'I confirm that I have read and understood the information provided about my procedure. I have had the opportunity to ask questions. I consent to the procedure described above and understand I may withdraw my consent at any time before the procedure begins.',
-  yo: 'I confirm that I have read and understood the information provided about my procedure. I have had the opportunity to ask questions. I consent to the procedure described above and understand I may withdraw my consent at any time before the procedure begins.',
-  ig: 'I confirm that I have read and understood the information provided about my procedure. I have had the opportunity to ask questions. I consent to the procedure described above and understand I may withdraw my consent at any time before the procedure begins.',
-  ha: 'I confirm that I have read and understood the information provided about my procedure. I have had the opportunity to ask questions. I consent to the procedure described above and understand I may withdraw my consent at any time before the procedure begins.',
+  en: 'By signing below you acknowledge that you have answered the questions to the best of your knowledge. You have had the risks/benefits of the scan explained to you and consent to the examination.',
+  yo: 'By signing below you acknowledge that you have answered the questions to the best of your knowledge. You have had the risks/benefits of the scan explained to you and consent to the examination.',
+  ig: 'By signing below you acknowledge that you have answered the questions to the best of your knowledge. You have had the risks/benefits of the scan explained to you and consent to the examination.',
+  ha: 'By signing below you acknowledge that you have answered the questions to the best of your knowledge. You have had the risks/benefits of the scan explained to you and consent to the examination.',
 };
 
 function consentDeclInit(consent) {
@@ -4104,6 +3922,7 @@ function renderConsentDeclaration() {
               placeholder="Type your full name to sign" autocomplete="off"
               oninput="consentDeclCheckSubmit()" />
             <div class="form-hint">Typing your full name constitutes a valid electronic signature.</div>
+            <div class="form-hint" style="margin-top:6px;font-style:italic">(Parent or Guardian on behalf of patient under 16 years of age)</div>
           </div>
           <div>
             <label class="form-label" for="cdecl-date">Date &amp; Time</label>
