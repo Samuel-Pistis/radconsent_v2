@@ -1067,12 +1067,10 @@ function navigate(page, data, opts = {}) {
     recordsState.records = null;
     recordsState.loading = false;
   }
-  // Force reload of record detail when opening a different record
+  // Always reload record detail — status may have changed since last visit
   if (page === 'record-detail') {
-    if (recordDetailState.record?.id !== data?.id) {
-      recordDetailState.record  = null;
-      recordDetailState.loading = false;
-    }
+    recordDetailState.record  = null;
+    recordDetailState.loading = false;
   }
   if (page === 'stage2-report') {
     if (stage2State.record?.id !== data?.id) {
