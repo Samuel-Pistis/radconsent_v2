@@ -3886,13 +3886,35 @@ function sigTopazRenderStatus(status, msg) {
 }
 
 function sigLoadTopaz() {
-  if (sigTopazLoaded) { sigTopazActivate(); return; }
+  if (sigTopazLoaded) {
+    // If wsq is still open, activate immediately; otherwise reconnect
+    if (typeof wsq !== 'undefined' && wsq.readyState === WebSocket.OPEN) {
+      sigTopazActivate();
+    } else {
+      sigTopazLoaded = false;
+      sigLoadTopaz();
+    }
+    return;
+  }
   sigTopazRenderStatus('loading', 'Connecting to Topaz SigWeb service…');
   const script = document.createElement('script');
   script.src = 'http://localhost:47289/SigWebTablet.js';
-  script.onload = () => { sigTopazLoaded = true; setTimeout(sigTopazActivate, 300); };
+  script.onload = () => { sigTopazLoaded = true; sigWaitForWS(); };
   script.onerror = () => sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
   document.head.appendChild(script);
+}
+
+function sigWaitForWS(attempts) {
+  attempts = attempts || 0;
+  if (typeof wsq !== 'undefined' && wsq.readyState === WebSocket.OPEN) {
+    sigTopazActivate();
+    return;
+  }
+  if (attempts >= 30) { // 3 second timeout
+    sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
+    return;
+  }
+  setTimeout(() => sigWaitForWS(attempts + 1), 100);
 }
 
 function sigTopazActivate() {
