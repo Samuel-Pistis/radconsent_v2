@@ -3896,21 +3896,19 @@ function sigTopazSign() {
   }
   sigTopazRenderStatus('capturing', 'Sign on the Topaz pad now…');
 
-  const msgEl = document.createElement('div');
-  msgEl.id = 'sig-topaz-msg';
+  const msgEl = document.createElement('MyExtensionDataElement');
   msgEl.setAttribute('messageAttribute', JSON.stringify({
     firstName: '', lastName: '', eMail: '', location: '',
     imageFormat: 1, imageX: 500, imageY: 100,
     imageTransparency: false, imageScaling: false,
     maxUpScalePercent: 0.0, rawDataFormat: 'ENC', minSigPoints: 25
   }));
-  document.body.appendChild(msgEl);
+  document.documentElement.appendChild(msgEl);
 
-  document.addEventListener('SignResponse', function handler(e) {
-    document.removeEventListener('SignResponse', handler);
-    const old = document.getElementById('sig-topaz-msg');
-    if (old) old.remove();
-    const obj = JSON.parse(msgEl.getAttribute('msgAttribute') || '{}');
+  top.document.addEventListener('SignResponse', function handler(e) {
+    top.document.removeEventListener('SignResponse', handler);
+    msgEl.remove();
+    const obj = JSON.parse(e.target.getAttribute('msgAttribute') || '{}');
     if (!obj.isSigned) {
       sigTopazRenderStatus('idle', 'Signature cancelled — click "Sign on Pad" to try again.');
       return;
@@ -3920,9 +3918,11 @@ function sigTopazSign() {
     if (preview) { preview.src = sigTopazPreviewUrl; preview.style.display = 'block'; }
     sigTopazRenderStatus('captured', 'Signature captured successfully.');
     consentDeclCheckSubmit();
-  });
+  }, false);
 
-  msgEl.dispatchEvent(new Event('SignStartEvent'));
+  const evt = document.createEvent('Events');
+  evt.initEvent('SignStartEvent', true, false);
+  msgEl.dispatchEvent(evt);
 }
 
 function sigTopazClear() {
