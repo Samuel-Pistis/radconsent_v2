@@ -316,9 +316,10 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .badge-draft_stage2   { background:#EDE9FE; color:#6D28D9; border-color:#C4B5FD; }
 .badge-closed         { background:var(--c-success-light); color:#15803D; border-color:var(--c-success-border); }
 .badge-pending_review { background:var(--c-warning-light); color:#B45309; border-color:var(--c-warning-border); }
-.badge-flagged_tier1  { background:var(--c-danger-light); color:#B91C1C; border-color:var(--c-danger-border); }
-.badge-voided         { background:#F8FAFC; color:var(--c-text-muted); border-color:var(--c-border); text-decoration:line-through; }
-.badge-declined       { background:#FEF2F2; color:#991B1B; border-color:#FCA5A5; }
+.badge-flagged_tier1         { background:var(--c-danger-light); color:#B91C1C; border-color:var(--c-danger-border); }
+.badge-awaiting_signature    { background:#F0FDF4; color:#15803D; border-color:#86EFAC; }
+.badge-voided                { background:#F8FAFC; color:var(--c-text-muted); border-color:var(--c-border); text-decoration:line-through; }
+.badge-declined              { background:#FEF2F2; color:#991B1B; border-color:#FCA5A5; }
 /* Tier badges */
 .badge-tier1 { background:var(--c-danger-light); color:#B91C1C; border-color:var(--c-danger-border); font-weight:600; }
 .badge-tier2 { background:var(--c-warning-light); color:#B45309; border-color:var(--c-warning-border); }
@@ -914,14 +915,15 @@ const MODALITY_LABELS = {
 };
 
 const STATUS_LABELS = {
-  in_progress    : 'In Progress',
-  draft_stage1   : 'Stage 1 Complete',
-  draft_stage2   : 'Stage 2 Complete',
-  closed         : 'Closed',
-  pending_review : 'Pending Review',
-  flagged_tier1  : 'Tier 1 Flagged',
-  declined       : 'Declined',
-  voided         : 'Voided',
+  in_progress          : 'In Progress',
+  draft_stage1         : 'Stage 1 Complete',
+  draft_stage2         : 'Stage 2 Complete',
+  closed               : 'Closed',
+  pending_review       : 'Pending Review',
+  flagged_tier1        : 'Tier 1 Flagged',
+  awaiting_signature   : 'Awaiting Signature',
+  declined             : 'Declined',
+  voided               : 'Voided',
 };
 
 const ROLE_LABELS = {
@@ -1563,9 +1565,10 @@ const STATUS_FILTER_OPTS = [
   { value: 'in_progress',   label: 'In Progress'          },
   { value: 'draft_stage1',  label: 'Awaiting Radiographer'},
   { value: 'draft_stage2',  label: 'Awaiting Nurse'       },
-  { value: 'pending_review',label: 'Pending Review'       },
-  { value: 'flagged_tier1', label: 'Tier 1 Flagged'       },
-  { value: 'closed',        label: 'Closed'               },
+  { value: 'pending_review',      label: 'Pending Review'       },
+  { value: 'flagged_tier1',       label: 'Tier 1 Flagged'       },
+  { value: 'awaiting_signature',  label: 'Awaiting Signature'   },
+  { value: 'closed',              label: 'Closed'               },
   { value: 'declined',      label: 'Declined'             },
   { value: 'voided',        label: 'Voided'               },
 ];
@@ -1578,6 +1581,8 @@ function getRecordAction(rec, role) {
   if ((rec.status === 'pending_review' || rec.status === 'flagged_tier1') &&
       (role === 'radiologist' || role === 'admin'))
     return { label: 'Review', cls: 'btn-warning btn-sm', page: 'rad-review' };
+  if (rec.status === 'awaiting_signature' && (role === 'radiographer' || role === 'nurse' || role === 'admin'))
+    return { label: 'Sign Consent', cls: 'btn-primary btn-sm', page: 'record-detail' };
   return { label: 'View', cls: 'btn-secondary btn-sm', page: 'record-detail' };
 }
 
@@ -1926,9 +1931,15 @@ async function radReviewSubmit() {
       notes,
       radiologistSignature: sig,
     });
-    toast('Decision recorded successfully.', 'success');
+    const id = radReviewState.record.id;
     radReviewState.record = null;
-    navigate('flagged');
+    if (decision === 'declined') {
+      toast('Record declined and removed from queue.', 'success');
+      navigate('flagged');
+    } else {
+      toast('Approved — patient may now sign the consent declaration.', 'success');
+      navigate('record-detail', { id });
+    }
   } catch (err) {
     toast(err.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Submit Decision'; }
@@ -2312,6 +2323,12 @@ async function submitNewConsent() {
 /* ═══════════════════════════════════════════════════════════════
    RECORD DETAIL
 ═══════════════════════════════════════════════════════════════ */
+function navigateToSignConsent() {
+  const rec = recordDetailState.record;
+  if (!rec) return;
+  navigate('consent-declaration', { consent: rec });
+}
+
 async function downloadRecord(id) {
   const btn = document.getElementById('dl-record-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Preparing…'; }
@@ -2465,27 +2482,50 @@ function renderRecordDetail() {
 
   // ── Stage 1 card ─────────────────────────────────────────────
   const s1 = rec.stage1;
+  const isAwaitingSig   = rec.status === 'awaiting_signature';
+  const isPendingReview = rec.status === 'pending_review' || rec.status === 'flagged_tier1';
+  const canSignNow = isAwaitingSig && (role === 'radiographer' || role === 'nurse' || role === 'admin');
+  const signBtn = canSignNow
+    ? `<button class="btn btn-primary btn-sm" onclick="navigateToSignConsent()">Sign Consent Now</button>`
+    : '';
+
+  let s1Body;
+  if (s1done) {
+    s1Body = `
+      <div class="scr-meta-grid">
+        ${metaRow('Patient Name (printed)',   esc(s1.patientSignature))}
+        ${metaRow('Signed',                   fmtDateTime(s1.completedAt))}
+        ${metaRow('Witnessed By',             esc(s1.witnessName))}
+        ${metaRow('Consent Version',          esc(s1.consentVersion))}
+        ${metaRow('Screening Completed',      s1.screeningCompletedAt ? fmtDateTime(s1.screeningCompletedAt) : null)}
+        ${s1.patientSignatureImage ? `
+        <div class="scr-meta-item" style="grid-column:1/-1">
+          <div class="scr-meta-label">Drawn Signature</div>
+          <img class="sig-img" src="${s1.patientSignatureImage}" alt="Patient signature" />
+        </div>` : ''}
+      </div>`;
+  } else if (isAwaitingSig) {
+    s1Body = `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:var(--radius-sm);font-size:12.5px;color:#15803D">
+      ${IC.check.replace('stroke="currentColor"','stroke="#15803D"').replace(/<svg /,'<svg width="14" height="14" ')}
+      <span><strong>Radiologist approved</strong> — patient may now sign the consent declaration.</span>
+      ${signBtn ? `<div style="margin-left:auto;flex-shrink:0">${signBtn}</div>` : ''}
+    </div>`;
+  } else if (isPendingReview) {
+    s1Body = pendingBanner('Radiologist', 'Safety flags detected — radiologist must review and approve before patient can sign');
+  } else {
+    s1Body = pendingBanner('Patient / Staff', 'Consent declaration signature required');
+  }
+
   const stage1Card = `
     <div class="card mb-4">
       <div class="card-header">
         <h3 style="display:flex;align-items:center;gap:8px">${stageIcon(s1done)}&nbsp;Stage 1 — Consent Declaration</h3>
-        ${s1done ? `<span class="badge badge-green">Complete</span>` : `<span class="badge badge-gray">Pending</span>`}
+        ${s1done ? `<span class="badge badge-green">Complete</span>`
+          : isAwaitingSig ? `<span class="badge badge-awaiting_signature">Approved — Awaiting Signature</span>`
+          : isPendingReview ? `<span class="badge badge-pending_review">Awaiting Radiologist Review</span>`
+          : `<span class="badge badge-gray">Pending</span>`}
       </div>
-      <div class="card-body">
-        ${s1done ? `
-          <div class="scr-meta-grid">
-            ${metaRow('Patient Name (printed)',   esc(s1.patientSignature))}
-            ${metaRow('Signed',                   fmtDateTime(s1.completedAt))}
-            ${metaRow('Witnessed By',             esc(s1.witnessName))}
-            ${metaRow('Consent Version',          esc(s1.consentVersion))}
-            ${metaRow('Screening Completed',      s1.screeningCompletedAt ? fmtDateTime(s1.screeningCompletedAt) : null)}
-            ${s1.patientSignatureImage ? `
-            <div class="scr-meta-item" style="grid-column:1/-1">
-              <div class="scr-meta-label">Drawn Signature</div>
-              <img class="sig-img" src="${s1.patientSignatureImage}" alt="Patient signature" />
-            </div>` : ''}
-          </div>` : pendingBanner('Patient / Staff', 'Consent declaration signature required')}
-      </div>
+      <div class="card-body">${s1Body}</div>
     </div>`;
 
   // ── Stage 2 card ─────────────────────────────────────────────
@@ -2872,12 +2912,13 @@ function renderStage3Vitals() {
   // ── Stage not ready guard ────────────────────────────────────
   if (rec.status !== 'draft_stage2') {
     const statusMsg = {
-      in_progress   : 'Patient has not yet signed the consent declaration.',
-      draft_stage1  : 'The Radiographer has not yet filed their Stage 2 report.',
-      pending_review: 'This record is awaiting radiologist review before Stage 2 can proceed.',
-      flagged_tier1 : 'This record has a Tier 1 flag and is awaiting radiologist review.',
-      declined      : 'This record was declined by the radiologist.',
-      closed        : 'This record is already closed.',
+      in_progress         : 'Patient has not yet signed the consent declaration.',
+      awaiting_signature  : 'Radiologist approved — waiting for patient to sign consent before Stage 2 can proceed.',
+      draft_stage1        : 'The Radiographer has not yet filed their Stage 2 report.',
+      pending_review      : 'This record is awaiting radiologist review before the patient can sign.',
+      flagged_tier1       : 'This record has a Tier 1 flag and is awaiting radiologist review.',
+      declined            : 'This record was declined by the radiologist.',
+      closed              : 'This record is already closed.',
     }[rec.status] || `Current status: ${rec.status}`;
     return `
       <div class="page-header"><div>${back}<div class="page-title">Vitals Check</div>
@@ -3750,9 +3791,13 @@ async function mriScrSubmit() {
       tierFlags: { tier1, tier2, tier3 },
     });
     if (!updated) return;
-    // Reset state so next visit to same page re-inits
     mriScrState.consent = null;
-    navigate('consent-declaration', { consent: updated });
+    if (updated.status === 'flagged_tier1' || updated.status === 'pending_review') {
+      navigate('record-detail', { id: updated.id });
+      toast('Safety flags detected — a radiologist must review and approve before the patient can sign.', 'warning');
+    } else {
+      navigate('consent-declaration', { consent: updated });
+    }
   } catch (err) {
     toast(err.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Proceed to Consent Declaration →'; }
@@ -4004,7 +4049,12 @@ async function safetyScrSubmit() {
     });
     if (!updated) return;
     safetyScrState.consent = null;
-    navigate('consent-declaration', { consent: updated });
+    if (updated.status === 'flagged_tier1' || updated.status === 'pending_review') {
+      navigate('record-detail', { id: updated.id });
+      toast('Safety flags detected — a radiologist must review and approve before the patient can sign.', 'warning');
+    } else {
+      navigate('consent-declaration', { consent: updated });
+    }
   } catch (err) {
     toast(err.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Proceed to Consent Declaration →'; }

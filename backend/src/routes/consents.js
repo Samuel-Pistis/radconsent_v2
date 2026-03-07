@@ -84,14 +84,23 @@ router.put('/:id/screening', (req, res) => {
   const existing = db.findOne('consents', { id: req.params.id });
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
 
-  const updated = db.update('consents', req.params.id, {
+  // If tier1/tier2 flags exist, block patient from signing until radiologist reviews
+  const tf = tierFlags || { tier1: [], tier2: [], tier3: [] };
+  const flaggedStatus = tf.tier1?.length > 0 ? 'flagged_tier1'
+                      : tf.tier2?.length > 0 ? 'pending_review'
+                      : null;
+
+  const updateData = {
     tierFlags,
     stage1: {
       ...(existing.stage1 || {}),
       screening,
       screeningCompletedAt: new Date().toISOString(),
     },
-  });
+  };
+  if (flaggedStatus) updateData.status = flaggedStatus;
+
+  const updated = db.update('consents', req.params.id, updateData);
   return res.json(updated);
 });
 
@@ -105,16 +114,20 @@ router.put('/:id/sign', (req, res) => {
   const existing = db.findOne('consents', { id: req.params.id });
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
 
-  const tierFlags = existing.tierFlags || { tier1: [], tier2: [], tier3: [] };
-  const newStatus = tierFlags.tier1?.length > 0 ? 'flagged_tier1'
-                  : tierFlags.tier2?.length > 0 ? 'pending_review'
-                  : 'draft_stage1';
+  // Only allow signing when: no flags (in_progress) or radiologist has approved (awaiting_signature)
+  if (existing.status !== 'in_progress' && existing.status !== 'awaiting_signature') {
+    return res.status(409).json({
+      error: existing.status === 'pending_review' || existing.status === 'flagged_tier1'
+        ? 'This record has safety flags. A radiologist must review and approve before the patient can sign.'
+        : `Cannot sign consent in current status: ${existing.status}.`,
+    });
+  }
 
   const now = new Date().toISOString();
   const lang = language || existing.language || 'en';
 
   const updated = db.update('consents', req.params.id, {
-    status  : newStatus,
+    status  : 'draft_stage1',
     language: lang,
     stage1  : {
       ...(existing.stage1 || {}),
@@ -440,7 +453,8 @@ router.put('/:id/review', (req, res) => {
   if (existing.status !== 'pending_review' && existing.status !== 'flagged_tier1')
     return res.status(409).json({ error: 'This record is not awaiting radiologist review.' });
 
-  const newStatus = decision === 'declined' ? 'declined' : 'draft_stage1';
+  // approved/proceed_with_modifications → awaiting_signature (patient must still sign)
+  const newStatus = decision === 'declined' ? 'declined' : 'awaiting_signature';
   const updated = db.update('consents', req.params.id, {
     status: newStatus,
     radiologistReview: {
