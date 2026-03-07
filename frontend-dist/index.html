@@ -3734,11 +3734,17 @@ const SCR_FLAG_LABELS = {
 
 /* ── Submit screening results to backend ─────────────────────  */
 async function mriScrSubmit() {
+  const consent = mriScrState.consent || state.pageData?.consent;
+  if (!consent?.id) {
+    toast('Session lost — please start a new consent from the beginning.', 'error');
+    navigate('new-consent');
+    return;
+  }
+
   const btn = document.getElementById('scr-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Saving…`; }
 
   const { screening, tier1, tier2, tier3 } = mriScrComputeResults();
-  const consent = mriScrState.consent;
 
   try {
     const updated = await api('PUT', `/consents/${consent.id}/screening`, {
@@ -3978,7 +3984,12 @@ function safetyScrAnswer(key, value) {
 }
 
 async function safetyScrSubmit() {
-  const consent = safetyScrState.consent;
+  const consent = safetyScrState.consent || state.pageData?.consent;
+  if (!consent?.id) {
+    toast('Session lost — please start a new consent from the beginning.', 'error');
+    navigate('new-consent');
+    return;
+  }
   const ans = safetyScrState.answers;
 
   const tier2 = SAFETY_QUESTIONS
@@ -4270,7 +4281,12 @@ async function consentDeclSubmit() {
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
 
   const witnessName = (document.getElementById('cdecl-witness')?.value || '').trim();
-  const consent = consentDeclState.consent;
+  const consent = consentDeclState.consent || state.pageData?.consent;
+  if (!consent?.id) {
+    toast('Session lost — please start a new consent from the beginning.', 'error');
+    navigate('new-consent');
+    return;
+  }
 
   try {
     const result = await api('PUT', `/consents/${consent.id}/sign`, {
