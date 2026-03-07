@@ -177,7 +177,7 @@ router.put('/:id/stage3', (req, res) => {
 
   const {
     bloodPressureSystolic, bloodPressureDiastolic,
-    pulse, condition, notes, nurseSignature,
+    pulse, condition, notes, nurseSignature, nurseSignatureImage,
   } = req.body || {};
 
   if (!condition)
@@ -219,7 +219,8 @@ router.put('/:id/stage3', (req, res) => {
         rr         : null,
       },
       patientCondition: conditionText,
-      nurseSignature  : nurseSignature.trim(),
+      nurseSignature      : nurseSignature?.trim() || '',
+      nurseSignatureImage : nurseSignatureImage || null,
     },
   });
   return res.json(updated);

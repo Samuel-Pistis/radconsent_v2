@@ -973,6 +973,11 @@ let recordsState      = { records: null, loading: false, search: '', statusFilte
 let recordDetailState = { record: null, loading: false };
 let stage2State       = { record: null, loading: false };
 let stage3State       = { record: null, loading: false, confirmed: false, confirmedRecord: null };
+let s3SigMode            = 'draw';
+let s3SigPadInstance     = null;
+let s3SigUploadedDataUrl = null;
+let s3SigTopazStatus     = 'idle';
+let s3SigTopazPreviewUrl = null;
 let radReviewState    = { record: null, loading: false };
 let adminState        = { records: null, loading: false };
 let dashboardState    = { records: null, loading: false };
@@ -1078,6 +1083,11 @@ function navigate(page, data, opts = {}) {
       stage3State.record    = null;
       stage3State.loading   = false;
       stage3State.confirmed = false;
+      s3SigMode            = 'draw';
+      s3SigPadInstance     = null;
+      s3SigUploadedDataUrl = null;
+      s3SigTopazStatus     = 'idle';
+      s3SigTopazPreviewUrl = null;
     }
   }
   if (page === 'rad-review') {
@@ -2929,19 +2939,51 @@ function renderStage3Vitals() {
         <div class="divider"></div>
 
         <!-- Nurse signature -->
-        <div class="form-row">
-          <div>
-            <label class="form-label" for="s3-performer">Nurse Name</label>
-            <input class="form-control" type="text" id="s3-performer"
-              value="${esc(state.user?.name || '')}" readonly
-              style="background:var(--c-bg);color:var(--c-text-sec);cursor:default" />
+        <div class="mb-4">
+          <label class="form-label" for="s3-performer">Nurse Name</label>
+          <input class="form-control" type="text" id="s3-performer"
+            value="${esc(state.user?.name || '')}" readonly
+            style="background:var(--c-bg);color:var(--c-text-sec);cursor:default;max-width:320px" />
+        </div>
+        <div class="mb-4">
+          <div class="form-label">Nurse Signature <span class="req">*</span></div>
+          <div class="sig-mode-tabs">
+            <button id="s3-sig-tab-draw"   type="button" class="sig-mode-tab${s3SigMode==='draw'  ?' sig-tab-active':''}" onclick="s3SigSwitchMode('draw')">&#9998; Draw</button>
+            <button id="s3-sig-tab-upload" type="button" class="sig-mode-tab${s3SigMode==='upload'?' sig-tab-active':''}" onclick="s3SigSwitchMode('upload')">&#8593; Upload image</button>
+            <button id="s3-sig-tab-topaz"  type="button" class="sig-mode-tab${s3SigMode==='topaz' ?' sig-tab-active':''}" onclick="s3SigSwitchMode('topaz')">&#128394; Topaz Pad</button>
           </div>
-          <div>
-            <label class="form-label" for="s3-sig">Signature <span class="req">*</span></label>
-            <input class="form-control" type="text" id="s3-sig"
-              placeholder="Type your full name to sign"
-              autocomplete="off" oninput="stage3CheckSubmit()" />
-            <div class="form-hint">Typing your name constitutes a valid electronic signature.</div>
+          <!-- Draw pane -->
+          <div id="s3-sig-draw-pane"${s3SigMode!=='draw'?' style="display:none"':''}>
+            <div class="sig-pad-wrap${s3SigPadInstance&&!s3SigPadInstance?.isEmpty()?' sig-pad-filled':''}">
+              <canvas id="s3-sigpad"></canvas>
+              <div class="sig-pad-toolbar">
+                <span class="sig-pad-hint">Sign using mouse, finger or stylus</span>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="s3SigClear()">Clear</button>
+              </div>
+            </div>
+          </div>
+          <!-- Upload pane -->
+          <div id="s3-sig-upload-pane"${s3SigMode!=='upload'?' style="display:none"':''}>
+            <label class="sig-upload-area" for="s3-sig-upload-input">
+              <span style="font-size:22px">&#8593;</span>
+              <span>Click to select a signature image</span>
+              <span style="font-size:11px">JPG, PNG or GIF accepted</span>
+            </label>
+            <input type="file" id="s3-sig-upload-input" accept="image/*" style="display:none" onchange="s3SigHandleUpload(this)" />
+            ${s3SigUploadedDataUrl ? `<img id="s3-sig-upload-preview" class="sig-img" src="${s3SigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="s3-sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
+          </div>
+          <!-- Topaz pane -->
+          <div id="s3-sig-topaz-pane" class="sig-topaz-pane"${s3SigMode!=='topaz'?' style="display:none"':''}>
+            <div class="sig-topaz-status">
+              <span id="s3-sig-topaz-dot" class="sig-topaz-dot${s3SigTopazStatus==='capturing'?' dot-capturing':s3SigTopazStatus==='captured'?' dot-captured':s3SigTopazStatus==='error'?' dot-error':''}"></span>
+              <span id="s3-sig-topaz-text">${s3SigTopazStatus==='capturing'?'Sign on the Topaz pad now\u2026':s3SigTopazStatus==='captured'?'Signature captured successfully.':s3SigTopazStatus==='error'?'SigPlusExtLite extension not detected. Install it in Chrome and reload.':'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.'}</span>
+            </div>
+            <div class="sig-topaz-actions">
+              <button type="button" class="btn btn-primary btn-sm" onclick="s3SigTopazSign()"${s3SigTopazStatus==='capturing'?' disabled':''}>Sign on Pad</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="s3SigTopazClear()"${s3SigTopazStatus!=='captured'?' disabled':''}>Clear</button>
+            </div>
+            ${s3SigTopazPreviewUrl ? `<img id="s3-sig-topaz-preview" class="sig-img" src="${s3SigTopazPreviewUrl}" alt="Nurse signature" />` : `<img id="s3-sig-topaz-preview" class="sig-img" style="display:none" alt="Nurse signature" />`}
+            <div class="form-hint" style="margin-top:4px">Requires the <a href="https://chrome.google.com/webstore/detail/sigplusextlite/gjaebefdmgmhgheehpjpeclhplpkdpbi" target="_blank" rel="noopener">SigPlusExtLite Chrome extension</a> and the Topaz L460 pad connected via USB.</div>
           </div>
         </div>
       </div>
@@ -2954,25 +2996,151 @@ function renderStage3Vitals() {
     </div>`;
 }
 
+// ── Stage-3 signature helpers ─────────────────────────────────────────────────
+function s3SigSwitchMode(mode) {
+  s3SigMode = mode;
+  document.getElementById('s3-sig-draw-pane')?.style.setProperty('display', mode === 'draw'   ? '' : 'none');
+  document.getElementById('s3-sig-upload-pane')?.style.setProperty('display', mode === 'upload' ? '' : 'none');
+  document.getElementById('s3-sig-topaz-pane')?.style.setProperty('display', mode === 'topaz'  ? '' : 'none');
+  document.getElementById('s3-sig-tab-draw')?.classList.toggle('sig-tab-active', mode === 'draw');
+  document.getElementById('s3-sig-tab-upload')?.classList.toggle('sig-tab-active', mode === 'upload');
+  document.getElementById('s3-sig-tab-topaz')?.classList.toggle('sig-tab-active', mode === 'topaz');
+  if (mode === 'draw') s3InitSigPad();
+  if (mode === 'topaz') s3SigLoadTopaz();
+  stage3CheckSubmit();
+}
+
+function s3InitSigPad() {
+  const canvas = document.getElementById('s3-sigpad');
+  if (!canvas || typeof SignaturePad === 'undefined') return;
+  if (s3SigPadInstance) s3SigPadInstance.off();
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  canvas.width  = (canvas.offsetWidth  || 600) * ratio;
+  canvas.height = (canvas.offsetHeight || 160) * ratio;
+  canvas.getContext('2d').scale(ratio, ratio);
+  s3SigPadInstance = new SignaturePad(canvas, { penColor: '#0F172A', backgroundColor: '#ffffff', minWidth: 0.5, maxWidth: 2.5 });
+  s3SigPadInstance.addEventListener('endStroke', () => {
+    canvas.closest('.sig-pad-wrap')?.classList.add('sig-pad-filled');
+    stage3CheckSubmit();
+  });
+}
+
+function s3SigClear() {
+  s3SigPadInstance?.clear();
+  document.getElementById('s3-sigpad')?.closest('.sig-pad-wrap')?.classList.remove('sig-pad-filled');
+  stage3CheckSubmit();
+}
+
+function s3SigHandleUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    s3SigUploadedDataUrl = e.target.result;
+    const preview = document.getElementById('s3-sig-upload-preview');
+    if (preview) { preview.src = s3SigUploadedDataUrl; preview.style.display = 'block'; }
+    stage3CheckSubmit();
+  };
+  reader.readAsDataURL(file);
+}
+
+function s3SigLoadTopaz() {
+  const installed = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+  if (!installed) {
+    s3SigTopazRenderStatus('error', 'SigPlusExtLite extension not detected. Install it in Chrome and reload.');
+    return;
+  }
+  s3SigTopazRenderStatus('idle', 'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.');
+}
+
+function s3SigTopazRenderStatus(status, msg) {
+  s3SigTopazStatus = status;
+  const el  = document.getElementById('s3-sig-topaz-text');
+  const dot = document.getElementById('s3-sig-topaz-dot');
+  if (el) el.textContent = msg;
+  if (dot) {
+    dot.className = 'sig-topaz-dot';
+    if (status === 'capturing') dot.classList.add('dot-capturing');
+    if (status === 'captured')  dot.classList.add('dot-captured');
+    if (status === 'error')     dot.classList.add('dot-error');
+  }
+}
+
+function s3SigTopazSign() {
+  const installed = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+  if (!installed) {
+    s3SigTopazRenderStatus('error', 'SigPlusExtLite extension not detected. Install it in Chrome and reload.');
+    return;
+  }
+  s3SigTopazRenderStatus('capturing', 'Sign on the Topaz pad now\u2026');
+  const msgEl = document.createElement('MyExtensionDataElement');
+  msgEl.setAttribute('messageAttribute', JSON.stringify({
+    firstName: '', lastName: '', eMail: '', location: '',
+    imageFormat: 1, imageX: 500, imageY: 100,
+    imageTransparency: false, imageScaling: false,
+    maxUpScalePercent: 0.0, rawDataFormat: 'ENC', minSigPoints: 25
+  }));
+  document.documentElement.appendChild(msgEl);
+  top.document.addEventListener('SignResponse', function handler(e) {
+    top.document.removeEventListener('SignResponse', handler);
+    msgEl.remove();
+    const obj = JSON.parse(e.target.getAttribute('msgAttribute') || '{}');
+    if (!obj.isSigned) {
+      s3SigTopazRenderStatus('idle', 'Signature cancelled \u2014 click \u201cSign on Pad\u201d to try again.');
+      return;
+    }
+    s3SigTopazPreviewUrl = 'data:image/png;base64,' + obj.imageData;
+    const preview = document.getElementById('s3-sig-topaz-preview');
+    if (preview) { preview.src = s3SigTopazPreviewUrl; preview.style.display = 'block'; }
+    s3SigTopazRenderStatus('captured', 'Signature captured successfully.');
+    stage3CheckSubmit();
+  }, false);
+  const evt = document.createEvent('Events');
+  evt.initEvent('SignStartEvent', true, false);
+  msgEl.dispatchEvent(evt);
+}
+
+function s3SigTopazClear() {
+  s3SigTopazPreviewUrl = null;
+  const preview = document.getElementById('s3-sig-topaz-preview');
+  if (preview) preview.style.display = 'none';
+  s3SigTopazRenderStatus('idle', 'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.');
+  stage3CheckSubmit();
+}
+
 function stage3CheckSubmit() {
-  const sig = (document.getElementById('s3-sig')?.value || '').trim();
+  const sigOk = s3SigMode === 'upload' ? !!s3SigUploadedDataUrl
+              : s3SigMode === 'topaz'  ? !!s3SigTopazPreviewUrl
+              : (s3SigPadInstance && !s3SigPadInstance.isEmpty());
   const btn = document.getElementById('s3-submit-btn');
-  if (btn) btn.disabled = !sig;
+  if (btn) btn.disabled = !sigOk;
 }
 
 async function stage3Submit() {
-  const sig       = (document.getElementById('s3-sig')?.value || '').trim();
   const condition = document.querySelector('[name="s3-condition"]:checked')?.value;
   const notes     = (document.getElementById('s3-notes')?.value || '').trim();
   const bpSys     = document.getElementById('s3-bp-sys')?.value;
   const bpDia     = document.getElementById('s3-bp-dia')?.value;
   const pulse     = document.getElementById('s3-pulse')?.value;
 
-  if (!sig)       { toast('Please type your name to sign.', 'warning'); return; }
+  let nurseSignatureImage = null;
+  if (s3SigMode === 'upload') {
+    if (!s3SigUploadedDataUrl) { toast('Please upload a signature image.', 'warning'); return; }
+    nurseSignatureImage = s3SigUploadedDataUrl;
+  } else if (s3SigMode === 'topaz') {
+    if (!s3SigTopazPreviewUrl) { toast('Please capture a signature on the Topaz pad.', 'warning'); return; }
+    nurseSignatureImage = s3SigTopazPreviewUrl;
+  } else {
+    if (!s3SigPadInstance || s3SigPadInstance.isEmpty()) { toast('Please draw your signature.', 'warning'); return; }
+    nurseSignatureImage = s3SigPadInstance.toDataURL('image/png');
+  }
+
   if (!condition) { toast('Please select a patient condition.', 'warning'); return; }
 
   const btn = document.getElementById('s3-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
+
+  const nurseName = (document.getElementById('s3-performer')?.value || '').trim() || state.user?.name || '';
 
   try {
     const result = await api('PUT', `/consents/${stage3State.record.id}/stage3`, {
@@ -2980,8 +3148,9 @@ async function stage3Submit() {
       bloodPressureDiastolic : bpDia  ? Number(bpDia)  : null,
       pulse                  : pulse  ? Number(pulse)  : null,
       condition,
-      notes  : notes || null,
-      nurseSignature: sig,
+      notes             : notes || null,
+      nurseSignature    : nurseName,
+      nurseSignatureImage,
     });
     if (!result) return;
     stage3State.confirmed      = true;
@@ -4217,6 +4386,9 @@ function bindPageEvents() {
   bindMriScreeningEvents();
   if (state.page === 'consent-declaration' && !consentDeclState.signed && sigMode === 'draw') {
     initSigPad();
+  }
+  if (state.page === 'stage3-vitals' && !stage3State.confirmed && s3SigMode === 'draw') {
+    s3InitSigPad();
   }
 }
 
