@@ -894,7 +894,6 @@ body.dark input[type="checkbox"] { accent-color: var(--c-accent); }
 .sig-topaz-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-  <script src="http://localhost:47289/SigWeb/SigWebTablet.js" async onerror="window._sigWebFailed=true"></script>
 </head>
 <body>
   <div id="app"></div>
@@ -966,9 +965,8 @@ let consentDeclState = { lang: 'en', consent: null, signed: false, signedResult:
 let sigPadInstance      = null;
 let sigMode             = 'draw';   // 'draw' | 'upload' | 'topaz'
 let sigUploadedDataUrl  = null;
-let sigTopazStatus      = 'idle';   // 'idle' | 'loading' | 'capturing' | 'captured' | 'error'
+let sigTopazStatus      = 'idle';   // 'idle' | 'capturing' | 'captured' | 'error'
 let sigTopazPreviewUrl  = null;
-let sigTopazLoaded      = false;
 
 /* Records archive + detail state */
 let recordsState      = { records: null, loading: false, search: '', statusFilter: 'all' };
@@ -3842,10 +3840,6 @@ function consentDeclClearSig() {
 }
 
 function sigSwitchMode(mode) {
-  // Turn off topaz capture if leaving topaz mode
-  if (sigMode === 'topaz' && mode !== 'topaz') {
-    try { if (typeof SetTabletState !== 'undefined' && typeof wsq !== 'undefined') SetTabletState(0, wsq); } catch(e) {}
-  }
   sigMode = mode;
   document.getElementById('sig-draw-pane')?.style.setProperty('display', mode === 'draw' ? '' : 'none');
   document.getElementById('sig-upload-pane')?.style.setProperty('display', mode === 'upload' ? '' : 'none');
@@ -3871,15 +3865,14 @@ function sigHandleUpload(input) {
   reader.readAsDataURL(file);
 }
 
-// ── Topaz SigWeb helpers ──────────────────────────────────────────────────────
+// ── Topaz SigPlusExtLite helpers ─────────────────────────────────────────────
 function sigTopazRenderStatus(status, msg) {
   sigTopazStatus = status;
-  const el = document.getElementById('sig-topaz-status-text');
+  const el  = document.getElementById('sig-topaz-status-text');
   const dot = document.getElementById('sig-topaz-dot');
   if (el) el.textContent = msg;
   if (dot) {
     dot.className = 'sig-topaz-dot';
-    if (status === 'loading')   dot.classList.add('dot-loading');
     if (status === 'capturing') dot.classList.add('dot-capturing');
     if (status === 'captured')  dot.classList.add('dot-captured');
     if (status === 'error')     dot.classList.add('dot-error');
@@ -3887,74 +3880,56 @@ function sigTopazRenderStatus(status, msg) {
 }
 
 function sigLoadTopaz() {
-  if (window._sigWebFailed) {
-    sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
+  const installed = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+  if (!installed) {
+    sigTopazRenderStatus('error', 'SigPlusExtLite extension not detected. Install it in Chrome and reload.');
     return;
   }
-  sigTopazRenderStatus('loading', 'Connecting to Topaz SigWeb service…');
-  sigWaitForWS();
+  sigTopazRenderStatus('idle', 'Extension ready — click "Sign on Pad" to capture.');
 }
 
-function sigWaitForWS(attempts) {
-  attempts = attempts || 0;
-  if (window._sigWebFailed) {
-    sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
+function sigTopazSign() {
+  const installed = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+  if (!installed) {
+    sigTopazRenderStatus('error', 'SigPlusExtLite extension not detected. Install it in Chrome and reload.');
     return;
   }
-  if (typeof wsq !== 'undefined' && wsq.readyState === WebSocket.OPEN) {
-    sigTopazActivate();
-    return;
-  }
-  if (attempts >= 30) { // 3 second timeout
-    sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
-    return;
-  }
-  setTimeout(() => sigWaitForWS(attempts + 1), 100);
-}
+  sigTopazRenderStatus('capturing', 'Sign on the Topaz pad now…');
 
-function sigTopazActivate() {
-  try {
-    SetDisplayXSize(500);
-    SetDisplayYSize(100);
-    SetTabletOutputMode(1);
-    ClearTablet();
-    SetTabletState(1, wsq);
-    sigTopazRenderStatus('capturing', 'Sign on the Topaz pad now…');
-    const acceptBtn = document.getElementById('sig-topaz-accept');
-    const clearBtn  = document.getElementById('sig-topaz-clear');
-    if (acceptBtn) acceptBtn.disabled = false;
-    if (clearBtn)  clearBtn.disabled  = false;
-  } catch(e) {
-    sigTopazRenderStatus('error', 'Topaz pad not responding. Check USB and SigWeb installation.');
-  }
-}
+  const msgEl = document.createElement('div');
+  msgEl.id = 'sig-topaz-msg';
+  msgEl.setAttribute('messageAttribute', JSON.stringify({
+    firstName: '', lastName: '', eMail: '', location: '',
+    imageFormat: 1, imageX: 500, imageY: 100,
+    imageTransparency: false, imageScaling: false,
+    maxUpScalePercent: 0.0, rawDataFormat: 'ENC', minSigPoints: 25
+  }));
+  document.body.appendChild(msgEl);
 
-function sigTopazAccept() {
-  try {
-    const pts = NumberOfTabletPoints();
-    if (!pts || pts < 5) { toast('Signature appears empty. Please sign on the Topaz pad first.', 'warning'); return; }
-    GetSigImageB64('image/png', function(data) {
-      if (!data) { sigTopazRenderStatus('error', 'Failed to capture image. Try again.'); return; }
-      sigTopazPreviewUrl = data.startsWith('data:') ? data : 'data:image/png;base64,' + data;
-      const preview = document.getElementById('sig-topaz-preview');
-      if (preview) { preview.src = sigTopazPreviewUrl; preview.style.display = 'block'; }
-      try { SetTabletState(0, wsq); } catch(e) {}
-      sigTopazRenderStatus('captured', 'Signature captured successfully.');
-      consentDeclCheckSubmit();
-    });
-  } catch(e) {
-    sigTopazRenderStatus('error', 'Error reading pad. Ensure SigWeb is running.');
-  }
+  document.addEventListener('SignResponse', function handler(e) {
+    document.removeEventListener('SignResponse', handler);
+    const old = document.getElementById('sig-topaz-msg');
+    if (old) old.remove();
+    const obj = JSON.parse(msgEl.getAttribute('msgAttribute') || '{}');
+    if (!obj.isSigned) {
+      sigTopazRenderStatus('idle', 'Signature cancelled — click "Sign on Pad" to try again.');
+      return;
+    }
+    sigTopazPreviewUrl = 'data:image/png;base64,' + obj.imageData;
+    const preview = document.getElementById('sig-topaz-preview');
+    if (preview) { preview.src = sigTopazPreviewUrl; preview.style.display = 'block'; }
+    sigTopazRenderStatus('captured', 'Signature captured successfully.');
+    consentDeclCheckSubmit();
+  });
+
+  msgEl.dispatchEvent(new Event('SignStartEvent'));
 }
 
 function sigTopazClear() {
-  try { ClearTablet(); } catch(e) {}
   sigTopazPreviewUrl = null;
   const preview = document.getElementById('sig-topaz-preview');
   if (preview) preview.style.display = 'none';
-  // re-start capture
-  try { SetTabletState(1, wsq); sigTopazRenderStatus('capturing', 'Sign on the Topaz pad now…'); }
-  catch(e) { sigTopazRenderStatus('error', 'Pad not responding.'); }
+  sigTopazRenderStatus('idle', 'Extension ready — click "Sign on Pad" to capture.');
   consentDeclCheckSubmit();
 }
 
@@ -4151,16 +4126,15 @@ function renderConsentDeclaration() {
           <!-- Topaz pad pane -->
           <div id="sig-topaz-pane" class="sig-topaz-pane"${sigMode!=='topaz'?' style="display:none"':''}>
             <div class="sig-topaz-status">
-              <span id="sig-topaz-dot" class="sig-topaz-dot${sigTopazStatus==='capturing'?' dot-capturing':sigTopazStatus==='captured'?' dot-captured':sigTopazStatus==='error'?' dot-error':sigTopazStatus==='loading'?' dot-loading':''}"></span>
-              <span id="sig-topaz-status-text">${sigTopazStatus==='idle'?'Click &ldquo;Start Capture&rdquo; to activate the pad':sigTopazStatus==='loading'?'Connecting to SigWeb&hellip;':sigTopazStatus==='capturing'?'Sign on the Topaz pad now&hellip;':sigTopazStatus==='captured'?'Signature captured successfully.':'Cannot connect to SigWeb. Is it installed and running?'}</span>
+              <span id="sig-topaz-dot" class="sig-topaz-dot${sigTopazStatus==='capturing'?' dot-capturing':sigTopazStatus==='captured'?' dot-captured':sigTopazStatus==='error'?' dot-error':''}"></span>
+              <span id="sig-topaz-status-text">${sigTopazStatus==='capturing'?'Sign on the Topaz pad now\u2026':sigTopazStatus==='captured'?'Signature captured successfully.':sigTopazStatus==='error'?'SigPlusExtLite extension not detected. Install it in Chrome and reload.':'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.'}</span>
             </div>
             <div class="sig-topaz-actions">
-              <button type="button" class="btn btn-primary btn-sm" onclick="sigLoadTopaz()"${sigTopazStatus==='capturing'||sigTopazStatus==='captured'?' disabled':''}>Start Capture</button>
-              <button type="button" id="sig-topaz-accept" class="btn btn-success btn-sm" onclick="sigTopazAccept()"${sigTopazStatus!=='capturing'?' disabled':''}>Accept Signature</button>
-              <button type="button" id="sig-topaz-clear"  class="btn btn-ghost btn-sm"   onclick="sigTopazClear()"${sigTopazStatus!=='capturing'&&sigTopazStatus!=='captured'?' disabled':''}>Clear</button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="sigTopazSign()"${sigTopazStatus==='capturing'?' disabled':''}>Sign on Pad</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="sigTopazClear()"${sigTopazStatus!=='captured'?' disabled':''}>Clear</button>
             </div>
             ${sigTopazPreviewUrl ? `<img id="sig-topaz-preview" class="sig-img" src="${sigTopazPreviewUrl}" alt="Topaz signature" />` : `<img id="sig-topaz-preview" class="sig-img" style="display:none" alt="Topaz signature" />`}
-            <div class="form-hint" style="margin-top:4px">Requires <a href="https://www.topazsystems.com/software/sigweb.exe" target="_blank" rel="noopener">Topaz SigWeb</a> to be installed and the L460 pad connected via USB.</div>
+            <div class="form-hint" style="margin-top:4px">Requires the <a href="https://chrome.google.com/webstore/detail/sigplusextlite/gjaebefdmgmhgheehpjpeclhplpkdpbi" target="_blank" rel="noopener">SigPlusExtLite Chrome extension</a> and the Topaz L460 pad connected via USB.</div>
           </div>
         </div>
         <!-- Typed name + date row -->

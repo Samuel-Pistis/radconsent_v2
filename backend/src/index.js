@@ -15,15 +15,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── CSP: allow SigWebTablet.js (uses eval internally) ───────
+// ── CSP ──────────────────────────────────────────────────────
 app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net http://localhost:47289 http://localhost:47289/SigWeb/",
+      "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
       "style-src 'self' 'unsafe-inline'",
-      "connect-src 'self' ws://localhost:47289 wss://localhost:47289 wss://localhost:47290",
+      "connect-src 'self'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
     ].join('; ')
