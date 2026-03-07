@@ -894,6 +894,7 @@ body.dark input[type="checkbox"] { accent-color: var(--c-accent); }
 .sig-topaz-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <script src="http://localhost:47289/SigWebTablet.js" async onerror="window._sigWebFailed=true"></script>
 </head>
 <body>
   <div id="app"></div>
@@ -3886,26 +3887,20 @@ function sigTopazRenderStatus(status, msg) {
 }
 
 function sigLoadTopaz() {
-  if (sigTopazLoaded) {
-    // If wsq is still open, activate immediately; otherwise reconnect
-    if (typeof wsq !== 'undefined' && wsq.readyState === WebSocket.OPEN) {
-      sigTopazActivate();
-    } else {
-      sigTopazLoaded = false;
-      sigLoadTopaz();
-    }
+  if (window._sigWebFailed) {
+    sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
     return;
   }
   sigTopazRenderStatus('loading', 'Connecting to Topaz SigWeb service…');
-  const script = document.createElement('script');
-  script.src = 'http://localhost:47289/SigWebTablet.js';
-  script.onload = () => { sigTopazLoaded = true; sigWaitForWS(); };
-  script.onerror = () => sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
-  document.head.appendChild(script);
+  sigWaitForWS();
 }
 
 function sigWaitForWS(attempts) {
   attempts = attempts || 0;
+  if (window._sigWebFailed) {
+    sigTopazRenderStatus('error', 'Cannot connect to SigWeb. Is it installed and running?');
+    return;
+  }
   if (typeof wsq !== 'undefined' && wsq.readyState === WebSocket.OPEN) {
     sigTopazActivate();
     return;
