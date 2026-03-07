@@ -455,6 +455,20 @@ router.put('/:id/review', (req, res) => {
   return res.json(updated);
 });
 
+// PUT /api/consents/:id/recall — admin recalls a declined record back to radiographer queue
+router.put('/:id/recall', (req, res) => {
+  if (req.user.role !== 'admin')
+    return res.status(403).json({ error: 'Only admins can recall records.' });
+
+  const existing = db.findOne('consents', { id: req.params.id });
+  if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
+  if (existing.status !== 'declined')
+    return res.status(409).json({ error: 'Only declined records can be recalled.' });
+
+  const updated = db.update('consents', req.params.id, { status: 'draft_stage1' });
+  return res.json(updated);
+});
+
 // DELETE /api/consents/:id — admin deletes a single consent record
 router.delete('/:id', (req, res) => {
   if (req.user.role !== 'admin')

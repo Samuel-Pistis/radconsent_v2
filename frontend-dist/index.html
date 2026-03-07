@@ -959,6 +959,8 @@ const ncState = {
 
 /* MRI Screening step-machine state */
 let mriScrState = { steps: [], stepIdx: 0, answers: {}, consent: null };
+/* General Safety Screening state (non-MRI modalities) */
+let safetyScrState = { consent: null, answers: {} };
 
 /* Consent Declaration state */
 let consentDeclState = { lang: 'en', consent: null, signed: false, signedResult: null };
@@ -1095,6 +1097,10 @@ function navigate(page, data, opts = {}) {
       radReviewState.record  = null;
       radReviewState.loading = false;
     }
+  }
+  if (page === 'safety-screening') {
+    safetyScrState.consent = data?.consent || null;
+    safetyScrState.answers = {};
   }
   state.page     = page;
   state.pageData = data || {};
@@ -1381,6 +1387,7 @@ function renderPage() {
     case 'new-consent'        : return renderNewConsent();
     case 'record-detail'      : return renderRecordDetail();
     case 'mri-screening'      : return renderMriScreening();
+    case 'safety-screening'   : return renderSafetyScreening();
     case 'consent-declaration': return renderConsentDeclaration();
     case 'stage2-report'      : return renderStage2Report();
     case 'stage3-vitals'      : return renderStage3Vitals();
@@ -2123,7 +2130,9 @@ function renderAdminPanel() {
         <td style="color:var(--c-text-sec)">${esc(MODALITY_SHORT[r.modality] || r.modality)}</td>
         <td><span class="badge badge-${r.status}">${esc(STATUS_LABELS[r.status] || r.status)}</span></td>
         <td style="color:var(--c-text-muted);font-size:12px">${fmtDate(r.createdAt)}</td>
-        <td style="text-align:right">
+        <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end">
+          ${r.status === 'declined' ? `<button class="btn btn-ghost btn-sm"
+            onclick="adminRecallRecord('${r.id}','${esc(r.patient?.name||'this record')}')">Recall</button>` : ''}
           <button class="btn btn-danger btn-sm"
             onclick="adminDeleteRecord('${r.id}','${esc(r.patient?.name||'this record')}')">Delete</button>
         </td>
@@ -2167,6 +2176,21 @@ function renderAdminPanel() {
         </table>
       </div>
     </div>`;
+}
+
+async function adminRecallRecord(id, name) {
+  if (!confirm(`Recall the declined record for "${name}"? It will be returned to the radiographer queue.`)) return;
+  try {
+    const updated = await api('PUT', `/consents/${id}/recall`);
+    toast(`Record recalled — now awaiting radiographer.`, 'success');
+    if (adminState.records) {
+      const idx = adminState.records.findIndex(r => r.id === id);
+      if (idx !== -1) adminState.records[idx] = updated;
+    }
+    render();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
 }
 
 async function adminDeleteRecord(id, name) {
@@ -2278,7 +2302,7 @@ async function submitNewConsent() {
     if (ncState.modality.startsWith('mri_')) {
       navigate('mri-screening', { consent: data });
     } else {
-      navigate('consent-declaration', { consent: data });
+      navigate('safety-screening', { consent: data });
     }
   } catch (err) {
     toast(err.message, 'error');
@@ -3865,6 +3889,98 @@ function renderMriResults() {
 }
 
 /* ── Main render function ─────────────────────────────────────  */
+/* ═══════════════════════════════════════════════════════════════
+   SAFETY SCREENING (non-MRI modalities)
+═══════════════════════════════════════════════════════════════ */
+const SAFETY_QUESTIONS = [
+  { key: 'pregnancy',          label: 'Is the patient pregnant, or is pregnancy possible?' },
+  { key: 'renal_impairment',   label: 'Does the patient have kidney disease, impaired renal function, or elevated creatinine?' },
+  { key: 'contrast_reaction',  label: 'Has the patient had a previous adverse reaction to contrast media or iodine?' },
+  { key: 'cardiac_implant',    label: 'Does the patient have a pacemaker, ICD, or other cardiac electronic implant?' },
+  { key: 'metallic_implant',   label: 'Does the patient have any other metallic or electronic implants (e.g. cochlear implant, neurostimulator, insulin pump)?' },
+];
+
+function renderSafetyScreening() {
+  const consent = safetyScrState.consent;
+  const subtitle = consent
+    ? esc(consent.patient?.name) + ' · ' + esc(MODALITY_LABELS[consent.modality] || consent.modality)
+    : '';
+  const ans = safetyScrState.answers;
+  const allAnswered = SAFETY_QUESTIONS.every(q => ans[q.key] !== undefined);
+
+  return `
+    <div class="page-header">
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')"
+          style="margin-bottom:6px;margin-left:-6px">← Back</button>
+        <div class="page-title">Safety Screening</div>
+        <div class="page-subtitle">${subtitle}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>${IC.medical}&nbsp; Pre-Procedure Safety Check</h3></div>
+      <div class="card-body">
+        <p style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:20px">
+          Please answer all questions below. Any <strong>Yes</strong> answer will be flagged for radiologist review before the procedure proceeds.
+        </p>
+        ${SAFETY_QUESTIONS.map((q, i) => `
+          <div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
+            <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">${i + 1}. ${q.label}</div>
+            <div style="display:flex;gap:24px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
+                <input type="radio" name="sfq-${q.key}" value="yes"
+                  ${ans[q.key] === 'yes' ? 'checked' : ''}
+                  onchange="safetyScrAnswer('${q.key}','yes')"
+                  style="accent-color:var(--c-accent)"> Yes
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
+                <input type="radio" name="sfq-${q.key}" value="no"
+                  ${ans[q.key] === 'no' ? 'checked' : ''}
+                  onchange="safetyScrAnswer('${q.key}','no')"
+                  style="accent-color:var(--c-accent)"> No
+              </label>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')">Cancel</button>
+        <button class="btn btn-primary" onclick="safetyScrSubmit()" ${allAnswered ? '' : 'disabled'}>
+          Proceed to Consent Declaration →
+        </button>
+      </div>
+    </div>`;
+}
+
+function safetyScrAnswer(key, value) {
+  safetyScrState.answers[key] = value;
+  render();
+}
+
+async function safetyScrSubmit() {
+  const consent = safetyScrState.consent;
+  const ans = safetyScrState.answers;
+
+  const tier2 = SAFETY_QUESTIONS
+    .filter(q => ans[q.key] === 'yes')
+    .map(q => q.key);
+
+  const btn = document.querySelector('.card-footer .btn-primary');
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Saving…`; }
+
+  try {
+    const updated = await api('PUT', `/consents/${consent.id}/screening`, {
+      screening : ans,
+      tierFlags : { tier1: [], tier2, tier3: [] },
+    });
+    if (!updated) return;
+    safetyScrState.consent = null;
+    navigate('consent-declaration', { consent: updated });
+  } catch (err) {
+    toast(err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Proceed to Consent Declaration →'; }
+  }
+}
+
 function renderMriScreening() {
   const consent = state.pageData.consent;
   mriScrInit(consent);
