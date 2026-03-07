@@ -1081,16 +1081,15 @@ function navigate(page, data, opts = {}) {
     }
   }
   if (page === 'stage3-vitals') {
-    if (stage3State.record?.id !== data?.id) {
-      stage3State.record    = null;
-      stage3State.loading   = false;
-      stage3State.confirmed = false;
-      s3SigMode            = 'draw';
-      s3SigPadInstance     = null;
-      s3SigUploadedDataUrl = null;
-      s3SigTopazStatus     = 'idle';
-      s3SigTopazPreviewUrl = null;
-    }
+    // Always reload — status may have changed since last visit
+    stage3State.record    = null;
+    stage3State.loading   = false;
+    stage3State.confirmed = false;
+    s3SigMode            = 'draw';
+    s3SigPadInstance     = null;
+    s3SigUploadedDataUrl = null;
+    s3SigTopazStatus     = 'idle';
+    s3SigTopazPreviewUrl = null;
   }
   if (page === 'rad-review') {
     if (radReviewState.record?.id !== data?.id) {
@@ -2870,6 +2869,28 @@ function renderStage3Vitals() {
           <button class="btn btn-primary btn-lg" onclick="navigate('dashboard')">Return to Dashboard</button>
         </div>
       </div>`;
+  }
+
+  // ── Stage not ready guard ────────────────────────────────────
+  if (rec.status !== 'draft_stage2') {
+    const statusMsg = {
+      in_progress   : 'Patient has not yet signed the consent declaration.',
+      draft_stage1  : 'The Radiographer has not yet filed their Stage 2 report.',
+      pending_review: 'This record is awaiting radiologist review before Stage 2 can proceed.',
+      flagged_tier1 : 'This record has a Tier 1 flag and is awaiting radiologist review.',
+      declined      : 'This record was declined by the radiologist.',
+      closed        : 'This record is already closed.',
+    }[rec.status] || `Current status: ${rec.status}`;
+    return `
+      <div class="page-header"><div>${back}<div class="page-title">Vitals Check</div>
+        <div class="page-subtitle">${esc(rec.patient?.name)} · ${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</div>
+      </div></div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:48px 32px">
+        <div style="font-size:32px;margin-bottom:12px">⏳</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:8px">Stage 3 Not Yet Available</div>
+        <div style="font-size:13.5px;color:var(--c-text-sec);max-width:420px;margin:0 auto 24px">${statusMsg}</div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('consents')">← Back to Records</button>
+      </div></div>`;
   }
 
   // ── Stage 2 context (read-only) ─────────────────────────────
