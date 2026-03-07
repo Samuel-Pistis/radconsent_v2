@@ -21,7 +21,7 @@ app.use((req, res, next) => {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net http://localhost:47289",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net http://localhost:47289 http://localhost:47289/SigWeb/",
       "style-src 'self' 'unsafe-inline'",
       "connect-src 'self' ws://localhost:47289 wss://localhost:47289 wss://localhost:47290",
       "img-src 'self' data: blob:",
