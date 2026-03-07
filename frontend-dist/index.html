@@ -867,6 +867,79 @@ body.dark {
 body.dark select,
 body.dark select option { color-scheme: dark; background: #1E293B; color: #F1F5F9; }
 body.dark input[type="checkbox"] { accent-color: var(--c-accent); }
+
+/* ── Dark mode — badge text colours (semantic backgrounds darken; text must lighten) ── */
+body.dark .badge-draft_stage1,
+body.dark .badge-tier3,
+body.dark .badge-role-radiographer,
+body.dark .badge-blue          { color: #93C5FD; }
+body.dark .badge-closed,
+body.dark .badge-role-nurse,
+body.dark .badge-green         { color: #86EFAC; }
+body.dark .badge-pending_review,
+body.dark .badge-tier2,
+body.dark .badge-role-admin,
+body.dark .badge-amber         { color: #FCD34D; }
+body.dark .badge-flagged_tier1,
+body.dark .badge-tier1,
+body.dark .badge-red           { color: #FCA5A5; }
+body.dark .badge-role-radiologist,
+body.dark .badge-purple        { color: #D8B4FE; }
+/* Hardcoded-background badges — full override */
+body.dark .badge-in_progress,
+body.dark .badge-gray          { background:#1E293B; color:#94A3B8; border-color:#334155; }
+body.dark .badge-draft_stage2  { background:#1E1433; color:#C4B5FD; border-color:#4C1D95; }
+body.dark .badge-awaiting_signature { background:#052E16; color:#86EFAC; border-color:#166534; }
+body.dark .badge-declined      { background:#2D0A0A; color:#FCA5A5; border-color:#991B1B; }
+body.dark .badge-voided        { background:#1E293B; border-color:#334155; }
+body.dark .badge-role-radiographer { background:#0C1A3A; border-color:#1E3A8A; }
+body.dark .badge-role-nurse        { background:#052E16; border-color:#166534; }
+body.dark .badge-role-radiologist  { background:#1E0A3A; border-color:#6D28D9; }
+body.dark .badge-role-admin        { background:#2D1B00; border-color:#92400E; }
+body.dark .badge-purple            { background:#1E0A3A; }
+
+/* ── Dark mode — alerts ── */
+body.dark .alert-info    { color:#93C5FD; }
+body.dark .alert-success { color:#86EFAC; }
+body.dark .alert-warning { color:#FCD34D; }
+body.dark .alert-danger  { color:#FCA5A5; }
+body.dark .scr-alert-tier1 { color:#FCA5A5; }
+body.dark .scr-alert-tier2 { color:#FCD34D; }
+body.dark .scr-alert-clear { color:#86EFAC; }
+
+/* ── Dark mode — toasts ── */
+body.dark .toast-success { background:#052E16; border-color:#166534; color:#86EFAC; }
+body.dark .toast-error   { background:#2D0A0A; border-color:#991B1B; color:#FCA5A5; }
+body.dark .toast-warning { background:#2D1B00; border-color:#92400E; color:#FCD34D; }
+body.dark .toast-info    { background:#0C1A3A; border-color:#1E3A8A; color:#93C5FD; }
+
+/* ── Dark mode — hardcoded surface backgrounds ── */
+body.dark .card-footer             { background:#172032; }
+body.dark .table thead th          { background:#172032; }
+body.dark .table tbody tr:hover td { background:#1A2640; }
+body.dark .screen-domain-header    { background:#172032; }
+
+/* ── Dark mode — interactive hover & selected states ── */
+body.dark .sex-btn:hover                           { background:#0C1A3A; }
+body.dark .scr-choice-btn:hover,
+body.dark .scr-choice-btn.selected                 { background:#0C1A3A; color:#93C5FD; }
+body.dark .scr-check-option:hover                  { background:#0F1E38; }
+body.dark .modality-card:hover                     { background:#172032; border-color:#5B9BC8; }
+body.dark .modality-card.selected                  { background:#0C1A3A; }
+body.dark .lang-btn:hover                          { background:#172032; }
+body.dark .consent-mode-card:hover                 { background:#172032; }
+body.dark .consent-mode-card.selected              { background:#0C1A3A; }
+body.dark .consent-mode-default                    { background:#052E16; color:#86EFAC; border-color:#166534; }
+body.dark .sig-upload-area:hover                   { background:#0C1A3A; color:var(--c-accent); }
+body.dark .decision-card:hover,
+body.dark .decision-card.selected                  { background:#0C1A3A; }
+
+/* ── Dark mode — modality icons & tag ── */
+body.dark .mi-mri       { background:#0C1A3A; color:#93C5FD; }
+body.dark .mi-ct        { background:#042F2E; color:#5EEAD4; }
+body.dark .mi-mmg       { background:#2D0A1A; color:#F9A8D4; }
+body.dark .modality-tag { background:#0C1A3A; color:#93C5FD; }
+
 /* ── Signature pad ── */
 .sig-pad-wrap { border: 2px solid var(--c-border); border-radius: var(--radius); background: #fff; overflow: hidden; transition: border-color var(--t); }
 .sig-pad-wrap.sig-pad-filled { border-color: var(--c-accent); }
