@@ -4057,7 +4057,20 @@ function renderMammographyScreening() {
     ? esc(consent.patient?.name) + ' · Mammography'
     : '';
   const a = mmgScrState.answers;
-  const answered = a.age_40_plus !== undefined;
+  const answered = a.age_40_plus !== undefined && a.pregnancy !== undefined && a.referral_source !== undefined;
+
+  function yesno(key, name) {
+    return `<div style="display:flex;gap:24px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
+        <input type="radio" name="${name}" value="yes" ${a[key]==='yes'?'checked':''}
+          onchange="mmgScrAnswer('${key}','yes')" style="accent-color:var(--c-accent)"> Yes
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
+        <input type="radio" name="${name}" value="no" ${a[key]==='no'?'checked':''}
+          onchange="mmgScrAnswer('${key}','no')" style="accent-color:var(--c-accent)"> No
+      </label>
+    </div>`;
+  }
 
   return `
     <div class="page-header">
@@ -4071,24 +4084,39 @@ function renderMammographyScreening() {
       <div class="card-header"><h3>${IC.medical}&nbsp; Pre-Procedure Safety Check</h3></div>
       <div class="card-body">
         <p style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:20px">
-          Please answer the question below before proceeding.
+          Please answer all questions before proceeding.
         </p>
+
         <div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">Is the patient 40 years of age or above?</div>
-          <div style="display:flex;gap:24px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
-              <input type="radio" name="mmg-age" value="yes" ${a.age_40_plus==='yes'?'checked':''}
-                onchange="mmgScrAnswer('age_40_plus','yes')" style="accent-color:var(--c-accent)"> Yes
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
-              <input type="radio" name="mmg-age" value="no" ${a.age_40_plus==='no'?'checked':''}
-                onchange="mmgScrAnswer('age_40_plus','no')" style="accent-color:var(--c-accent)"> No
-            </label>
-          </div>
+          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">1. Is the patient 40 years of age or above?</div>
+          ${yesno('age_40_plus', 'mmg-age')}
           ${a.age_40_plus === 'no' ? `<div class="alert alert-warning mt-3" style="font-size:13px">
             ${IC.warning}&nbsp; Routine mammography is recommended from age 40. This record will be flagged for radiologist review before proceeding.
           </div>` : ''}
         </div>
+
+        <div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
+          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">2. Is the patient currently pregnant, or is pregnancy possible?</div>
+          ${yesno('pregnancy', 'mmg-pregnancy')}
+          ${a.pregnancy === 'yes' ? `<div class="alert alert-danger mt-3" style="font-size:13px">
+            ${IC.warning}&nbsp; <strong>Mammography is contraindicated in pregnancy.</strong> This record will be flagged for radiologist review before proceeding.
+          </div>` : ''}
+        </div>
+
+        <div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
+          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">3. Referral source</div>
+          <div style="display:flex;gap:24px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
+              <input type="radio" name="mmg-referral" value="lasuth" ${a.referral_source==='lasuth'?'checked':''}
+                onchange="mmgScrAnswer('referral_source','lasuth')" style="accent-color:var(--c-accent)"> LASUTH
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
+              <input type="radio" name="mmg-referral" value="outside_hospital" ${a.referral_source==='outside_hospital'?'checked':''}
+                onchange="mmgScrAnswer('referral_source','outside_hospital')" style="accent-color:var(--c-accent)"> Outside Hospital
+            </label>
+          </div>
+        </div>
+
       </div>
       <div class="card-footer">
         <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')">Cancel</button>
@@ -4107,6 +4135,7 @@ async function mmgScrSubmit() {
     return;
   }
   const a = mmgScrState.answers;
+  const tier1 = a.pregnancy === 'yes' ? ['pregnancy'] : [];
   const tier2 = a.age_40_plus === 'no' ? ['age_under_40'] : [];
 
   const btn = document.querySelector('.card-footer .btn-primary');
@@ -4115,7 +4144,7 @@ async function mmgScrSubmit() {
   try {
     const updated = await api('PUT', `/consents/${consent.id}/screening`, {
       screening : a,
-      tierFlags : { tier1: [], tier2, tier3: [] },
+      tierFlags : { tier1, tier2, tier3: [] },
     });
     if (!updated) return;
     mmgScrState.consent = null;
