@@ -914,10 +914,12 @@ body.dark .toast-warning { background:#2D1B00; border-color:#92400E; color:#FCD3
 body.dark .toast-info    { background:#0C1A3A; border-color:#1E3A8A; color:#93C5FD; }
 
 /* ── Dark mode — hardcoded surface backgrounds ── */
-body.dark .card-footer             { background:#172032; }
-body.dark .table thead th          { background:#172032; }
-body.dark .table tbody tr:hover td { background:#1A2640; }
-body.dark .screen-domain-header    { background:#172032; }
+body.dark .card-footer              { background:#172032; }
+body.dark .table                    { background:var(--c-surface); }
+body.dark .table tbody td           { background:var(--c-surface); }
+body.dark .table thead th           { background:#172032; }
+body.dark .table tbody tr:hover td  { background:#1A2640; }
+body.dark .screen-domain-header     { background:#172032; }
 
 /* ── Dark mode — interactive hover & selected states ── */
 body.dark .sex-btn:hover                           { background:#0C1A3A; }
