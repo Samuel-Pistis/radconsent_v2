@@ -4046,253 +4046,53 @@ function renderMriResults() {
 /* ═══════════════════════════════════════════════════════════════
    MAMMOGRAPHY SCREENING
 ═══════════════════════════════════════════════════════════════ */
-const REQUIRED_MMG_KEYS = [
-  'pregnancy', 'family_history', 'previous_surgery', 'mastectomy',
-  'breast_implant', 'nipple_discharge', 'breast_tenderness', 'breast_lump_pain',
-  'caffeine', 'breastfeeding', 'oral_contraceptive', 'hrt',
-  'previous_imaging', 'menopausal', 'payment_method', 'referral_source',
-];
-
 function mmgScrAnswer(key, value) {
   mmgScrState.answers[key] = value;
   render();
 }
 
-function mmgScrToggleRelative(rel) {
-  const rels = mmgScrState.answers.family_relatives || [];
-  const i = rels.indexOf(rel);
-  if (i >= 0) rels.splice(i, 1); else rels.push(rel);
-  mmgScrState.answers.family_relatives = [...rels];
-}
-
 function renderMammographyScreening() {
   const consent = mmgScrState.consent;
   const subtitle = consent
-    ? esc(consent.patient?.name) + ' · Mammography Screening'
+    ? esc(consent.patient?.name) + ' · Mammography'
     : '';
   const a = mmgScrState.answers;
-  const allDone = REQUIRED_MMG_KEYS.every(k => a[k] !== undefined);
-  const rels = a.family_relatives || [];
-
-  function yesno(key) {
-    return `<div style="display:flex;gap:24px">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
-        <input type="radio" name="mmg-${key}" value="yes" ${a[key]==='yes'?'checked':''} onchange="mmgScrAnswer('${key}','yes')" style="accent-color:var(--c-accent)"> Yes
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
-        <input type="radio" name="mmg-${key}" value="no" ${a[key]==='no'?'checked':''} onchange="mmgScrAnswer('${key}','no')" style="accent-color:var(--c-accent)"> No
-      </label>
-    </div>`;
-  }
-
-  function sideOpts(key, opts) {
-    return `<div style="display:flex;gap:16px;flex-wrap:wrap">
-      ${opts.map(([v,l]) => `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
-        <input type="radio" name="mmg-${key}" value="${v}" ${a[key]===v?'checked':''} onchange="mmgScrAnswer('${key}','${v}')" style="accent-color:var(--c-accent)"> ${l}
-      </label>`).join('')}
-    </div>`;
-  }
-
-  function qBlock(label, content, required = true) {
-    return `<div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-      <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">${label}${required ? ' <span style="color:var(--c-danger);font-size:11px">*</span>' : ''}</div>
-      ${content}
-    </div>`;
-  }
-
-  function secHead(title) {
-    return `<div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c-text-sec);margin:24px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--c-border)">${title}</div>`;
-  }
-
-  function textIn(key, placeholder = '', type = 'text') {
-    return `<input type="${type}" value="${esc(a[key]||'')}" oninput="mmgScrState.answers['${key}']=this.value"
-      placeholder="${placeholder}"
-      style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px;font-size:13.5px;background:var(--c-bg);color:var(--c-text)">`;
-  }
-
-  function textAr(key, placeholder = '') {
-    return `<textarea rows="2" oninput="mmgScrState.answers['${key}']=this.value"
-      placeholder="${placeholder}"
-      style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px;font-size:13.5px;background:var(--c-bg);color:var(--c-text);resize:vertical">${esc(a[key]||'')}</textarea>`;
-  }
+  const answered = a.age_40_plus !== undefined;
 
   return `
     <div class="page-header">
       <div>
         <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')" style="margin-bottom:6px;margin-left:-6px">← Back</button>
-        <div class="page-title">Mammography Screening Questionnaire</div>
+        <div class="page-title">Mammography Safety Screening</div>
         <div class="page-subtitle">${subtitle}</div>
       </div>
     </div>
     <div class="card">
-      <div class="card-header"><h3>${IC.medical}&nbsp; Patient Information &amp; Consent Form — Mammography</h3></div>
+      <div class="card-header"><h3>${IC.medical}&nbsp; Pre-Procedure Safety Check</h3></div>
       <div class="card-body">
-        <p style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:4px">
-          Please complete all required fields <span style="color:var(--c-danger)">*</span>. This information ensures patient safety and optimises the mammography procedure.
+        <p style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:20px">
+          Please answer the question below before proceeding.
         </p>
-
-        ${secHead('Gynaecological History')}
-
-        ${qBlock('Last Menstrual Period (LMP)', textIn('lmp_date', 'DD/MM/YYYY'), false)}
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="mb-4">
-          <div style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-            <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">Age at first menstrual period</div>
-            ${textIn('menarche_age', 'e.g. 13', 'number')}
+        <div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
+          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">Is the patient 40 years of age or above?</div>
+          <div style="display:flex;gap:24px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
+              <input type="radio" name="mmg-age" value="yes" ${a.age_40_plus==='yes'?'checked':''}
+                onchange="mmgScrAnswer('age_40_plus','yes')" style="accent-color:var(--c-accent)"> Yes
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
+              <input type="radio" name="mmg-age" value="no" ${a.age_40_plus==='no'?'checked':''}
+                onchange="mmgScrAnswer('age_40_plus','no')" style="accent-color:var(--c-accent)"> No
+            </label>
           </div>
-          <div style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-            <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">Age at first pregnancy <span style="font-weight:400;color:var(--c-text-sec)">(if applicable)</span></div>
-            ${textIn('first_pregnancy_age', 'e.g. 24 or N/A')}
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="mb-4">
-          <div style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-            <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">Number of pregnancies</div>
-            ${textIn('num_pregnancies', 'e.g. 2', 'number')}
-          </div>
-          <div style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-            <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">Number of live births</div>
-            ${textIn('num_live_births', 'e.g. 2', 'number')}
-          </div>
-        </div>
-
-        ${qBlock('Hormone drugs taken?', `
-          ${yesno('hormone_drugs')}
-          ${a.hormone_drugs === 'yes' ? `<div style="margin-top:10px">${textIn('hormone_drugs_details', 'Specify drug(s) and duration…')}</div>` : ''}
-        `)}
-
-        ${secHead('Pregnancy Status')}
-
-        ${qBlock('Is the patient currently pregnant, or is pregnancy possible?', `
-          ${yesno('pregnancy')}
-          ${a.pregnancy === 'yes' ? `<div class="alert alert-danger mt-3" style="font-size:13px">
-            ${IC.warning}&nbsp; <strong>Mammography is contraindicated in pregnancy.</strong> This record will be flagged for radiologist review before proceeding.
+          ${a.age_40_plus === 'no' ? `<div class="alert alert-warning mt-3" style="font-size:13px">
+            ${IC.warning}&nbsp; Routine mammography is recommended from age 40. This record will be flagged for radiologist review before proceeding.
           </div>` : ''}
-        `)}
-
-        ${secHead('Family History')}
-
-        ${qBlock('Family history of breast cancer?', `
-          ${yesno('family_history')}
-          ${a.family_history === 'yes' ? `
-            <div style="margin-top:10px">
-              <div style="font-size:13px;color:var(--c-text-sec);margin-bottom:8px">Which relatives? (select all that apply)</div>
-              <div style="display:flex;flex-wrap:wrap;gap:12px">
-                ${['Mother','Sister','Daughter','Grandmother','Cousin','Aunty'].map(r => `
-                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13.5px">
-                    <input type="checkbox" ${rels.includes(r)?'checked':''} onchange="mmgScrToggleRelative('${r}')" style="accent-color:var(--c-accent)"> ${r}
-                  </label>`).join('')}
-              </div>
-            </div>` : ''}
-        `)}
-
-        ${secHead('Breast History')}
-
-        ${qBlock('Previous breast surgery?', `
-          ${yesno('previous_surgery')}
-          ${a.previous_surgery === 'yes' ? `
-            <div style="margin-top:10px">
-              <div style="font-size:13px;color:var(--c-text-sec);margin-bottom:6px">Which breast?</div>
-              ${sideOpts('surgery_side', [['right','Right'],['left','Left'],['both','Both']])}
-              <div style="margin-top:10px">${textAr('surgery_details', 'Describe the surgery and date…')}</div>
-            </div>` : ''}
-        `)}
-
-        ${qBlock('Mastectomy', sideOpts('mastectomy', [['none','None'],['right','Right'],['left','Left'],['both','Both']]))}
-
-        ${qBlock('Date of biopsy <span style="font-weight:400;color:var(--c-text-sec)">(if applicable)</span>', textIn('biopsy_date', 'DD/MM/YYYY'), false)}
-
-        ${qBlock('Breast implant present?', `
-          ${yesno('breast_implant')}
-          ${a.breast_implant === 'yes' ? `<div class="alert alert-warning mt-3" style="font-size:13px">
-            ${IC.warning}&nbsp; Implants may reduce image quality and require additional views. This record will be flagged for radiologist review.
-          </div>` : ''}
-        `)}
-
-        ${secHead('Current Breast Symptoms')}
-
-        ${qBlock('Current breast complaints', textAr('breast_complaints', 'Describe any current complaints…'), false)}
-
-        ${qBlock('Nipple discharge', sideOpts('nipple_discharge', [['none','None'],['yes_right','Yes – Right'],['yes_left','Yes – Left'],['yes_both','Yes – Both']]))}
-
-        ${qBlock('Breast tenderness', sideOpts('breast_tenderness', [['none','None'],['yes_right','Yes – Right'],['yes_left','Yes – Left'],['yes_both','Yes – Both']]))}
-
-        ${qBlock('Breast lump / pain', sideOpts('breast_lump_pain', [['none','None'],['yes_right','Yes – Right'],['yes_left','Yes – Left'],['yes_both','Yes – Both']]))}
-
-        ${secHead('Lifestyle & Medications')}
-
-        ${qBlock('Caffeine consumption?', `
-          ${yesno('caffeine')}
-          ${a.caffeine === 'yes' ? `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-              <div>
-                <div style="font-size:12px;color:var(--c-text-sec);margin-bottom:4px">Last caffeine intake date</div>
-                ${textIn('caffeine_last_date', 'DD/MM/YYYY')}
-              </div>
-              <div>
-                <div style="font-size:12px;color:var(--c-text-sec);margin-bottom:4px">Daily caffeine intake / dietary history</div>
-                ${textIn('caffeine_diet', 'e.g. 3 cups/day')}
-              </div>
-            </div>` : ''}
-        `)}
-
-        ${qBlock('Currently breastfeeding?', `
-          ${yesno('breastfeeding')}
-          ${a.breastfeeding === 'yes' ? `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-              <div>
-                <div style="font-size:12px;color:var(--c-text-sec);margin-bottom:4px">Duration</div>
-                ${textIn('breastfeeding_duration', 'e.g. 6 months')}
-              </div>
-              <div>
-                <div style="font-size:12px;color:var(--c-text-sec);margin-bottom:4px">Last breastfeeding date</div>
-                ${textIn('breastfeeding_last_date', 'DD/MM/YYYY')}
-              </div>
-            </div>` : ''}
-        `)}
-
-        ${qBlock('Oral contraceptive pills (OCP)?', yesno('oral_contraceptive'))}
-
-        ${qBlock('Hormone replacement therapy (HRT)?', yesno('hrt'))}
-
-        ${secHead('Previous Breast Imaging')}
-
-        ${qBlock('Previous breast mammogram, MRI, or ultrasound?', `
-          ${yesno('previous_imaging')}
-          ${a.previous_imaging === 'yes' ? `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-              <div>
-                <div style="font-size:12px;color:var(--c-text-sec);margin-bottom:4px">Date of previous imaging</div>
-                ${textIn('imaging_date', 'DD/MM/YYYY')}
-              </div>
-              <div>
-                <div style="font-size:12px;color:var(--c-text-sec);margin-bottom:4px">Location / Institution</div>
-                ${textIn('imaging_location', 'e.g. LAUTECH Teaching Hospital')}
-              </div>
-            </div>
-            <div style="margin-top:10px">
-              <div style="font-size:12px;color:var(--c-text-sec);margin-bottom:4px">Summary of previous report</div>
-              ${textAr('imaging_report', 'Describe key findings…')}
-            </div>` : ''}
-        `)}
-
-        ${secHead('Menopausal Status')}
-
-        ${qBlock('Post-menopausal?', yesno('menopausal'))}
-
-        ${secHead('Administrative')}
-
-        ${qBlock('Payment method', sideOpts('payment_method', [['insurance','Insurance'],['out_of_pocket','Out-of-Pocket']]))}
-
-        ${qBlock('Referral source', sideOpts('referral_source', [['lautech','LAUTECH'],['outside_hospital','Outside Hospital']]))}
-
-        ${qBlock('Reason for referral by doctor', textAr('referral_reason', 'State the clinical indication for this examination…'), false)}
-
+        </div>
       </div>
       <div class="card-footer">
         <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')">Cancel</button>
-        <button class="btn btn-primary" onclick="mmgScrSubmit()" ${allDone ? '' : 'disabled'}>
+        <button class="btn btn-primary" onclick="mmgScrSubmit()" ${answered ? '' : 'disabled'}>
           Proceed to Consent Declaration →
         </button>
       </div>
@@ -4307,13 +4107,7 @@ async function mmgScrSubmit() {
     return;
   }
   const a = mmgScrState.answers;
-
-  const tier1 = a.pregnancy === 'yes' ? ['pregnancy'] : [];
-  const tier2 = [
-    ...(a.breast_implant === 'yes'                        ? ['breast_implant']   : []),
-    ...(a.previous_surgery === 'yes'                      ? ['previous_surgery'] : []),
-    ...(['right','left','both'].includes(a.mastectomy)    ? ['mastectomy']       : []),
-  ];
+  const tier2 = a.age_40_plus === 'no' ? ['age_under_40'] : [];
 
   const btn = document.querySelector('.card-footer .btn-primary');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Saving…`; }
@@ -4321,13 +4115,13 @@ async function mmgScrSubmit() {
   try {
     const updated = await api('PUT', `/consents/${consent.id}/screening`, {
       screening : a,
-      tierFlags : { tier1, tier2, tier3: [] },
+      tierFlags : { tier1: [], tier2, tier3: [] },
     });
     if (!updated) return;
     mmgScrState.consent = null;
     if (updated.status === 'flagged_tier1' || updated.status === 'pending_review') {
       navigate('record-detail', { id: updated.id });
-      toast('Safety flags detected — a radiologist must review and approve before the patient can sign.', 'warning');
+      toast('Safety flag detected — a radiologist must review and approve before the patient can sign.', 'warning');
     } else {
       navigate('consent-declaration', { consent: updated });
     }
