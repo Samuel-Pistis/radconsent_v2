@@ -188,6 +188,98 @@ No code changes are required — Express already listens on all interfaces by de
 
 ---
 
+## Signature Setup
+
+RadConsent supports **three signature methods**. Each workstation can use whichever method is available. All three can coexist — staff choose the tab that matches their setup.
+
+---
+
+### Method 1 — Draw (always available, no setup required)
+
+The patient or staff member draws directly on the screen using a mouse, trackpad, or touchscreen. No additional hardware or software is needed.
+
+This works on every machine out of the box.
+
+---
+
+### Method 2 — Upload Image (always available, no setup required)
+
+A signature image (PNG, JPG) can be uploaded from the local machine. Useful if a scanned signature needs to be attached.
+
+No additional hardware or software is needed.
+
+---
+
+### Method 3 — Topaz Signature Pad (requires hardware + Chrome extension)
+
+This method uses a **Topaz L460 USB signature pad** for biometric handwritten signatures captured directly on the pad.
+
+#### Requirements
+
+| Item | Details |
+|---|---|
+| Hardware | Topaz L460 USB signature pad |
+| Browser | **Google Chrome only** (does not work in Edge, Firefox, or Safari) |
+| Chrome Extension | SigPlusExtLite |
+| Driver | Topaz SigWeb (Windows only) |
+
+#### Step-by-step setup
+
+**1. Connect the Topaz pad**
+- Plug the Topaz L460 into a USB port on the machine
+- Windows should recognise it automatically (no manual driver needed for basic detection)
+
+**2. Install SigWeb (Topaz driver service)**
+- Download from the Topaz website: https://www.topazsystems.com/sigweb.html
+- Run the installer and follow the prompts
+- SigWeb runs as a background Windows service — it must be running whenever the pad is used
+- To verify it is running: open Task Manager → Services tab → look for **SigWeb** with status "Running"
+
+**3. Install the SigPlusExtLite Chrome extension**
+- Open Google Chrome
+- Go to the Chrome Web Store link:
+  https://chrome.google.com/webstore/detail/sigplusextlite/gjaebefdmgmhgheehpjpeclhplpkdpbi
+- Click **Add to Chrome** → **Add extension**
+- A small Topaz icon will appear in Chrome's toolbar when installed
+
+**4. Reload the RadConsent page**
+- After installing the extension, do a full page reload (**Ctrl + Shift + R**)
+- Open the consent declaration or nurse vitals form
+- Click the **Topaz Pad** tab in the signature section
+- The status dot should turn **green** and show "Extension ready"
+
+**5. Capturing a signature**
+- Click **Sign on Pad**
+- The Topaz pad activates — the patient or nurse signs directly on the pad surface
+- The signature appears in the app automatically when the pen lifts
+- Click **Clear** to redo, or proceed to submit
+
+#### Troubleshooting the Topaz pad
+
+| Problem | Fix |
+|---|---|
+| Status dot is red — "Extension not detected" | Extension is not installed or Chrome was not reloaded after install. Install the extension and press Ctrl+Shift+R. |
+| Extension installed but pad not responding | SigWeb service is not running. Open Services (services.msc) and start SigWeb. |
+| Pad detected but signature does not appear | USB connection issue. Unplug and replug the pad, then try again. |
+| Works on one machine but not another | Each machine needs its own SigWeb installation and Chrome extension. Repeat steps 2–4 on each machine. |
+| Extension asks for permissions | Click "Allow" — it needs access to communicate with the SigWeb local service. |
+
+> **Important:** The Topaz pad only works in **Google Chrome** with the SigPlusExtLite extension installed. If Chrome is not the default browser on a workstation, staff must open Chrome manually to use the pad.
+
+---
+
+### Which method should each workstation use?
+
+| Workstation | Recommended method |
+|---|---|
+| Reception / radiographer desk (with Topaz pad) | Topaz Pad |
+| Tablet or touchscreen (no pad) | Draw |
+| Any machine without a pad or touchscreen | Upload |
+
+> Staff can always fall back to **Draw** or **Upload** if the Topaz pad is unavailable.
+
+---
+
 ## Troubleshooting
 
 ### "Port 3000 is already in use"
