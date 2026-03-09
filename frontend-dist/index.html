@@ -1696,16 +1696,16 @@ function renderDashboard() {
   const inProgress = recs.filter(r => r.status === 'in_progress').length;
 
   const actionItems = recs.filter(r => {
-    if (role === 'radiographer') return r.status === 'draft_stage1';
-    if (role === 'nurse')        return r.status === 'draft_stage2';
+    if (role === 'radiographer') return r.status === 'draft_stage1' || r.status === 'awaiting_signature';
+    if (role === 'nurse')        return r.status === 'draft_stage2' || r.status === 'awaiting_signature';
     if (role === 'radiologist')  return r.status === 'pending_review' || r.status === 'flagged_tier1';
-    if (role === 'admin')        return ['draft_stage1','draft_stage2','pending_review','flagged_tier1'].includes(r.status);
+    if (role === 'admin')        return ['draft_stage1','draft_stage2','pending_review','flagged_tier1','awaiting_signature'].includes(r.status);
     return false;
   });
 
   const actionLabel = {
-    radiographer: 'Awaiting Report',
-    nurse:        'Awaiting Vitals',
+    radiographer: 'Needs Attention',
+    nurse:        'Needs Attention',
     radiologist:  'Awaiting Review',
     admin:        'Needs Attention',
   }[role] || 'Needs Action';
