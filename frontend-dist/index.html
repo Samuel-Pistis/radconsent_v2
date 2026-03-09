@@ -2593,31 +2593,281 @@ function navigateToSignConsent() {
   navigate('consent-declaration', { consent: rec });
 }
 
-async function downloadRecord(id) {
-  const btn = document.getElementById('dl-record-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Preparing…'; }
-  try {
-    const resp = await fetch(`${API_BASE}/consents/${id}/pdf`, {
-      headers: { 'Authorization': `Bearer ${state.token}` },
+function downloadPDF(id) {
+  const rec = recordDetailState.record;
+  if (!rec) { toast('Record not loaded.', 'error'); return; }
+
+  const p  = rec.patient  || {};
+  const s1 = rec.stage1   || {};
+  const s2 = rec.stage2   || {};
+  const s3 = rec.stage3   || {};
+  const rv = rec.radiologistReview || null;
+  const tf = rec.tierFlags || { tier1: [], tier2: [], tier3: [] };
+  const scr = s1.screening || {};
+
+  function fmtDt(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-GB', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
     });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ error: 'Download failed.' }));
-      throw new Error(err.error || 'Download failed.');
-    }
-    const blob = await resp.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `radconsent-${id}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    toast(err.message, 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Download Record'; }
   }
+  function v(val) { return (val == null || val === '') ? '—' : String(val); }
+  function row(label, value) {
+    return `<tr><td class="lbl">${label}</td><td>${v(value)}</td></tr>`;
+  }
+  function sec(title) {
+    return `<tr class="sec-head"><td colspan="2">${title}</td></tr>`;
+  }
+
+  const MLABELS = {
+    mri_without_contrast : 'MRI (no contrast)',
+    mri_with_gadolinium  : 'MRI + Gadolinium',
+    ct_without_contrast  : 'CT (no contrast)',
+    ct_with_iv_contrast  : 'CT + IV Contrast',
+    mammography          : 'Mammography',
+  };
+
+  const FLAG_LABELS = {
+    pregnancy:'Possible pregnancy', age_under_40:'Patient under 40',
+    breast_implant:'Breast implant present', previous_surgery:'Previous breast surgery',
+    mastectomy:'Mastectomy', non_mr_conditional_pacemaker:'Pacemaker/ICD — NOT MR-conditional',
+    cochlear_implant_unknown:'Cochlear implant — type unknown',
+    deep_brain_stimulator:'Deep brain stimulator',
+    aneurysm_clip_unknown:'Aneurysm clip — type unknown',
+    spinal_cord_stimulator:'Spinal cord stimulator',
+    metallic_ocular_foreign_body:'Metallic ocular foreign body',
+    on_dialysis:'Currently on dialysis',
+    prior_severe_contrast_reaction:'Prior severe contrast reaction',
+    ckd_reduced_renal_function:'CKD / reduced renal function',
+    claustrophobia:'Severe claustrophobia',
+  };
+
+  // Mammography screening section
+  const isMmg = rec.modality === 'mammography';
+  const isMri = rec.modality?.startsWith('mri');
+  let scrSection = '';
+
+  if (isMmg && Object.keys(scr).length) {
+    const yn = k => scr[k] === 'yes' ? 'Yes' : scr[k] === 'no' ? 'No' : v(scr[k]);
+    const sideLabel = { none:'None', right:'Right', left:'Left', both:'Both',
+      yes_right:'Yes – Right', yes_left:'Yes – Left', yes_both:'Yes – Both' };
+    scrSection = `
+      <h3>Mammography Patient Questionnaire</h3>
+      <table>
+        ${sec('Safety')}
+        ${row('Age 40 or above', yn('age_40_plus'))}
+        ${row('Pregnancy / possible pregnancy', yn('pregnancy'))}
+        ${row('Referral source', scr.referral_source === 'lasuth' ? 'LASUTH' : scr.referral_source === 'outside_hospital' ? 'Outside Hospital' : v(scr.referral_source))}
+        ${sec('Gynaecological History')}
+        ${row('Last Menstrual Period', v(scr.lmp_date))}
+        ${row('Age at menarche', v(scr.menarche_age))}
+        ${row('Age at first pregnancy', v(scr.first_pregnancy_age))}
+        ${row('Number of pregnancies', v(scr.num_pregnancies))}
+        ${row('Number of live births', v(scr.num_live_births))}
+        ${row('Hormone drugs', yn('hormone_drugs'))}
+        ${scr.hormone_drugs === 'yes' ? row('Hormone drug details', v(scr.hormone_drugs_details)) : ''}
+        ${sec('Family History')}
+        ${row('Family history of breast cancer', yn('family_history'))}
+        ${scr.family_history === 'yes' ? row('Relatives affected', v((scr.family_relatives||[]).join(', '))) : ''}
+        ${sec('Breast History')}
+        ${row('Previous breast surgery', yn('previous_surgery'))}
+        ${scr.previous_surgery === 'yes' ? row('Surgery side', v(sideLabel[scr.surgery_side] || scr.surgery_side)) : ''}
+        ${scr.previous_surgery === 'yes' ? row('Surgery details', v(scr.surgery_details)) : ''}
+        ${row('Mastectomy', v(sideLabel[scr.mastectomy] || scr.mastectomy))}
+        ${scr.biopsy_date ? row('Date of biopsy', v(scr.biopsy_date)) : ''}
+        ${row('Breast implant present', yn('breast_implant'))}
+        ${sec('Current Breast Symptoms')}
+        ${row('Current complaints', v(scr.breast_complaints) || '—')}
+        ${row('Nipple discharge', v(sideLabel[scr.nipple_discharge] || scr.nipple_discharge))}
+        ${row('Breast tenderness', v(sideLabel[scr.breast_tenderness] || scr.breast_tenderness))}
+        ${row('Breast lump / pain', v(sideLabel[scr.breast_lump_pain] || scr.breast_lump_pain))}
+        ${sec('Lifestyle & Medications')}
+        ${row('Caffeine consumption', yn('caffeine'))}
+        ${scr.caffeine === 'yes' ? row('Last caffeine date', v(scr.caffeine_last_date)) : ''}
+        ${scr.caffeine === 'yes' ? row('Daily caffeine intake', v(scr.caffeine_diet)) : ''}
+        ${row('Breastfeeding', yn('breastfeeding'))}
+        ${scr.breastfeeding === 'yes' ? row('Breastfeeding duration', v(scr.breastfeeding_duration)) : ''}
+        ${row('Oral contraceptive pills', yn('oral_contraceptive'))}
+        ${row('Hormone replacement therapy', yn('hrt'))}
+        ${sec('Previous Breast Imaging')}
+        ${row('Previous mammogram / MRI / USS', yn('previous_imaging'))}
+        ${scr.previous_imaging === 'yes' ? row('Imaging date', v(scr.imaging_date)) : ''}
+        ${scr.previous_imaging === 'yes' ? row('Imaging location', v(scr.imaging_location)) : ''}
+        ${scr.previous_imaging === 'yes' ? row('Report summary', v(scr.imaging_report)) : ''}
+        ${sec('Administrative')}
+        ${row('Post-menopausal', yn('menopausal'))}
+        ${row('Payment method', scr.payment_method === 'insurance' ? 'Insurance' : scr.payment_method === 'out_of_pocket' ? 'Out-of-Pocket' : v(scr.payment_method))}
+        ${scr.referral_reason ? row('Reason for referral', v(scr.referral_reason)) : ''}
+      </table>`;
+  }
+
+  // MRI / general safety flags
+  let flagSection = '';
+  const allFlags = [...(tf.tier1||[]), ...(tf.tier2||[]), ...(tf.tier3||[])];
+  if (allFlags.length) {
+    const flagRows = [
+      ...(tf.tier1||[]).map(f => `<tr><td>${FLAG_LABELS[f]||f}</td><td class="tier t1">Tier 1 — Contraindicated</td></tr>`),
+      ...(tf.tier2||[]).map(f => `<tr><td>${FLAG_LABELS[f]||f}</td><td class="tier t2">Tier 2 — Review Required</td></tr>`),
+      ...(tf.tier3||[]).map(f => `<tr><td>${FLAG_LABELS[f]||f}</td><td class="tier t3">Tier 3 — Awareness</td></tr>`),
+    ].join('');
+    flagSection = `
+      <h3>Safety Flags</h3>
+      <table><thead><tr><th>Flag</th><th>Classification</th></tr></thead>
+      <tbody>${flagRows}</tbody></table>`;
+  }
+
+  // Radiologist review
+  let rvSection = '';
+  if (rv) {
+    const decLabel = { approved:'Approved', proceed_with_modifications:'Proceed with Modifications', declined:'Declined' };
+    rvSection = `
+      <h3>Radiologist Review</h3>
+      <table>
+        ${row('Decision', decLabel[rv.decision] || rv.decision)}
+        ${row('Reviewed by', v(rv.reviewedByName))}
+        ${row('Reviewed at', fmtDt(rv.reviewedAt))}
+        ${rv.notes ? row('Notes', v(rv.notes)) : ''}
+      </table>`;
+  }
+
+  // Signature image
+  const sigHtml = s1.patientSignatureImage
+    ? `<div class="sig-box"><img src="${s1.patientSignatureImage}" alt="Patient signature" style="max-height:80px;max-width:260px"></div>`
+    : s1.patientSignature
+      ? `<div class="sig-box sig-text">${esc(s1.patientSignature)}</div>`
+      : '<div class="sig-box sig-empty">No signature captured</div>';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RadConsent — ${esc(p.name || 'Patient')} — ${esc(rec.id)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; background: #fff; }
+  .page { max-width: 800px; margin: 0 auto; padding: 28px 32px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 3px solid #1B6CA8; padding-bottom: 12px; margin-bottom: 20px; }
+  .header-left .logo { font-size: 18pt; font-weight: 700; color: #1B6CA8; }
+  .header-left .sub  { font-size: 9pt; color: #555; margin-top: 2px; }
+  .header-right { text-align: right; font-size: 9pt; color: #555; }
+  .header-right .rec-id { font-family: monospace; font-size: 8.5pt; color: #777; }
+  .status-bar { background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 6px;
+    padding: 8px 14px; margin-bottom: 18px; font-size: 9.5pt; color: #166534; font-weight: 600; }
+  h2 { font-size: 12pt; font-weight: 700; color: #1B6CA8; margin: 20px 0 8px;
+    padding-bottom: 4px; border-bottom: 1.5px solid #DBEAFE; }
+  h3 { font-size: 11pt; font-weight: 700; color: #1e3a5f; margin: 18px 0 6px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10.5pt; }
+  table thead th { background: #F1F5F9; padding: 6px 10px; text-align: left;
+    font-size: 9pt; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; border: 1px solid #CBD5E1; }
+  table td { padding: 6px 10px; border: 1px solid #E2E8F0; vertical-align: top; }
+  table tr.sec-head td { background: #F8FAFC; font-weight: 700; font-size: 9.5pt;
+    color: #475569; text-transform: uppercase; letter-spacing: .5px;
+    border-color: #CBD5E1; padding: 5px 10px; }
+  td.lbl { width: 38%; color: #475569; font-weight: 600; }
+  .tier { font-size: 9pt; font-weight: 700; }
+  .t1 { color: #B91C1C; }
+  .t2 { color: #B45309; }
+  .t3 { color: #1D4ED8; }
+  .sig-box { border: 1.5px solid #CBD5E1; border-radius: 6px; padding: 10px 14px;
+    min-height: 70px; display: flex; align-items: center; justify-content: center;
+    background: #F8FAFC; margin-top: 6px; }
+  .sig-text { font-family: cursive; font-size: 16pt; color: #1B6CA8; }
+  .sig-empty { color: #94A3B8; font-style: italic; font-size: 10pt; }
+  .footer { margin-top: 28px; padding-top: 12px; border-top: 2px solid #E2E8F0;
+    font-size: 8.5pt; color: #94A3B8; display: flex; justify-content: space-between; }
+  @media print {
+    body { font-size: 10pt; }
+    .page { padding: 0; max-width: 100%; }
+    .no-print { display: none !important; }
+    h2 { page-break-before: auto; }
+    table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">RadConsent</div>
+      <div class="sub">Radiology Consent Management System</div>
+    </div>
+    <div class="header-right">
+      <div><strong>CONSENT RECORD</strong></div>
+      <div class="rec-id">${esc(rec.id)}</div>
+      <div>Generated: ${fmtDt(new Date().toISOString())}</div>
+    </div>
+  </div>
+
+  <div class="status-bar">&#10003; Record Status: CLOSED — All stages complete</div>
+
+  <h2>Patient &amp; Procedure Details</h2>
+  <table>
+    ${row('Full Name', p.name)}
+    ${row('Date of Birth', p.dob)}
+    ${row('Gender', p.gender)}
+    ${row('Hospital Number', p.hospitalNumber)}
+    ${row('Phone', p.phone)}
+    ${row('Referring Doctor', p.referringDoctor)}
+    ${row('Procedure', MLABELS[rec.modality] || rec.modality)}
+    ${row('Body Part / Region', rec.bodyPart)}
+    ${row('Language', rec.language)}
+    ${row('Consent Mode', rec.consentMode)}
+    ${row('Record Created', fmtDt(rec.createdAt))}
+    ${row('Record Closed', fmtDt(rec.closedAt))}
+  </table>
+
+  ${scrSection ? `<h2>Mammography Screening</h2>${scrSection}` : ''}
+  ${flagSection ? `<h2>Safety Screening</h2>${flagSection}` : ''}
+  ${rvSection   ? `<h2>Radiologist Review</h2>${rvSection}` : ''}
+
+  <h2>Stage 1 — Consent Declaration</h2>
+  <table>
+    ${row('Patient Name (printed)', p.name)}
+    ${row('Witness', s1.witnessName)}
+    ${row('Consent Version', s1.consentVersion)}
+    ${row('Signed At', fmtDt(s1.completedAt))}
+  </table>
+  <div style="margin-top:8px;font-size:9.5pt;color:#475569;font-weight:600">Patient Signature</div>
+  ${sigHtml}
+
+  <h2>Stage 2 — Radiographer Report</h2>
+  <table>
+    ${row('Radiographer', s2.performedByName)}
+    ${row('Procedure completed as planned', s2.completedAsPlanned)}
+    ${row('Complications', s2.complications || '—')}
+    ${s2.procedureNotes ? row('Procedure Notes', s2.procedureNotes) : ''}
+    ${row('Radiographer Signature', s2.radiographerSignature)}
+    ${row('Completed At', fmtDt(s2.completedAt))}
+  </table>
+
+  <h2>Stage 3 — Nurse Vitals</h2>
+  <table>
+    ${row('Nurse', s3.performedByName)}
+    ${row('Blood Pressure', s3.vitals?.bp   ? s3.vitals.bp   + ' mmHg' : '—')}
+    ${row('Pulse', s3.vitals?.pulse ? s3.vitals.pulse + ' bpm'  : '—')}
+    ${row('Patient Condition', s3.patientCondition)}
+    ${row('Nurse Signature', s3.nurseSignature)}
+    ${row('Completed At', fmtDt(s3.completedAt))}
+  </table>
+
+  <div class="footer">
+    <span>RadConsent v1.0 — Legal Clinical Document</span>
+    <span>Record: ${esc(rec.id)}</span>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { toast('Pop-up blocked — please allow pop-ups and try again.', 'error'); return; }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { w.print(); }, 400);
 }
 
 function renderRecordDetail() {
@@ -2904,9 +3154,8 @@ function renderRecordDetail() {
       </div>
       ${rec.status === 'closed' ? `
       <div style="display:flex;align-items:flex-end;padding-bottom:2px">
-        <button id="dl-record-btn" class="btn btn-secondary btn-sm"
-          onclick="downloadRecord('${rec.id}')">
-          ↓ Download Record
+        <button class="btn btn-primary btn-sm" onclick="downloadPDF('${rec.id}')">
+          ${IC.download}&nbsp; Download PDF
         </button>
       </div>` : ''}
     </div>
