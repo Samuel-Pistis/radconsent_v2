@@ -1217,7 +1217,8 @@ let s3SigUploadedDataUrl = null;
 let s3SigTopazStatus     = 'idle';
 let s3SigTopazPreviewUrl = null;
 let radReviewState    = { record: null, loading: false };
-let adminState        = { records: null, loading: false };
+let adminState        = { records: null, loading: false, tab: 'records', users: null, usersLoading: false, staffForm: null, pwdForm: null };
+let changePwdState    = { error: null, success: false };
 let dashboardState    = { records: null, loading: false };
 
 /* Dark mode — applied immediately so there's no flash */
@@ -1294,10 +1295,20 @@ function navigate(page, data, opts = {}) {
     dashboardState.records = null;
     dashboardState.loading = false;
   }
+  // Reset change-password form each time it's opened
+  if (page === 'change-password') {
+    changePwdState.error = null;
+    changePwdState.success = false;
+  }
   // Force reload of admin panel each time it's opened
   if (page === 'admin') {
     adminState.records = null;
     adminState.loading = false;
+    adminState.tab = 'records';
+    adminState.users = null;
+    adminState.usersLoading = false;
+    adminState.staffForm = null;
+    adminState.pwdForm = null;
   }
   // Force reload of records list whenever the archive or flagged queue is opened
   if (page === 'consents' || page === 'flagged') {
@@ -1426,6 +1437,8 @@ const IC = {
   moon      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
   sun       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
   menu      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
+  lock      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  trash     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1599,6 +1612,9 @@ function renderShell(pageHtml) {
           <button id="dark-toggle-btn" class="btn-dark-toggle" onclick="toggleDark()">
             ${darkMode ? IC.sun + '<span>Light mode</span>' : IC.moon + '<span>Dark mode</span>'}
           </button>
+          <button class="btn-dark-toggle" onclick="navigate('change-password')">
+            ${IC.lock} <span>Change Password</span>
+          </button>
           <button class="btn-signout" onclick="doLogout()">
             ${IC.logout} Sign Out
           </button>
@@ -1653,6 +1669,7 @@ function renderPage() {
     case 'stage2-report'      : return renderStage2Report();
     case 'stage3-vitals'      : return renderStage3Vitals();
     case 'rad-review'         : return renderRadReview();
+    case 'change-password'    : return renderChangePassword();
     default:
       return `<div class="empty-state">${IC.info}<h3>Page not found</h3>
         <button class="btn btn-primary mt-4" onclick="navigate('dashboard')">Go to Dashboard</button></div>`;
@@ -2362,7 +2379,8 @@ function renderRadReview() {
 }
 
 function renderAdminPanel() {
-  if (!adminState.records && !adminState.loading) {
+  // Load consent records when on the records tab
+  if (adminState.tab === 'records' && !adminState.records && !adminState.loading) {
     adminState.loading = true;
     api('GET', '/consents').then(data => {
       adminState.records = data;
@@ -2376,76 +2394,225 @@ function renderAdminPanel() {
     });
   }
 
-  const recs = adminState.records;
-
-  const MODALITY_SHORT = {
-    mri_without_contrast: 'MRI',
-    mri_with_gadolinium : 'MRI + Gad',
-    ct_without_contrast : 'CT',
-    ct_with_iv_contrast : 'CT + IV',
-    mammography         : 'Mammo',
-  };
-
-  let tableBody = '';
-  if (!recs) {
-    tableBody = `<tr><td colspan="5" style="text-align:center;padding:24px">
-      <span class="spinner spinner-dark"></span>&nbsp;Loading…</td></tr>`;
-  } else if (recs.length === 0) {
-    tableBody = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--c-text-muted)">
-      No consent records found.</td></tr>`;
-  } else {
-    recs.forEach(r => {
-      tableBody += `<tr>
-        <td style="font-weight:500">${esc(r.patient?.name || '—')}</td>
-        <td style="color:var(--c-text-sec)">${esc(MODALITY_SHORT[r.modality] || r.modality)}</td>
-        <td><span class="badge badge-${r.status}">${esc(STATUS_LABELS[r.status] || r.status)}</span></td>
-        <td style="color:var(--c-text-muted);font-size:12px">${fmtDate(r.createdAt)}</td>
-        <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end">
-          ${r.status === 'declined' ? `<button class="btn btn-ghost btn-sm"
-            onclick="adminRecallRecord('${r.id}','${esc(r.patient?.name||'this record')}')">Recall</button>` : ''}
-          <button class="btn btn-danger btn-sm"
-            onclick="adminDeleteRecord('${r.id}','${esc(r.patient?.name||'this record')}')">Delete</button>
-        </td>
-      </tr>`;
+  // Load users when on the staff tab
+  if (adminState.tab === 'staff' && !adminState.users && !adminState.usersLoading) {
+    adminState.usersLoading = true;
+    api('GET', '/users').then(data => {
+      adminState.users = data;
+      adminState.usersLoading = false;
+      if (state.page === 'admin') render();
+    }).catch(err => {
+      toast(err.message, 'error');
+      adminState.users = [];
+      adminState.usersLoading = false;
+      if (state.page === 'admin') render();
     });
   }
 
-  const count = recs?.length ?? '…';
+  const thStyle = 'padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px';
+
+  // ── Records tab ──────────────────────────────────────────────
+  let recordsContent = '';
+  if (adminState.tab === 'records') {
+    const recs = adminState.records;
+    const MODALITY_SHORT = {
+      mri_without_contrast: 'MRI', mri_with_gadolinium: 'MRI+Gad',
+      ct_without_contrast: 'CT',  ct_with_iv_contrast: 'CT+IV', mammography: 'Mammo',
+    };
+    let tableBody = '';
+    if (!recs) {
+      tableBody = `<tr><td colspan="5" style="text-align:center;padding:24px"><span class="spinner spinner-dark"></span>&nbsp;Loading…</td></tr>`;
+    } else if (recs.length === 0) {
+      tableBody = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--c-text-muted)">No consent records found.</td></tr>`;
+    } else {
+      recs.forEach(r => {
+        tableBody += `<tr>
+          <td style="font-weight:500">${esc(r.patient?.name || '—')}</td>
+          <td style="color:var(--c-text-sec)">${esc(MODALITY_SHORT[r.modality] || r.modality)}</td>
+          <td><span class="badge badge-${r.status}">${esc(STATUS_LABELS[r.status] || r.status)}</span></td>
+          <td style="color:var(--c-text-muted);font-size:12px">${fmtDate(r.createdAt)}</td>
+          <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end">
+            ${r.status === 'declined' ? `<button class="btn btn-ghost btn-sm"
+              onclick="adminRecallRecord('${r.id}','${esc(r.patient?.name||'this record')}')">Recall</button>` : ''}
+            <button class="btn btn-danger btn-sm"
+              onclick="adminDeleteRecord('${r.id}','${esc(r.patient?.name||'this record')}')">Delete</button>
+          </td>
+        </tr>`;
+      });
+    }
+    const count = recs?.length ?? '…';
+    recordsContent = `
+      <div class="card mb-4">
+        <div class="card-header" style="justify-content:space-between;align-items:center">
+          <h3>Consent Records <span style="font-size:13px;font-weight:400;color:var(--c-text-muted)">(${count})</span></h3>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="adminLoadDemo()">Load Demo Data</button>
+            <button class="btn btn-danger btn-sm" onclick="adminDeleteAll()"
+              ${!recs || recs.length === 0 ? 'disabled' : ''}>Delete All Records</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--c-border);background:var(--c-bg)">
+                <th style="${thStyle}">Patient</th>
+                <th style="${thStyle}">Procedure</th>
+                <th style="${thStyle}">Status</th>
+                <th style="${thStyle}">Created</th>
+                <th style="padding:10px 16px"></th>
+              </tr>
+            </thead>
+            <tbody style="font-size:13.5px">${tableBody}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  // ── Staff tab ────────────────────────────────────────────────
+  let staffContent = '';
+  if (adminState.tab === 'staff') {
+    const ROLE_BADGE = { radiographer: 'Radiographer', nurse: 'Nurse', radiologist: 'Radiologist', admin: 'Admin' };
+    const ROLE_COLOR = { radiographer: '#2563eb', nurse: '#059669', radiologist: '#7c3aed', admin: '#b45309' };
+
+    // Add / Edit form card
+    let formCard = '';
+    const sf = adminState.staffForm;
+    if (sf) {
+      const isEdit = sf.mode === 'edit';
+      formCard = `
+        <div class="card mb-4" style="border:2px solid var(--c-primary)">
+          <div class="card-header"><h3>${isEdit ? 'Edit Staff Account' : 'Add New Staff Account'}</h3></div>
+          <div class="card-body">
+            ${sf.error ? `<div class="alert alert-error mb-3">${esc(sf.error)}</div>` : ''}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group">
+                <label class="form-label">Full Name *</label>
+                <input class="form-control" id="sf-name" value="${esc(sf.name||'')}" placeholder="e.g. Dr. Amara Okonkwo">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address *</label>
+                <input class="form-control" id="sf-email" type="email" value="${esc(sf.email||'')}" placeholder="name@hospital.ng">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Role *</label>
+                <select class="form-control" id="sf-role">
+                  <option value="">— Select role —</option>
+                  ${['radiographer','nurse','radiologist','admin'].map(r =>
+                    `<option value="${r}" ${sf.role===r?'selected':''}>${ROLE_BADGE[r]}</option>`).join('')}
+                </select>
+              </div>
+              ${!isEdit ? `
+              <div class="form-group">
+                <label class="form-label">Initial Password *</label>
+                <input class="form-control" id="sf-pwd" type="password" placeholder="Min. 8 characters">
+              </div>` : '<div></div>'}
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn btn-primary" onclick="staffFormSubmit()">${isEdit ? 'Save Changes' : 'Create Account'}</button>
+              <button class="btn btn-ghost" onclick="staffFormCancel()">Cancel</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // Password reset form
+    let pwdCard = '';
+    const pf = adminState.pwdForm;
+    if (pf) {
+      pwdCard = `
+        <div class="card mb-4" style="border:2px solid var(--c-warning,#f59e0b)">
+          <div class="card-header"><h3>Reset Password — ${esc(pf.userName)}</h3></div>
+          <div class="card-body">
+            ${pf.error ? `<div class="alert alert-error mb-3">${esc(pf.error)}</div>` : ''}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group">
+                <label class="form-label">New Password *</label>
+                <input class="form-control" id="pf-new" type="password" placeholder="Min. 8 characters">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirm Password *</label>
+                <input class="form-control" id="pf-confirm" type="password" placeholder="Repeat new password">
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn btn-primary" onclick="staffPwdSubmit()">Set Password</button>
+              <button class="btn btn-ghost" onclick="staffPwdCancel()">Cancel</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // Users table
+    const users = adminState.users;
+    let usersBody = '';
+    if (!users) {
+      usersBody = `<tr><td colspan="5" style="text-align:center;padding:24px"><span class="spinner spinner-dark"></span>&nbsp;Loading…</td></tr>`;
+    } else if (users.length === 0) {
+      usersBody = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--c-text-muted)">No staff accounts found.</td></tr>`;
+    } else {
+      users.forEach(u => {
+        const isMe = u.id === state.user?.id;
+        usersBody += `<tr>
+          <td style="font-weight:500">${esc(u.name)}${isMe ? ' <span style="font-size:11px;color:var(--c-text-muted)">(you)</span>' : ''}</td>
+          <td style="color:var(--c-text-sec);font-size:13px">${esc(u.email)}</td>
+          <td><span style="display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;background:${ROLE_COLOR[u.role]}22;color:${ROLE_COLOR[u.role]}">${esc(ROLE_BADGE[u.role]||u.role)}</span></td>
+          <td style="color:var(--c-text-muted);font-size:12px">${fmtDate(u.createdAt)}</td>
+          <td style="text-align:right">
+            <div style="display:flex;gap:4px;justify-content:flex-end">
+              <button class="btn btn-ghost btn-sm" onclick="staffEditStart('${u.id}','${esc(u.name)}','${esc(u.email)}','${u.role}')">${IC.edit}</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--c-warning,#d97706)" title="Reset password"
+                onclick="staffPwdStart('${u.id}','${esc(u.name)}')">${IC.lock}</button>
+              ${!isMe ? `<button class="btn btn-ghost btn-sm" style="color:var(--c-danger)"
+                onclick="staffDelete('${u.id}','${esc(u.name)}')">${IC.trash}</button>` : ''}
+            </div>
+          </td>
+        </tr>`;
+      });
+    }
+
+    staffContent = `
+      ${formCard}
+      ${pwdCard}
+      <div class="card mb-4">
+        <div class="card-header" style="justify-content:space-between;align-items:center">
+          <h3>Staff Accounts <span style="font-size:13px;font-weight:400;color:var(--c-text-muted)">(${users?.length ?? '…'})</span></h3>
+          <button class="btn btn-primary btn-sm" onclick="staffFormNew()">${IC.plus} Add Staff</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--c-border);background:var(--c-bg)">
+                <th style="${thStyle}">Name</th>
+                <th style="${thStyle}">Email</th>
+                <th style="${thStyle}">Role</th>
+                <th style="${thStyle}">Created</th>
+                <th style="padding:10px 16px"></th>
+              </tr>
+            </thead>
+            <tbody style="font-size:13.5px">${usersBody}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  const tabBtn = (t, label, icon) => {
+    const active = adminState.tab === t;
+    return `<button class="btn ${active ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="adminSwitchTab('${t}')">${icon} ${label}</button>`;
+  };
 
   return `
     <div class="page-header">
       <div>
         <div class="page-title">Admin Panel</div>
-        <div class="page-subtitle">Record management</div>
+        <div class="page-subtitle">${adminState.tab === 'staff' ? 'Staff account management' : 'Record management'}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${tabBtn('records', 'Records', IC.records)}
+        ${tabBtn('staff', 'Staff', IC.users)}
       </div>
     </div>
-
-    <div class="card mb-4">
-      <div class="card-header" style="justify-content:space-between;align-items:center">
-        <h3>Consent Records <span style="font-size:13px;font-weight:400;color:var(--c-text-muted)">(${count})</span></h3>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-ghost btn-sm" onclick="adminLoadDemo()">Load Demo Data</button>
-          <button class="btn btn-danger btn-sm" onclick="adminDeleteAll()"
-            ${!recs || recs.length === 0 ? 'disabled' : ''}>Delete All Records</button>
-        </div>
-      </div>
-      <div class="card-body" style="padding:0">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr style="border-bottom:1px solid var(--c-border);background:var(--c-bg)">
-              <th style="padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Patient</th>
-              <th style="padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Procedure</th>
-              <th style="padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Status</th>
-              <th style="padding:10px 16px;text-align:left;font-size:12px;color:var(--c-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Created</th>
-              <th style="padding:10px 16px"></th>
-            </tr>
-          </thead>
-          <tbody style="font-size:13.5px">
-            ${tableBody}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
+    ${recordsContent}
+    ${staffContent}`;
 }
 
 async function adminRecallRecord(id, name) {
@@ -2497,6 +2664,176 @@ async function adminDeleteAll() {
     render();
   } catch (err) {
     toast(err.message, 'error');
+  }
+}
+
+// ── Admin tab switching ────────────────────────────────────────
+function adminSwitchTab(tab) {
+  adminState.tab = tab;
+  adminState.staffForm = null;
+  adminState.pwdForm = null;
+  // Trigger load on first visit to staff tab
+  if (tab === 'staff' && !adminState.users && !adminState.usersLoading) {
+    adminState.users = null;
+  }
+  render();
+}
+
+// ── Staff CRUD ─────────────────────────────────────────────────
+function staffFormNew() {
+  adminState.staffForm = { mode: 'add', name: '', email: '', role: '', error: null };
+  adminState.pwdForm = null;
+  render();
+}
+
+function staffFormCancel() {
+  adminState.staffForm = null;
+  render();
+}
+
+function staffEditStart(id, name, email, role) {
+  adminState.staffForm = { mode: 'edit', id, name, email, role, error: null };
+  adminState.pwdForm = null;
+  render();
+}
+
+async function staffFormSubmit() {
+  const sf = adminState.staffForm;
+  if (!sf) return;
+  const name  = document.getElementById('sf-name')?.value?.trim();
+  const email = document.getElementById('sf-email')?.value?.trim();
+  const role  = document.getElementById('sf-role')?.value;
+  const pwd   = document.getElementById('sf-pwd')?.value;
+
+  if (!name)  { sf.error = 'Name is required.'; render(); return; }
+  if (!email) { sf.error = 'Email is required.'; render(); return; }
+  if (!role)  { sf.error = 'Role is required.'; render(); return; }
+  if (sf.mode === 'add' && !pwd) { sf.error = 'Initial password is required.'; render(); return; }
+
+  try {
+    if (sf.mode === 'add') {
+      const created = await api('POST', '/users', { name, email, role, password: pwd });
+      toast(`Account created for ${created.name}.`, 'success');
+      adminState.users = null; // reload
+    } else {
+      const updated = await api('PUT', `/users/${sf.id}`, { name, email, role });
+      toast(`Account updated for ${updated.name}.`, 'success');
+      if (adminState.users) {
+        const idx = adminState.users.findIndex(u => u.id === sf.id);
+        if (idx !== -1) adminState.users[idx] = { ...adminState.users[idx], ...updated };
+      }
+    }
+    adminState.staffForm = null;
+    render();
+  } catch (err) {
+    sf.error = err.message;
+    render();
+  }
+}
+
+function staffPwdStart(userId, userName) {
+  adminState.pwdForm = { userId, userName, error: null };
+  adminState.staffForm = null;
+  render();
+}
+
+function staffPwdCancel() {
+  adminState.pwdForm = null;
+  render();
+}
+
+async function staffPwdSubmit() {
+  const pf = adminState.pwdForm;
+  if (!pf) return;
+  const newPwd = document.getElementById('pf-new')?.value;
+  const confirm2 = document.getElementById('pf-confirm')?.value;
+  if (!newPwd) { pf.error = 'New password is required.'; render(); return; }
+  if (newPwd.length < 8) { pf.error = 'Password must be at least 8 characters.'; render(); return; }
+  if (newPwd !== confirm2) { pf.error = 'Passwords do not match.'; render(); return; }
+  try {
+    await api('PUT', `/users/${pf.userId}/password`, { newPassword: newPwd });
+    toast(`Password reset for ${pf.userName}.`, 'success');
+    adminState.pwdForm = null;
+    render();
+  } catch (err) {
+    pf.error = err.message;
+    render();
+  }
+}
+
+async function staffDelete(id, name) {
+  if (!confirm(`Delete account for "${name}"? This cannot be undone.`)) return;
+  try {
+    await api('DELETE', `/users/${id}`);
+    toast(`Account for ${name} deleted.`, 'success');
+    adminState.users = adminState.users?.filter(u => u.id !== id) ?? null;
+    render();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHANGE PASSWORD (all roles)
+═══════════════════════════════════════════════════════════════ */
+function renderChangePassword() {
+  const s = changePwdState;
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Change Password</div>
+        <div class="page-subtitle">Update your account password</div>
+      </div>
+    </div>
+    <div class="card" style="max-width:480px">
+      <div class="card-header"><h3>${IC.lock} Change Password</h3></div>
+      <div class="card-body">
+        ${s.error ? `<div class="alert alert-error mb-3">${esc(s.error)}</div>` : ''}
+        ${s.success ? `<div class="alert alert-success mb-3">Password changed successfully.</div>` : ''}
+        <div class="form-group">
+          <label class="form-label">Current Password *</label>
+          <input class="form-control" id="cp-current" type="password" placeholder="Your current password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password *</label>
+          <input class="form-control" id="cp-new" type="password" placeholder="Min. 8 characters">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm New Password *</label>
+          <input class="form-control" id="cp-confirm" type="password" placeholder="Repeat new password">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-primary" onclick="changePasswordSubmit()">Update Password</button>
+          <button class="btn btn-ghost" onclick="navigate('dashboard')">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function changePasswordSubmit() {
+  const current = document.getElementById('cp-current')?.value;
+  const newPwd  = document.getElementById('cp-new')?.value;
+  const confirm2= document.getElementById('cp-confirm')?.value;
+  changePwdState.error = null;
+  changePwdState.success = false;
+  if (!current)  { changePwdState.error = 'Current password is required.'; render(); return; }
+  if (!newPwd)   { changePwdState.error = 'New password is required.'; render(); return; }
+  if (newPwd.length < 8) { changePwdState.error = 'New password must be at least 8 characters.'; render(); return; }
+  if (newPwd !== confirm2) { changePwdState.error = 'Passwords do not match.'; render(); return; }
+  try {
+    await api('PUT', `/users/${state.user.id}/password`, { currentPassword: current, newPassword: newPwd });
+    changePwdState.success = true;
+    render();
+    // Clear fields after success
+    setTimeout(() => {
+      ['cp-current','cp-new','cp-confirm'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+    }, 50);
+  } catch (err) {
+    changePwdState.error = err.message;
+    render();
   }
 }
 

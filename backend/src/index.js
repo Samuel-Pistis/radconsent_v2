@@ -6,6 +6,7 @@ const path    = require('path');
 
 const authRouter     = require('./routes/auth');
 const consentsRouter = require('./routes/consents');
+const usersRouter    = require('./routes/users');
 
 const PORT = process.env.PORT || 3000;
 
@@ -34,6 +35,7 @@ app.use((req, res, next) => {
 // ── API routes ──────────────────────────────────────────────
 app.use('/api/auth',     authRouter);
 app.use('/api/consents', consentsRouter);
+app.use('/api/users',    usersRouter);
 
 // ── Serve frontend ──────────────────────────────────────────
 const FRONTEND = path.join(__dirname, '..', '..', 'frontend-dist');
