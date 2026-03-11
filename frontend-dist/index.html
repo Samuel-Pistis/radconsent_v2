@@ -1194,9 +1194,9 @@ const ncState = {
 /* MRI Screening step-machine state */
 let mriScrState = { steps: [], stepIdx: 0, answers: {}, consent: null };
 /* General Safety Screening state (non-MRI modalities) */
-let safetyScrState = { consent: null, answers: {} };
+let safetyScrState = { consent: null, answers: {}, stepIdx: 0 };
 /* Mammography Screening state */
-let mmgScrState = { consent: null, answers: {} };
+let mmgScrState = { consent: null, answers: {}, stepIdx: 0 };
 
 /* Consent Declaration state */
 let consentDeclState = { lang: 'en', consent: null, signed: false, signedResult: null };
@@ -1346,12 +1346,19 @@ function navigate(page, data, opts = {}) {
   if (page === 'safety-screening') {
     safetyScrState.consent = data?.consent || null;
     safetyScrState.answers = {};
+    safetyScrState.stepIdx = 0;
   }
   if (page === 'mammography-screening') {
     // Only reset state when starting fresh (consent provided = new session)
     if (data?.consent) {
       mmgScrState.consent = data.consent;
       mmgScrState.answers = {};
+      mmgScrState.stepIdx = 0;
+    }
+  }
+  if (page === 'mammography-questionnaire') {
+    if (data?.consent) {
+      mmgScrState.stepIdx = 0;
     }
   }
   state.page     = page;
@@ -4465,22 +4472,31 @@ function mriScrRefreshSteps() {
   mriScrState.stepIdx = Math.min(newIdx, newSteps.length - 1);
 }
 
-/* ── Record answer and advance ─────────────────────────────── */
+/* ── Record answer ONLY ─────────────────────────────── */
 function mriScrAnswer(stepId, value) {
   mriScrState.answers[stepId] = value;
   mriScrRefreshSteps();
-  mriScrState.stepIdx++;
   render();
 }
 
-/* ── Multicheck: read all checked boxes then advance ─────────  */
-function mriScrMultiNext(stepId) {
-  const boxes = document.querySelectorAll(`[data-scr-check="${stepId}"]:checked`);
-  const vals  = Array.from(boxes).map(b => b.value);
-  if (vals.length === 0) { toast('Please select at least one option, or choose "None of the above".', 'warning'); return; }
-  // 'none' sentinel means no items apply — store as empty array
-  mriScrState.answers[stepId] = vals.includes('none') ? [] : vals;
-  mriScrRefreshSteps();
+function mriScrNext(stepId, isMulti) {
+  if (isMulti) {
+    const boxes = document.querySelectorAll(`[data-scr-check="${stepId}"]:checked`);
+    const vals  = Array.from(boxes).map(b => b.value);
+    if (vals.length === 0) { toast('Please select at least one option, or choose "None of the above".', 'warning'); return; }
+    mriScrState.answers[stepId] = vals.includes('none') ? [] : vals;
+    mriScrRefreshSteps();
+  } else {
+    const step = mriScrState.steps[mriScrState.stepIdx];
+    if (step.type === 'info') {
+      mriScrState.answers[stepId] = 'acknowledged';
+    } else {
+      if (mriScrState.answers[stepId] === undefined) {
+        toast('Please answer this step to proceed.', 'warning');
+        return;
+      }
+    }
+  }
   mriScrState.stepIdx++;
   render();
 }
@@ -4668,15 +4684,13 @@ function renderMriStep(step, stepNum, totalSteps) {
     </div>`;
 
   let body = '';
+  const ans = mriScrState.answers[step.id];
 
   if (step.type === 'info') {
     body = `
       <div style="text-align:center;padding:8px 0 20px">
         <div style="font-size:22px;font-weight:700;color:var(--c-text);margin-bottom:14px">${esc(step.title)}</div>
-        <div style="font-size:14.5px;line-height:1.75;color:var(--c-text-sec);max-width:560px;margin:0 auto 28px">${esc(step.body)}</div>
-        <button class="btn btn-primary btn-lg" onclick="mriScrAnswer('${step.id}','acknowledged')">
-          I understand — Continue →
-        </button>
+        <div style="font-size:14.5px;line-height:1.75;color:var(--c-text-sec);max-width:560px;margin:0 auto">${esc(step.body)}</div>
       </div>`;
 
   } else if (step.type === 'yesno') {
@@ -4684,17 +4698,17 @@ function renderMriStep(step, stepNum, totalSteps) {
       <div class="scr-question">${esc(step.question)}</div>
       ${step.hint ? `<div class="scr-question-hint">${esc(step.hint)}</div>` : ''}
       <div class="scr-choice-grid two-col">
-        <button class="scr-choice-btn" onclick="mriScrAnswer('${step.id}','yes')">
+        <button class="scr-choice-btn ${ans === 'yes' ? 'selected' : ''}" onclick="mriScrAnswer('${step.id}','yes')">
           <span class="scr-choice-label">Yes</span>
         </button>
-        <button class="scr-choice-btn" onclick="mriScrAnswer('${step.id}','no')">
+        <button class="scr-choice-btn ${ans === 'no' ? 'selected' : ''}" onclick="mriScrAnswer('${step.id}','no')">
           <span class="scr-choice-label">No</span>
         </button>
       </div>`;
 
   } else if (step.type === 'radio') {
     const opts = step.options.map(o => `
-      <button class="scr-choice-btn" onclick="mriScrAnswer('${step.id}','${o.id}')">
+      <button class="scr-choice-btn ${ans === o.id ? 'selected' : ''}" onclick="mriScrAnswer('${step.id}','${o.id}')">
         <span class="scr-choice-label">${esc(o.label)}</span>
         ${o.desc ? `<span class="scr-choice-desc">${esc(o.desc)}</span>` : ''}
         <span class="scr-choice-desc" style="margin-top:4px">${esc(o.tierLabel)}</span>
@@ -4705,25 +4719,39 @@ function renderMriStep(step, stepNum, totalSteps) {
       <div class="scr-choice-grid">${opts}</div>`;
 
   } else if (step.type === 'multicheck') {
-    const opts = step.options.map(o => `
+    const checkedVals = Array.isArray(ans) ? ans : [];
+    const opts = step.options.map(o => {
+      const isChecked = checkedVals.includes(o.id) ? 'checked' : '';
+      return `
       <label class="scr-check-option">
-        <input type="checkbox" value="${o.id}" data-scr-check="${step.id}">
+        <input type="checkbox" value="${o.id}" data-scr-check="${step.id}" ${isChecked} onchange="render()">
         <div class="scr-check-option-text">
           <div class="scr-check-label">${esc(o.label)}</div>
           ${o.tierLabel ? `<div class="scr-check-tier">${esc(o.tierLabel)}</div>` : ''}
         </div>
-      </label>`).join('');
+      </label>`;
+    }).join('');
     body = `
       <div class="scr-question">${esc(step.question)}</div>
       ${step.hint ? `<div class="scr-question-hint">${esc(step.hint)}</div>` : ''}
-      <div class="scr-check-list">${opts}</div>
-      <div class="scr-continue-row">
-        <button class="btn btn-secondary btn-sm" onclick="mriScrBack()">← Back</button>
-        <button class="btn btn-primary" onclick="mriScrMultiNext('${step.id}')">Continue →</button>
-      </div>`;
+      <div class="scr-check-list">${opts}</div>`;
   }
 
-  return `${progressBar}<div class="card"><div class="card-body" style="padding:28px">${body}</div></div>`;
+  const isMulti = step.type === 'multicheck';
+  const hasAnswer = (isMulti && ans && ans.length > 0) || (!isMulti && ans !== undefined);
+
+  return `${progressBar}
+    <div class="card">
+      <div class="card-body" style="padding:28px">${body}</div>
+      <div class="card-footer" style="padding:16px 24px;display:flex;justify-content:space-between">
+        ${stepNum === 1 
+          ? '<div></div>' 
+          : '<button class="btn btn-secondary btn-sm" onclick="mriScrBack()">← Previous</button>'}
+        ${stepNum === totalSteps 
+          ? `<button class="btn btn-primary" onclick="mriScrNext('${step.id}', ${isMulti})" ${(!isMulti && step.type !== 'info') && !hasAnswer ? 'disabled' : ''}>View Results →</button>`
+          : `<button class="btn btn-primary" onclick="mriScrNext('${step.id}', ${isMulti})" ${(!isMulti && step.type !== 'info') && !hasAnswer ? 'disabled' : ''}>Next →</button>`}
+      </div>
+    </div>`;
 }
 
 /* ── Render results page ─────────────────────────────────────  */
@@ -4893,11 +4921,11 @@ function mmgScrSubmit() {
 /* ═══════════════════════════════════════════════════════════════
    MAMMOGRAPHY QUESTIONNAIRE (patient info — step 2)
 ═══════════════════════════════════════════════════════════════ */
-const REQUIRED_MMG_QUEST_KEYS = [
-  'family_history', 'previous_surgery', 'mastectomy', 'breast_implant',
-  'nipple_discharge', 'breast_tenderness', 'breast_lump_pain',
-  'caffeine', 'breastfeeding', 'oral_contraceptive', 'hrt',
-  'previous_imaging', 'menopausal', 'payment_method', 'referral_source',
+const MMG_SECTION_KEYS = [
+  ['hormone_drugs', 'family_history'],
+  ['previous_surgery', 'mastectomy', 'breast_implant', 'nipple_discharge', 'breast_tenderness', 'breast_lump_pain'],
+  ['caffeine', 'breastfeeding', 'oral_contraceptive', 'hrt', 'previous_imaging'],
+  ['menopausal', 'payment_method', 'referral_source']
 ];
 
 function mmgQuestAnswer(key, value) {
@@ -4912,14 +4940,43 @@ function mmgQuestToggleRelative(rel) {
   mmgScrState.answers.family_relatives = [...rels];
 }
 
+function mmgQuestBack() {
+  if (mmgScrState.stepIdx > 0) {
+    mmgScrState.stepIdx--;
+    render();
+  } else {
+    navigate('mammography-screening',{consent:mmgScrState.consent});
+  }
+}
+
+function mmgQuestNext() {
+  const reqKeys = MMG_SECTION_KEYS[mmgScrState.stepIdx] || [];
+  const missing = reqKeys.filter(k => mmgScrState.answers[k] === undefined);
+  if (missing.length > 0) {
+    toast('Please complete all required fields.', 'warning');
+    return;
+  }
+  
+  if (mmgScrState.stepIdx < MMG_SECTION_KEYS.length - 1) {
+    mmgScrState.stepIdx++;
+    render();
+  } else {
+    mmgQuestSubmit();
+  }
+}
+
 function renderMammographyQuestionnaire() {
   const consent = mmgScrState.consent || state.pageData?.consent;
   const subtitle = consent
     ? esc(consent.patient?.name) + ' · Mammography Questionnaire'
     : '';
   const a = mmgScrState.answers;
-  const allDone = REQUIRED_MMG_QUEST_KEYS.every(k => a[k] !== undefined);
   const rels = a.family_relatives || [];
+  const stepIdx = mmgScrState.stepIdx || 0;
+  
+  const reqKeys = MMG_SECTION_KEYS[stepIdx] || [];
+  const sectionDone = reqKeys.every(k => a[k] !== undefined);
+  const isLast = stepIdx === MMG_SECTION_KEYS.length - 1;
 
   function yesno(key) {
     return `<div style="display:flex;gap:24px">
@@ -4966,23 +5023,10 @@ function renderMammographyQuestionnaire() {
       style="width:100%;padding:8px 10px;border:1px solid var(--c-border);border-radius:6px;font-size:13.5px;background:var(--c-bg);color:var(--c-text);resize:vertical">${esc(a[key]||'')}</textarea>`;
   }
 
-  return `
-    <div class="page-header">
-      <div>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('mammography-screening',{consent:mmgScrState.consent})" style="margin-bottom:6px;margin-left:-6px">← Back</button>
-        <div class="page-title">Mammography Patient Questionnaire</div>
-        <div class="page-subtitle">${subtitle}</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h3>${IC.medical}&nbsp; Patient Information — Mammography</h3></div>
-      <div class="card-body">
-        <p style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:4px">
-          Please complete all required fields <span style="color:var(--c-danger)">*</span>.
-        </p>
-
+  const sectionsHtml = [
+    // Step 0
+    `
         ${secHead('Gynaecological History')}
-
         ${qBlock('Last Menstrual Period (LMP)', textIn('lmp_date', 'DD/MM/YYYY'), false)}
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="mb-4">
@@ -5027,9 +5071,10 @@ function renderMammographyQuestionnaire() {
               </div>
             </div>` : ''}
         `)}
-
+    `,
+    // Step 1
+    `
         ${secHead('Breast History')}
-
         ${qBlock('Previous breast surgery?', `
           ${yesno('previous_surgery')}
           ${a.previous_surgery === 'yes' ? `
@@ -5041,23 +5086,18 @@ function renderMammographyQuestionnaire() {
         `)}
 
         ${qBlock('Mastectomy', sideOpts('mastectomy', [['none','None'],['right','Right'],['left','Left'],['both','Both']]))}
-
         ${qBlock('Date of biopsy <span style="font-weight:400;color:var(--c-text-sec)">(if applicable)</span>', textIn('biopsy_date', 'DD/MM/YYYY'), false)}
-
         ${qBlock('Breast implant present?', yesno('breast_implant'))}
 
         ${secHead('Current Breast Symptoms')}
-
         ${qBlock('Current breast complaints', textAr('breast_complaints', 'Describe any current complaints…'), false)}
-
         ${qBlock('Nipple discharge', sideOpts('nipple_discharge', [['none','None'],['yes_right','Yes – Right'],['yes_left','Yes – Left'],['yes_both','Yes – Both']]))}
-
         ${qBlock('Breast tenderness', sideOpts('breast_tenderness', [['none','None'],['yes_right','Yes – Right'],['yes_left','Yes – Left'],['yes_both','Yes – Both']]))}
-
         ${qBlock('Breast lump / pain', sideOpts('breast_lump_pain', [['none','None'],['yes_right','Yes – Right'],['yes_left','Yes – Left'],['yes_both','Yes – Both']]))}
-
+    `,
+    // Step 2
+    `
         ${secHead('Lifestyle & Medications')}
-
         ${qBlock('Caffeine consumption?', `
           ${yesno('caffeine')}
           ${a.caffeine === 'yes' ? `
@@ -5089,11 +5129,9 @@ function renderMammographyQuestionnaire() {
         `)}
 
         ${qBlock('Oral contraceptive pills (OCP)?', yesno('oral_contraceptive'))}
-
         ${qBlock('Hormone replacement therapy (HRT)?', yesno('hrt'))}
 
         ${secHead('Previous Breast Imaging')}
-
         ${qBlock('Previous breast mammogram, MRI, or ultrasound?', `
           ${yesno('previous_imaging')}
           ${a.previous_imaging === 'yes' ? `
@@ -5112,25 +5150,57 @@ function renderMammographyQuestionnaire() {
               ${textAr('imaging_report', 'Describe key findings…')}
             </div>` : ''}
         `)}
-
+    `,
+    // Step 3
+    `
         ${secHead('Menopausal Status')}
-
         ${qBlock('Post-menopausal?', yesno('menopausal'))}
 
         ${secHead('Administrative')}
-
         ${qBlock('Payment method', sideOpts('payment_method', [['insurance','Insurance'],['out_of_pocket','Out-of-Pocket']]))}
-
         ${qBlock('Referral source', sideOpts('referral_source', [['lasuth','LASUTH'],['outside_hospital','Outside Hospital']]))}
-
         ${qBlock('Reason for referral by doctor', textAr('referral_reason', 'State the clinical indication for this examination…'), false)}
+    `
+  ];
+
+  const pct = Math.round(((stepIdx + 1) / MMG_SECTION_KEYS.length) * 100);
+
+  const progressBar = `
+    <div class="scr-progress-wrap">
+      <div class="scr-step-label">
+        <span>Questionnaire Section</span>
+        <span>Step ${stepIdx + 1} of ${MMG_SECTION_KEYS.length}</span>
+      </div>
+      <div class="scr-progress-bar"><div class="scr-progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+
+  return `
+    <div class="page-header">
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="mmgQuestBack()" style="margin-bottom:6px;margin-left:-6px">← Back</button>
+        <div class="page-title">Mammography Patient Questionnaire</div>
+        <div class="page-subtitle">${subtitle}</div>
+      </div>
+    </div>
+    ${progressBar}
+    <div class="card">
+      <div class="card-header"><h3>${IC.medical}&nbsp; Patient Information — Mammography</h3></div>
+      <div class="card-body">
+        <p style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:4px">
+          Please complete all required fields <span style="color:var(--c-danger)">*</span>.
+        </p>
+
+        ${sectionsHtml[stepIdx]}
 
       </div>
-      <div class="card-footer">
-        <button class="btn btn-ghost btn-sm" onclick="navigate('mammography-screening',{consent:mmgScrState.consent})">← Back</button>
-        <button class="btn btn-primary" onclick="mmgQuestSubmit()" ${allDone ? '' : 'disabled'}>
-          Proceed to Consent Declaration →
-        </button>
+      <div class="card-footer" style="padding:16px 24px;display:flex;justify-content:space-between">
+        ${stepIdx === 0 
+          ? '<div></div>' 
+          : '<button class="btn btn-secondary btn-sm" onclick="mmgQuestBack()">← Previous</button>'}
+        ${isLast 
+          ? `<button class="btn btn-primary" onclick="mmgQuestNext()" ${sectionDone ? '' : 'disabled'}>Proceed to Consent Declaration →</button>`
+          : `<button class="btn btn-primary" onclick="mmgQuestNext()" ${sectionDone ? '' : 'disabled'}>Next →</button>`
+        }
       </div>
     </div>`;
 }
@@ -5184,53 +5254,85 @@ const SAFETY_QUESTIONS = [
   { key: 'metallic_implant',   label: 'Does the patient have any other metallic or electronic implants (e.g. cochlear implant, neurostimulator, insulin pump)?' },
 ];
 
+function safetyScrBack() {
+  if (safetyScrState.stepIdx > 0) {
+    safetyScrState.stepIdx--;
+    render();
+  } else {
+    navigate('new-consent');
+  }
+}
+
+function safetyScrNext() {
+  const currentKey = SAFETY_QUESTIONS[safetyScrState.stepIdx].key;
+  if (!safetyScrState.answers[currentKey]) {
+    toast('Please answer this question to proceed.', 'warning');
+    return;
+  }
+  
+  if (safetyScrState.stepIdx < SAFETY_QUESTIONS.length - 1) {
+    safetyScrState.stepIdx++;
+    render();
+  } else {
+    safetyScrSubmit();
+  }
+}
+
 function renderSafetyScreening() {
   const consent = safetyScrState.consent;
   const subtitle = consent
     ? esc(consent.patient?.name) + ' · ' + esc(MODALITY_LABELS[consent.modality] || consent.modality)
     : '';
   const ans = safetyScrState.answers;
-  const allAnswered = SAFETY_QUESTIONS.every(q => ans[q.key] !== undefined);
+  
+  const stepIdx = safetyScrState.stepIdx || 0;
+  const q = SAFETY_QUESTIONS[stepIdx];
+  const isLast = stepIdx === SAFETY_QUESTIONS.length - 1;
+  const hasAnswer = ans[q.key] !== undefined;
+
+  const pct = Math.round(((stepIdx + 1) / SAFETY_QUESTIONS.length) * 100);
+
+  const progressBar = `
+    <div class="scr-progress-wrap">
+      <div class="scr-step-label">
+        <span>Safety Question</span>
+        <span>Step ${stepIdx + 1} of ${SAFETY_QUESTIONS.length}</span>
+      </div>
+      <div class="scr-progress-bar"><div class="scr-progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
 
   return `
     <div class="page-header">
       <div>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')"
+        <button class="btn btn-ghost btn-sm" onclick="safetyScrBack()"
           style="margin-bottom:6px;margin-left:-6px">← Back</button>
         <div class="page-title">Safety Screening</div>
         <div class="page-subtitle">${subtitle}</div>
       </div>
     </div>
+    ${progressBar}
     <div class="card">
       <div class="card-header"><h3>${IC.medical}&nbsp; Pre-Procedure Safety Check</h3></div>
-      <div class="card-body">
-        <p style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:20px">
-          Please answer all questions below. Any <strong>Yes</strong> answer will be flagged for radiologist review before the procedure proceeds.
-        </p>
-        ${SAFETY_QUESTIONS.map((q, i) => `
-          <div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-            <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">${i + 1}. ${q.label}</div>
-            <div style="display:flex;gap:24px">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
-                <input type="radio" name="sfq-${q.key}" value="yes"
-                  ${ans[q.key] === 'yes' ? 'checked' : ''}
-                  onchange="safetyScrAnswer('${q.key}','yes')"
-                  style="accent-color:var(--c-accent)"> Yes
-              </label>
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
-                <input type="radio" name="sfq-${q.key}" value="no"
-                  ${ans[q.key] === 'no' ? 'checked' : ''}
-                  onchange="safetyScrAnswer('${q.key}','no')"
-                  style="accent-color:var(--c-accent)"> No
-              </label>
-            </div>
-          </div>`).join('')}
+      <div class="card-body" style="padding:28px">
+        <div class="scr-question">${stepIdx + 1}. ${esc(q.label)}</div>
+        <div class="scr-question-hint">Any <strong>Yes</strong> answer will be flagged for radiologist review before the procedure proceeds.</div>
+        <div class="scr-choice-grid two-col" style="margin-top:20px;margin-bottom:12px">
+          <button class="scr-choice-btn ${ans[q.key] === 'yes' ? 'selected' : ''}" onclick="safetyScrAnswer('${q.key}','yes')">
+            <span class="scr-choice-label">Yes</span>
+          </button>
+          <button class="scr-choice-btn ${ans[q.key] === 'no' ? 'selected' : ''}" onclick="safetyScrAnswer('${q.key}','no')">
+            <span class="scr-choice-label">No</span>
+          </button>
+        </div>
       </div>
-      <div class="card-footer">
-        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')">Cancel</button>
-        <button class="btn btn-primary" onclick="safetyScrSubmit()" ${allAnswered ? '' : 'disabled'}>
-          Proceed to Consent Declaration →
-        </button>
+      <div class="card-footer" style="padding:16px 24px;display:flex;justify-content:space-between">
+        ${stepIdx === 0 
+          ? '<div></div>' 
+          : '<button class="btn btn-secondary btn-sm" onclick="safetyScrBack()">← Previous</button>'}
+        ${isLast 
+          ? `<button class="btn btn-primary" onclick="safetyScrNext()" ${hasAnswer ? '' : 'disabled'}>Proceed to Consent Declaration →</button>`
+          : `<button class="btn btn-primary" onclick="safetyScrNext()" ${hasAnswer ? '' : 'disabled'}>Next →</button>`
+        }
       </div>
     </div>`;
 }
