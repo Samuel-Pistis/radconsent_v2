@@ -423,56 +423,145 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   LOGIN PAGE
+   LOGIN PAGE — SPLIT-SCREEN LAYOUT
 ═══════════════════════════════════════════════════════════════ */
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(150deg, #0B2545 0%, #123354 45%, #1B6CA8 100%);
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
+  display: flex;
 }
-.login-container { width: 100%; max-width: 400px; }
-.login-logo { text-align: center; margin-bottom: 24px; }
+
+/* ── Hero panel (left half) ── */
+.login-hero {
+  flex: 0 0 40%; position: relative;
+  background: url('consent-hero.png') center/cover no-repeat;
+  display: flex; flex-direction: column;
+  justify-content: flex-end; padding: 48px;
+  overflow: hidden;
+}
+.login-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(11,37,69,.92) 0%, rgba(11,37,69,.55) 40%, rgba(11,37,69,.25) 100%);
+  z-index: 1;
+}
+.login-hero-content { position: relative; z-index: 2; }
+.login-hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 99px; padding: 5px 14px;
+  font-size: 11px; font-weight: 600; color: rgba(255,255,255,.8);
+  letter-spacing: .5px; text-transform: uppercase;
+  margin-bottom: 18px; backdrop-filter: blur(8px);
+}
+.login-hero-badge-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #4ADE80; flex-shrink: 0;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.login-hero-title {
+  font-size: 34px; font-weight: 800; color: #fff;
+  line-height: 1.2; letter-spacing: -.5px;
+  margin-bottom: 12px;
+}
+.login-hero-sub {
+  font-size: 15px; color: rgba(255,255,255,.7);
+  line-height: 1.65; max-width: 440px;
+}
+.login-hero-features {
+  display: flex; gap: 28px; margin-top: 28px;
+  flex-wrap: wrap;
+}
+.login-hero-feat {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; color: rgba(255,255,255,.85);
+}
+.login-hero-feat-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: rgba(255,255,255,.12);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.login-hero-feat-icon svg { width: 15px; height: 15px; color: #fff; }
+
+/* ── Form panel (right half) ── */
+.login-form-panel {
+  flex: 1; min-width: 380px;
+  background: var(--c-bg);
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 48px 52px;
+  overflow-y: auto; height: 100vh;
+}
+.login-form-inner { width: 100%; max-width: 380px; }
+
+.login-logo { text-align: center; margin-bottom: 32px; }
 .login-logo-mark {
   width: 52px; height: 52px;
-  background: rgba(255,255,255,.13);
-  border: 1.5px solid rgba(255,255,255,.22);
+  background: linear-gradient(135deg, #0B2545 0%, #1B6CA8 100%);
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 11px;
+  margin: 0 auto 12px;
+  box-shadow: 0 4px 12px rgba(27,108,168,.25);
 }
 .login-logo-mark svg { width: 26px; height: 26px; color: #fff; }
-.login-app-name  { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -.3px; }
-.login-app-sub   { color: rgba(255,255,255,.5); font-size: 12px; margin-top: 3px; }
-.login-card      { background: var(--c-surface); border-radius: var(--radius-lg); box-shadow: 0 20px 60px rgba(0,0,0,.3); padding: 26px; margin-bottom: 16px; }
-.login-card h2   { font-size: 15px; font-weight: 600; color: var(--c-text); margin-bottom: 18px; }
+.login-app-name  { color: var(--c-text); font-size: 22px; font-weight: 700; letter-spacing: -.4px; }
+.login-app-sub   { color: var(--c-text-muted); font-size: 12.5px; margin-top: 4px; }
+
+.login-card {
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0,0,0,.06);
+  padding: 28px; margin-bottom: 18px;
+}
+.login-card h2 {
+  font-size: 15.5px; font-weight: 600; color: var(--c-text);
+  margin-bottom: 4px;
+}
+.login-card-sub {
+  font-size: 12.5px; color: var(--c-text-muted); margin-bottom: 20px;
+}
 .login-error {
   background: var(--c-danger-light); border: 1px solid var(--c-danger-border);
   color: #991B1B; border-radius: var(--radius-sm);
   padding: 9px 12px; font-size: 12.5px; margin-bottom: 14px; display: none;
 }
 .login-error.show { display: block; }
+
 /* Demo panel */
 .demo-panel {
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.15);
-  border-radius: var(--radius); padding: 14px;
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: var(--radius); padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
 }
 .demo-panel-title {
   font-size: 10px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 1px;
-  color: rgba(255,255,255,.45); margin-bottom: 9px;
+  color: var(--c-text-muted); margin-bottom: 10px;
 }
-.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .demo-btn {
-  background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.18);
-  border-radius: var(--radius-sm); padding: 9px 11px;
+  background: var(--c-bg); border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
   text-align: left; cursor: pointer;
-  transition: background var(--t), border-color var(--t);
+  transition: background var(--t), border-color var(--t), box-shadow var(--t);
 }
-.demo-btn:hover { background: rgba(255,255,255,.17); border-color: rgba(255,255,255,.32); }
-.demo-btn-role { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: rgba(255,255,255,.45); margin-bottom: 2px; }
-.demo-btn-name { font-size: 12px; font-weight: 500; color: rgba(255,255,255,.88); }
+.demo-btn:hover { background: var(--c-info-light); border-color: var(--c-accent); box-shadow: 0 2px 8px rgba(27,108,168,.1); }
+.demo-btn-role { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--c-text-muted); margin-bottom: 3px; }
+.demo-btn-name { font-size: 12.5px; font-weight: 500; color: var(--c-text); }
+
+/* ── Login responsive ── */
+@media (max-width: 900px) {
+  .login-page { flex-direction: column; }
+  .login-hero { min-height: 260px; flex: none; padding: 32px 24px; }
+  .login-hero-title { font-size: 24px; }
+  .login-hero-sub { font-size: 13px; }
+  .login-hero-features { gap: 16px; }
+  .login-form-panel { max-width: none; min-width: 0; height: auto; padding: 32px 24px; }
+}
+@media (max-width: 500px) {
+  .login-hero-features { flex-direction: column; gap: 10px; }
+  .login-form-panel { padding: 28px 18px; }
+  .demo-grid { grid-template-columns: 1fr; }
+}
 
 /* ═══════════════════════════════════════════════════════════════
    STAT CARDS
@@ -1471,50 +1560,86 @@ function getNavItems(role) {
 function renderLogin() {
   return `
     <div class="login-page">
-      <div class="login-container">
-        <div class="login-logo">
-          <div class="login-logo-mark">${IC.medical}</div>
-          <div class="login-app-name">RadConsent</div>
-          <div class="login-app-sub">Radiology Consent Management Platform</div>
-        </div>
-
-        <div class="login-card">
-          <h2>Sign in to your account</h2>
-          <div id="login-error" class="login-error"></div>
-          <form id="login-form" autocomplete="on">
-            <div class="form-group">
-              <label class="form-label" for="login-email">Email address</label>
-              <input class="form-control" type="email" id="login-email" name="email"
-                placeholder="name@example.com" autocomplete="email" required />
+      <!-- ── Hero panel (left) ── -->
+      <div class="login-hero">
+        <div class="login-hero-content">
+          <div class="login-hero-badge">
+            <span class="login-hero-badge-dot"></span>
+            Clinical-Grade Consent Platform
+          </div>
+          <div class="login-hero-title">Patient Safety<br>Starts With Informed&nbsp;Consent</div>
+          <div class="login-hero-sub">
+            RadConsent streamlines radiology consent workflows across all imaging modalities, ensuring every step is documented, auditable, and compliant.
+          </div>
+          <div class="login-hero-features">
+            <div class="login-hero-feat">
+              <div class="login-hero-feat-icon">${IC.shield}</div>
+              <span>MRI Safety<br>Screening</span>
             </div>
-            <div class="form-group" style="margin-bottom:18px">
-              <label class="form-label" for="login-password">Password</label>
-              <input class="form-control" type="password" id="login-password" name="password"
-                placeholder="••••••••" autocomplete="current-password" required />
+            <div class="login-hero-feat">
+              <div class="login-hero-feat-icon">${IC.clipboard}</div>
+              <span>Multi-modality<br>Consent Declaration</span>
             </div>
-            <button type="submit" id="login-btn" class="btn btn-dark btn-lg btn-block">Sign In</button>
-          </form>
+            <div class="login-hero-feat">
+              <div class="login-hero-feat-icon">${IC.edit}</div>
+              <span>Digital Consent<br>Signatures</span>
+            </div>
+            <div class="login-hero-feat">
+              <div class="login-hero-feat-icon">${IC.medical}</div>
+              <span>Tiered Review<br>Process</span>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div class="demo-panel">
-          <div class="demo-panel-title">Demo accounts — click to fill</div>
-          <div class="demo-grid">
-            <button class="demo-btn" onclick="fillDemo('radiographer@radconsent.demo')">
-              <div class="demo-btn-role">Radiographer</div>
-              <div class="demo-btn-name">Chidi Eze</div>
-            </button>
-            <button class="demo-btn" onclick="fillDemo('nurse@radconsent.demo')">
-              <div class="demo-btn-role">Nurse</div>
-              <div class="demo-btn-name">Amaka Obi</div>
-            </button>
-            <button class="demo-btn" onclick="fillDemo('radiologist@radconsent.demo')">
-              <div class="demo-btn-role">Radiologist</div>
-              <div class="demo-btn-name">Dr. Amara Okonkwo</div>
-            </button>
-            <button class="demo-btn" onclick="fillDemo('admin@radconsent.demo')">
-              <div class="demo-btn-role">Admin</div>
-              <div class="demo-btn-name">Admin User</div>
-            </button>
+      <!-- ── Form panel (right) ── -->
+      <div class="login-form-panel">
+        <div class="login-form-inner">
+          <div class="login-logo">
+            <div class="login-logo-mark">${IC.medical}</div>
+            <div class="login-app-name">RadConsent</div>
+            <div class="login-app-sub">Radiology Consent Management</div>
+          </div>
+
+          <div class="login-card">
+            <h2>Welcome back</h2>
+            <div class="login-card-sub">Sign in to continue to your dashboard</div>
+            <div id="login-error" class="login-error"></div>
+            <form id="login-form" autocomplete="on">
+              <div class="form-group">
+                <label class="form-label" for="login-email">Email address</label>
+                <input class="form-control" type="email" id="login-email" name="email"
+                  placeholder="name@example.com" autocomplete="email" required />
+              </div>
+              <div class="form-group" style="margin-bottom:20px">
+                <label class="form-label" for="login-password">Password</label>
+                <input class="form-control" type="password" id="login-password" name="password"
+                  placeholder="••••••••" autocomplete="current-password" required />
+              </div>
+              <button type="submit" id="login-btn" class="btn btn-dark btn-lg btn-block">Sign In</button>
+            </form>
+          </div>
+
+          <div class="demo-panel">
+            <div class="demo-panel-title">Demo accounts — click to fill</div>
+            <div class="demo-grid">
+              <button class="demo-btn" onclick="fillDemo('radiographer@radconsent.demo')">
+                <div class="demo-btn-role">Radiographer</div>
+                <div class="demo-btn-name">Chidi Eze</div>
+              </button>
+              <button class="demo-btn" onclick="fillDemo('nurse@radconsent.demo')">
+                <div class="demo-btn-role">Nurse</div>
+                <div class="demo-btn-name">Amaka Obi</div>
+              </button>
+              <button class="demo-btn" onclick="fillDemo('radiologist@radconsent.demo')">
+                <div class="demo-btn-role">Radiologist</div>
+                <div class="demo-btn-name">Dr. Amara Okonkwo</div>
+              </button>
+              <button class="demo-btn" onclick="fillDemo('admin@radconsent.demo')">
+                <div class="demo-btn-role">Admin</div>
+                <div class="demo-btn-name">Admin User</div>
+              </button>
+            </div>
           </div>
         </div>
       </div>
