@@ -4954,7 +4954,7 @@ function renderMriStep(step, stepNum, totalSteps) {
       const isChecked = checkedVals.includes(o.id) ? 'checked' : '';
       return `
       <label class="scr-check-option">
-        <input type="checkbox" value="${o.id}" data-scr-check="${step.id}" ${isChecked} onchange="render()">
+        <input type="checkbox" value="${o.id}" data-scr-check="${step.id}" ${isChecked}>
         <div class="scr-check-option-text">
           <div class="scr-check-label">${esc(o.label)}</div>
           ${o.tierLabel ? `<div class="scr-check-tier">${esc(o.tierLabel)}</div>` : ''}
