@@ -2895,6 +2895,30 @@ async function submitNewConsent() {
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner"></span>&nbsp;Creating record…`;
 
+  // Extract clinical params
+  const urea = (document.getElementById('nc-urea')?.value || '').trim();
+  const creatinine = (document.getElementById('nc-creatinine')?.value || '').trim();
+  const bpSys = (document.getElementById('nc-bp-sys')?.value || '').trim();
+  const bpDia = (document.getElementById('nc-bp-dia')?.value || '').trim();
+  const pulse = (document.getElementById('nc-pulse')?.value || '').trim();
+  const spo2 = (document.getElementById('nc-spo2')?.value || '').trim();
+  const temp = (document.getElementById('nc-temp')?.value || '').trim();
+  const weight = (document.getElementById('nc-weight')?.value || '').trim();
+  
+  const hasVitals = bpSys || bpDia || pulse || spo2 || temp || weight;
+  let vitalsPayload = null;
+  
+  if (hasVitals) {
+    vitalsPayload = {};
+    if (bpSys && bpDia) vitalsPayload.bp = `${bpSys}/${bpDia}`;
+    else if (bpSys) vitalsPayload.bp = bpSys;
+    
+    if (pulse) vitalsPayload.pulse = pulse;
+    if (spo2) vitalsPayload.spo2 = spo2;
+    if (temp) vitalsPayload.temperature = temp;
+    if (weight) vitalsPayload.weight = weight;
+  }
+
   const payload = {
     patient: {
       name,
@@ -2903,6 +2927,9 @@ async function submitNewConsent() {
       gender          : ncState.sex,
       phone           : (document.getElementById('nc-phone')?.value        || '').trim(),
       referringDoctor : (document.getElementById('nc-ref-doctor')?.value   || '').trim(),
+      urea            : urea || null,
+      creatinine      : creatinine || null,
+      vitals          : vitalsPayload
     },
     modality    : ncState.modality,
     language    : ncState.language,
@@ -3248,6 +3275,7 @@ function renderRecordDetail() {
   const t1    = rec.tierFlags?.tier1 || [];
   const t2    = rec.tierFlags?.tier2 || [];
   const t3    = rec.tierFlags?.tier3 || [];
+  const role  = state.user?.role || '';
 
   // ── Stage completion ────────────────────────────────────────
   const s1done = !!rec.stage1?.consentAcknowledged;
@@ -3292,6 +3320,11 @@ function renderRecordDetail() {
     </div>`).join('');
 
   // ── Patient info ─────────────────────────────────────────────
+  
+  const pv = rec.patient?.vitals || {};
+  const pb = rec.patient || {};
+  const hasVitals = pb.urea || pb.creatinine || pv.bp || pv.pulse || pv.spo2 || pv.temperature || pv.weight;
+  
   const patientCard = `
     <div class="card mb-4">
       <div class="card-header"><h3>${IC.users}&nbsp; Patient</h3></div>
@@ -3304,6 +3337,20 @@ function renderRecordDetail() {
           ${metaRow('Hospital Number',   esc(rec.patient?.hospitalNumber))}
           ${metaRow('Referring Doctor',  esc(rec.patient?.referringDoctor))}
         </div>
+        
+        ${hasVitals ? `
+        <div class="divider" style="margin:20px 0"></div>
+        <div class="section-label" style="margin-bottom:12px;font-size:12px;color:var(--c-text-muted)">Pre-Procedure Clinical Data</div>
+        <div class="scr-meta-grid">
+          ${pv.weight ? metaRow('Weight', pv.weight + ' kg') : ''}
+          ${pb.urea ? metaRow('Urea', pb.urea + ' mmol/L') : ''}
+          ${pb.creatinine ? metaRow('Creatinine', pb.creatinine + ' µmol/L') : ''}
+          ${pv.bp ? metaRow('Blood Pressure', pv.bp + ' mmHg') : ''}
+          ${pv.pulse ? metaRow('Heart Rate', pv.pulse + ' bpm') : ''}
+          ${pv.spo2 ? metaRow('SpO2', pv.spo2 + ' %') : ''}
+          ${pv.temperature ? metaRow('Temperature', pv.temperature + ' °C') : ''}
+        </div>
+        ` : ''}
       </div>
     </div>`;
 
@@ -4227,10 +4274,73 @@ function renderNewConsent() {
       </div>
     </div>
 
-    <!-- ── Section 3: Preferred Language ── -->
-    <div class="card mb-4">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Section 3: Pre-Procedure Clinical Data ── -->
+    <!-- Hidden by default, toggled via selectModality() if CT or MRI -->
+    <div class="card mb-4" id="nc-clinical-params" style="display: none;">
       <div class="nc-section-header">
         <div class="nc-section-num">3</div>
+        <div class="nc-section-title">Pre-Procedure Clinical Data <span class="text-sm font-normal text-muted">(Optional)</span></div>
+      </div>
+      <div class="nc-section-body">
+        <div style="font-size:13px;color:var(--c-text-sec);margin-bottom:16px">
+          Enter latest relevant laboratory results and pre-procedure vitals for CT and MRI patients.
+        </div>
+        
+        <div class="form-row mb-3">
+          <div class="form-group">
+            <label class="form-label" for="nc-urea">Urea <span class="text-muted">(mmol/L)</span></label>
+            <input class="form-control" type="number" step="0.1" id="nc-urea" placeholder="e.g. 5.1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nc-creatinine">Creatinine <span class="text-muted">(µmol/L)</span></label>
+            <input class="form-control" type="number" step="1" id="nc-creatinine" placeholder="e.g. 85" />
+          </div>
+        </div>
+
+        <div class="form-row mb-3">
+          <div class="form-group">
+            <label class="form-label">Blood Pressure <span class="text-muted">(mmHg)</span></label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input class="form-control" type="number" id="nc-bp-sys" placeholder="Sys" style="flex:1" />
+              <span style="color:var(--c-border)">/</span>
+              <input class="form-control" type="number" id="nc-bp-dia" placeholder="Dia" style="flex:1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nc-pulse">Heart Rate <span class="text-muted">(bpm)</span></label>
+            <input class="form-control" type="number" id="nc-pulse" placeholder="e.g. 72" />
+          </div>
+        </div>
+
+        <div class="form-row mb-3">
+          <div class="form-group">
+            <label class="form-label" for="nc-spo2">SpO2 <span class="text-muted">(%)</span></label>
+            <input class="form-control" type="number" id="nc-spo2" placeholder="e.g. 98" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nc-temp">Temperature <span class="text-muted">(°C)</span></label>
+            <input class="form-control" type="number" step="0.1" id="nc-temp" placeholder="e.g. 36.6" />
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group" style="max-width:300px">
+            <label class="form-label" for="nc-weight">Weight <span class="text-muted">(kg)</span></label>
+            <input class="form-control" type="number" step="0.1" id="nc-weight" placeholder="e.g. 75.5" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Section 4: Preferred Language ── -->
+    <div class="card mb-4">
+      <div class="nc-section-header">
+        <div class="nc-section-num">4</div>
         <div class="nc-section-title">Patient's Preferred Language</div>
       </div>
       <div class="nc-section-body">
@@ -4262,10 +4372,10 @@ function renderNewConsent() {
       </div>
     </div>
 
-    <!-- ── Section 4: Consent Mode ── -->
+    <!-- ── Section 5: Consent Mode ── -->
     <div class="card mb-6">
       <div class="nc-section-header">
-        <div class="nc-section-num">4</div>
+        <div class="nc-section-num">5</div>
         <div class="nc-section-title">Consent Mode</div>
       </div>
       <div class="nc-section-body">
