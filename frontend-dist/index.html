@@ -65,6 +65,28 @@ input, select, textarea { font-family: inherit; }
   --t:                150ms ease;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Brand (slightly lightened for contrast against dark) */
+    --c-primary:        #1A365D;
+    --c-primary-hover:  #2A4365;
+    --c-accent:         #3B82F6;
+    --c-accent-hover:   #60A5FA;
+    /* Neutral / Dark Surfacing */
+    --c-bg:             #0F172A;
+    --c-surface:        #1E293B;
+    --c-border:         #334155;
+    --c-text:           #F8FAFC;
+    --c-text-sec:       #CBD5E1;
+    --c-text-muted:     #94A3B8;
+  }
+  
+  /* Auto-invert raster logos containing dark text so they become white */
+  .logo-img, .hero-logo-img, .sidebar-logo img {
+    filter: brightness(0) invert(1);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    APP SHELL LAYOUT
 ═══════════════════════════════════════════════════════════════ */
