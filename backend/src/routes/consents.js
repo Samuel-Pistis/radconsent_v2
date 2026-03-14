@@ -486,7 +486,7 @@ router.put('/:id/review', (req, res) => {
   return res.json(updated);
 });
 
-// PUT /api/consents/:id/recall — admin recalls a declined record back to radiographer queue
+// PUT /api/consents/:id/recall — admin recalls a declined record back to active queue
 router.put('/:id/recall', (req, res) => {
   if (req.user.role !== 'admin')
     return res.status(403).json({ error: 'Only admins can recall records.' });
@@ -496,7 +496,15 @@ router.put('/:id/recall', (req, res) => {
   if (existing.status !== 'declined')
     return res.status(409).json({ error: 'Only declined records can be recalled.' });
 
-  const updated = db.update('consents', req.params.id, { status: 'draft_stage1' });
+  const tf = existing.tierFlags || { tier1: [], tier2: [], tier3: [] };
+  const backStatus = tf.tier1?.length > 0 ? 'flagged_tier1'
+                   : tf.tier2?.length > 0 ? 'pending_review'
+                   : 'in_progress';
+
+  const updated = db.update('consents', req.params.id, {
+    status: backStatus,
+    radiologistReview: null
+  });
   return res.json(updated);
 });
 

@@ -2990,10 +2990,10 @@ function renderAdminPanel() {
 }
 
 async function adminRecallRecord(id, name) {
-  if (!confirm(`Recall the declined record for "${name}"? It will be returned to the radiographer queue.`)) return;
+  if (!confirm(`Recall the declined record for "${name}"? It will be returned to the active queue for re-evaluation.`)) return;
   try {
     const updated = await api('PUT', `/consents/${id}/recall`);
-    toast(`Record recalled — now awaiting radiographer.`, 'success');
+    toast(`Record recalled successfully.`, 'success');
     if (adminState.records) {
       const idx = adminState.records.findIndex(r => r.id === id);
       if (idx !== -1) adminState.records[idx] = updated;
