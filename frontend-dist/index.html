@@ -4901,6 +4901,42 @@ function mriScrRefreshSteps() {
   mriScrState.stepIdx = Math.min(newIdx, newSteps.length - 1);
 }
 
+/* ── Multicheck mutual-exclusion: 'none' vs everything else ── */
+function scrMultiToggle(stepId, changedVal, el) {
+  const all = [...document.querySelectorAll(`[data-scr-check="${stepId}"]`)];
+  const noneBox = all.find(b => b.value === 'none');
+  if (changedVal === 'none') {
+    if (el.checked) {
+      // Uncheck and visually disable all non-none options
+      all.forEach(b => {
+        if (b.value !== 'none') {
+          b.checked = false;
+          b.disabled = true;
+          const row = b.closest('.scr-check-option');
+          if (row) { row.style.opacity = '0.4'; row.style.pointerEvents = 'none'; }
+        }
+      });
+    } else {
+      // Re-enable non-none options
+      all.forEach(b => {
+        if (b.value !== 'none') {
+          b.disabled = false;
+          const row = b.closest('.scr-check-option');
+          if (row) { row.style.opacity = ''; row.style.pointerEvents = ''; }
+        }
+      });
+    }
+  } else if (el.checked && noneBox && noneBox.checked) {
+    // A real option was checked — clear 'none'
+    noneBox.checked = false;
+    all.forEach(b => {
+      b.disabled = false;
+      const row = b.closest('.scr-check-option');
+      if (row) { row.style.opacity = ''; row.style.pointerEvents = ''; }
+    });
+  }
+}
+
 /* ── Record answer ONLY ─────────────────────────────── */
 function mriScrAnswer(stepId, value) {
   mriScrState.answers[stepId] = value;
@@ -5153,7 +5189,7 @@ function renderMriStep(step, stepNum, totalSteps) {
       const isChecked = checkedVals.includes(o.id) ? 'checked' : '';
       return `
       <label class="scr-check-option">
-        <input type="checkbox" value="${o.id}" data-scr-check="${step.id}" ${isChecked}>
+        <input type="checkbox" value="${o.id}" data-scr-check="${step.id}" ${isChecked} onchange="scrMultiToggle('${step.id}','${o.id}',this)">
         <div class="scr-check-option-text">
           <div class="scr-check-label">${esc(o.label)}</div>
           ${o.tierLabel ? `<div class="scr-check-tier">${esc(o.tierLabel)}</div>` : ''}
