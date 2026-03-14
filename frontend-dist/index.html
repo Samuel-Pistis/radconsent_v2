@@ -1406,7 +1406,7 @@ let sigTopazPreviewUrl  = null;
 /* Records archive + detail state */
 let recordsState = {
   records: null, loading: false,
-  search: '', statusFilter: 'all',
+  search: '', statusFilter: [],
   dateFrom: new Date().toISOString().slice(0,10),  // today
   dateTo: ''
 };
@@ -2159,7 +2159,11 @@ function getFilteredRecords(extraStatusFilter) {
     (r.patient?.name || '').toLowerCase().includes(q) ||
     (r.patient?.hospitalNumber || '').toLowerCase().includes(q)
   );
-  if (sf !== 'all') recs = recs.filter(r => r.status === sf);
+  if (Array.isArray(sf)) {
+    if (sf.length > 0) recs = recs.filter(r => sf.includes(r.status));
+  } else if (sf && sf !== 'all') {
+    recs = recs.filter(r => r.status === sf);
+  }
   // ── Date range filter ──
   if (recordsState.dateFrom) {
     const from = new Date(recordsState.dateFrom + 'T00:00:00');
@@ -2219,10 +2223,18 @@ function recordsSearch(val) {
   if (tbody) tbody.innerHTML = buildRecordsRows();
 }
 
-function recordsFilterStatus(val) {
-  recordsState.statusFilter = val;
+function recordsToggleStatus(val, checked) {
+  if (checked) {
+    if (!recordsState.statusFilter.includes(val)) recordsState.statusFilter.push(val);
+  } else {
+    recordsState.statusFilter = recordsState.statusFilter.filter(v => v !== val);
+  }
   const tbody = document.getElementById('records-tbody');
   if (tbody) tbody.innerHTML = buildRecordsRows();
+  const btnText = document.getElementById('status-filter-text');
+  if (btnText) {
+    btnText.textContent = recordsState.statusFilter.length === 0 ? 'All Statuses' : recordsState.statusFilter.length + ' selected';
+  }
 }
 
 function recordsFilterDate(field, val) {
@@ -2254,9 +2266,7 @@ function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
     });
   }
 
-  const filterOpts = STATUS_FILTER_OPTS.map(o =>
-    `<option value="${o.value}"${recordsState.statusFilter===o.value?' selected':''}>${esc(o.label)}</option>`
-  ).join('');
+  // Status dropdown filter built in HTML template
 
   const body = recordsState.loading || !recordsState.records
     ? `<tr><td colspan="8"><div class="loading-state" style="padding:40px">
@@ -2286,9 +2296,22 @@ function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
             style="padding-left:32px" />
         </div>
         <!-- Status -->
-        <select class="form-select" style="width:auto;min-width:160px" onchange="recordsFilterStatus(this.value)">
-          ${filterOpts}
-        </select>
+        <details style="position:relative;width:auto;min-width:180px">
+          <summary class="form-control" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--c-bg);user-select:none;list-style:none">
+            <span id="status-filter-text" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${recordsState.statusFilter.length === 0 ? 'All Statuses' : recordsState.statusFilter.length + ' selected'}
+            </span>
+            <span style="font-size:10px;color:var(--c-text-muted)">▼</span>
+          </summary>
+          <div style="position:absolute;top:100%;left:0;right:0;background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);z-index:99;max-height:280px;overflow-y:auto;box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);padding:6px;margin-top:4px">
+            ${STATUS_FILTER_OPTS.filter(o => o.value !== 'all').map(o => `
+              <label style="display:flex;align-items:center;padding:6px 8px;gap:8px;cursor:pointer;border-radius:4px" onmouseover="this.style.background='var(--c-bg)'" onmouseout="this.style.background='transparent'">
+                <input type="checkbox" value="${o.value}" ${recordsState.statusFilter.includes(o.value) ? 'checked' : ''} onchange="recordsToggleStatus('${o.value}', this.checked)" style="accent-color:var(--c-accent)">
+                <span style="font-size:13.5px">${esc(o.label)}</span>
+              </label>
+            `).join('')}
+          </div>
+        </details>
         <!-- Date from -->
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
           <label style="font-size:12px;color:var(--c-text-muted);white-space:nowrap">From</label>
