@@ -1404,7 +1404,12 @@ let sigTopazStatus      = 'idle';   // 'idle' | 'capturing' | 'captured' | 'erro
 let sigTopazPreviewUrl  = null;
 
 /* Records archive + detail state */
-let recordsState      = { records: null, loading: false, search: '', statusFilter: 'all' };
+let recordsState = {
+  records: null, loading: false,
+  search: '', statusFilter: 'all',
+  dateFrom: new Date().toISOString().slice(0,10),  // today
+  dateTo: ''
+};
 let recordDetailState = { record: null, loading: false };
 let stage2State       = { record: null, loading: false };
 let stage3State       = { record: null, loading: false, confirmed: false, confirmedRecord: null };
@@ -2109,6 +2114,15 @@ function getFilteredRecords(extraStatusFilter) {
     (r.patient?.hospitalNumber || '').toLowerCase().includes(q)
   );
   if (sf !== 'all') recs = recs.filter(r => r.status === sf);
+  // ── Date range filter ──
+  if (recordsState.dateFrom) {
+    const from = new Date(recordsState.dateFrom + 'T00:00:00');
+    recs = recs.filter(r => new Date(r.createdAt) >= from);
+  }
+  if (recordsState.dateTo) {
+    const to = new Date(recordsState.dateTo + 'T23:59:59');
+    recs = recs.filter(r => new Date(r.createdAt) <= to);
+  }
   return recs;
 }
 
@@ -2165,6 +2179,19 @@ function recordsFilterStatus(val) {
   if (tbody) tbody.innerHTML = buildRecordsRows();
 }
 
+function recordsFilterDate(field, val) {
+  if (field === 'from') recordsState.dateFrom = val;
+  else                  recordsState.dateTo   = val;
+  const tbody = document.getElementById('records-tbody');
+  if (tbody) tbody.innerHTML = buildRecordsRows();
+}
+
+function recordsClearDates() {
+  recordsState.dateFrom = new Date().toISOString().slice(0, 10); // back to today
+  recordsState.dateTo   = '';
+  render(); // full re-render so date inputs reset
+}
+
 function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
   // Trigger async load if needed
   if (!recordsState.records && !recordsState.loading) {
@@ -2203,17 +2230,37 @@ function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
 
     <div class="card">
       ${showFilters ? `
-      <div class="card-header" style="gap:12px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px;position:relative">
+      <div class="card-header" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <!-- Search -->
+        <div style="flex:1;min-width:180px;position:relative">
           <div style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--c-text-muted)">${IC.search.replace('viewBox','style="width:14px;height:14px" viewBox')}</div>
           <input class="form-control" type="search" placeholder="Search patient name or hospital number…"
             value="${esc(recordsState.search)}"
             oninput="recordsSearch(this.value)"
             style="padding-left:32px" />
         </div>
-        <select class="form-select" style="width:auto;min-width:180px" onchange="recordsFilterStatus(this.value)">
+        <!-- Status -->
+        <select class="form-select" style="width:auto;min-width:160px" onchange="recordsFilterStatus(this.value)">
           ${filterOpts}
         </select>
+        <!-- Date from -->
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <label style="font-size:12px;color:var(--c-text-muted);white-space:nowrap">From</label>
+          <input class="form-control" type="date" id="rec-date-from"
+            value="${recordsState.dateFrom}"
+            onchange="recordsFilterDate('from', this.value)"
+            style="width:140px" />
+        </div>
+        <!-- Date to -->
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <label style="font-size:12px;color:var(--c-text-muted);white-space:nowrap">To</label>
+          <input class="form-control" type="date" id="rec-date-to"
+            value="${recordsState.dateTo}"
+            onchange="recordsFilterDate('to', this.value)"
+            style="width:140px" />
+        </div>
+        <!-- Clear -->
+        <button class="btn btn-ghost btn-sm" onclick="recordsClearDates()" style="white-space:nowrap;padding:6px 10px">Clear dates</button>
       </div>` : ''}
       <div class="consent-table-wrap table-wrap" style="border:none;border-radius:0">
         <table class="table">
