@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>RadConsent — Radiology Consent Management</title>
   <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -1201,6 +1201,114 @@ body.dark .modality-tag { background:#0C1A3A; color:#93C5FD; }
 .sig-topaz-dot.dot-loading   { background: #f59e0b; animation: pulse-dot 1.2s ease-in-out infinite; }
 @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
 .sig-topaz-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE OPTIMIZATIONS
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Safe-area / notch insets ── */
+.mobile-header { padding-top: env(safe-area-inset-top); height: calc(52px + env(safe-area-inset-top)); }
+.main-content  { padding-bottom: env(safe-area-inset-bottom); }
+.modal-overlay { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ── Consent record CARD VIEW (rendered from table rows on mobile) ── */
+.consent-card-list { display: none; }
+.consent-card {
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: var(--shadow-sm);
+}
+.consent-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.consent-card-name { font-size: 14px; font-weight: 600; color: var(--c-text); }
+.consent-card-meta { font-size: 11.5px; color: var(--c-text-muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.consent-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid var(--c-border); }
+
+/* ── Stage bar (record detail) — horizontal scroll on mobile ── */
+.stage-bar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+.stage-bar { min-width: max-content; }
+
+/* ── Page actions — wrap on small screens ── */
+@media (max-width: 640px) {
+  .page-actions { flex-wrap: wrap; justify-content: flex-start; }
+  .page-actions .btn { flex: 1; min-width: 120px; justify-content: center; }
+}
+
+/* ── 420px — extra-small phones (Galaxy A, older iPhones) ── */
+@media (max-width: 420px) {
+  /* Modality grid: 1 column */
+  .modality-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* MRI screening 2-col -> 1-col */
+  .scr-choice-grid.two-col { grid-template-columns: 1fr !important; }
+
+  /* Signature pad taller for finger drawing */
+  #cdecl-sigpad { height: 180px !important; }
+
+  /* Tighter card padding */
+  .card-body { padding: 12px !important; }
+  .nc-section-body { padding: 12px !important; }
+
+  /* Login logo smaller */
+  .login-logo img { height: 80px !important; }
+
+  /* Demo grid always 1-col */
+  .demo-grid { grid-template-columns: 1fr !important; }
+
+  /* Consent mode cards 1 col */
+  .consent-mode-grid { grid-template-columns: 1fr !important; }
+
+  /* Page title smaller */
+  .page-title { font-size: 18px !important; }
+
+  /* Buttons full width in submit row */
+  .nc-submit-row .btn, .scr-continue-row .btn { width: 100%; justify-content: center; }
+}
+
+/* ── 375px micro breakpoint (iPhone SE, small Androids) ── */
+@media (max-width: 375px) {
+  html { font-size: 13px; }
+  .main-inner { padding: 12px 10px; }
+  .card-header { padding: 10px 12px; }
+  .card-body { padding: 10px 12px !important; }
+  .page-header { padding-bottom: 10px; }
+  .page-title { font-size: 17px !important; }
+  .table { min-width: 360px; }
+  .modal { max-height: 95vh; }
+  .btn { font-size: 12px; }
+  .login-hero { min-height: 200px !important; }
+  .login-hero-title { font-size: 20px !important; }
+  .login-hero-badge { font-size: 9.5px; padding: 4px 10px; }
+  .stat-value { font-size: 20px; }
+  .sig-mode-tabs { width: 100%; }
+  .sig-mode-tab { flex: 1; text-align: center; }
+}
+
+/* ── Mobile card list for consent records (≤600px) ── */
+@media (max-width: 600px) {
+  /* Show card list, hide table */
+  .consent-card-list { display: flex; flex-direction: column; gap: 10px; }
+  .consent-table-wrap { display: none; }
+
+  /* Signature pad full-width */
+  .sig-img { max-width: 100%; }
+  .sig-mode-tabs { width: 100%; }
+  .sig-mode-tab { flex: 1; text-align: center; }
+
+  /* Flagged queue card — stack vertically */
+  .fq-card { flex-direction: column; }
+  .fq-accent { width: 100%; height: 4px; }
+  .fq-head { flex-direction: column; align-items: flex-start; gap: 6px; }
+
+  /* Login logo smaller */
+  .login-logo img { height: 90px; }
+
+  /* Consent records search row */
+  .page-header { gap: 8px; }
+
+  /* Stage bar — horizontal scroll */
+  .stage-bar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head>
@@ -2111,7 +2219,7 @@ function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
           ${filterOpts}
         </select>
       </div>` : ''}
-      <div class="table-wrap" style="border:none;border-radius:0">
+      <div class="consent-table-wrap table-wrap" style="border:none;border-radius:0">
         <table class="table">
           <thead>
             <tr>
@@ -2127,6 +2235,52 @@ function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
           <tbody id="records-tbody">${body}</tbody>
         </table>
       </div>
+      ${(() => {
+        /* Mobile card list — same data, card layout */
+        const recs = (() => {
+          if (recordsState.loading || !recordsState.records) return null;
+          let list = [...recordsState.records];
+          if (recordsState.search) {
+            const q = recordsState.search.toLowerCase();
+            list = list.filter(r =>
+              (r.patient?.name || '').toLowerCase().includes(q) ||
+              (r.patient?.hospitalNumber || '').toLowerCase().includes(q)
+            );
+          }
+          if (recordsState.statusFilter) list = list.filter(r => r.status === recordsState.statusFilter);
+          return list;
+        })();
+        if (!recs) return `<div class="consent-card-list"><div class="loading-state" style="padding:32px"><span class="spinner spinner-dark"></span></div></div>`;
+        if (!recs.length) return `<div class="consent-card-list"><div class="empty-state"><p>No records found.</p></div></div>`;
+        const role = state.user?.role || '';
+        const cards = recs.map(rec => {
+          const action = (() => {
+            switch(rec.status) {
+              case 'draft': return { label:'Continue', page:'mri-screening', cls:'btn-primary btn-sm' };
+              case 'awaiting_signature': return { label:'Sign Now', page:'sign-consent', cls:'btn-success btn-sm' };
+              case 'pending_review': return role === 'radiologist' ? { label:'Review', page:'radiologist-review', cls:'btn-warning btn-sm' } : { label:'View', page:'record-detail', cls:'btn-secondary btn-sm' };
+              default: return { label:'View', page:'record-detail', cls:'btn-secondary btn-sm' };
+            }
+          })();
+          return `
+          <div class="consent-card" onclick="navigate('record-detail',{id:'${rec.id}'})">
+            <div class="consent-card-head">
+              <div class="consent-card-name">${esc(rec.patient?.name || '—')}</div>
+              <span class="badge badge-${rec.status}">${esc(STATUS_LABELS[rec.status] || rec.status)}</span>
+            </div>
+            <div class="consent-card-meta">
+              <span>${esc(MODALITY_LABELS[rec.modality] || rec.modality)}</span>
+              <span>${LANG_FLAG[rec.language] || ''}${esc(LANGUAGE_LABELS[rec.language] || rec.language || '')}</span>
+              <span>${fmtDate(rec.createdAt)}</span>
+            </div>
+            <div class="consent-card-foot">
+              <div></div>
+              <button class="btn ${action.cls}" onclick="event.stopPropagation();navigate('${action.page}',{id:'${rec.id}'})">${esc(action.label)}</button>
+            </div>
+          </div>`;
+        }).join('');
+        return `<div class="consent-card-list" style="padding:12px">${cards}</div>`;
+      })()}
     </div>`;
 }
 
@@ -3678,7 +3832,9 @@ function renderRecordDetail() {
     <!-- Stage timeline -->
     <div class="card mb-4">
       <div class="card-body" style="padding:20px 24px">
-        <div style="display:flex;align-items:flex-start;gap:0">${timeline}</div>
+        <div class="stage-bar-wrap">
+          <div class="stage-bar" style="display:flex;align-items:flex-start;gap:0">${timeline}</div>
+        </div>
       </div>
     </div>
 
