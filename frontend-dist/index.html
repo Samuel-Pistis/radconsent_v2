@@ -1517,6 +1517,16 @@ function navigate(page, data, opts = {}) {
     recordsState.records = null;
     recordsState.loading = false;
   }
+  // Resume in-progress consent — smart routing
+  if (page === 'resume') {
+    resumeConsent(data?.id);
+    return;
+  }
+  // Sign consent after radiologist approval — fetch record then go to declaration
+  if (page === 'sign-consent-resume') {
+    resumeConsent(data?.id);
+    return;
+  }
   // Always reload record detail — status may have changed since last visit
   if (page === 'record-detail') {
     recordDetailState.record  = null;
@@ -2092,7 +2102,43 @@ const STATUS_FILTER_OPTS = [
   { value: 'voided',        label: 'Voided'               },
 ];
 
+/* ── Smart resume: fetch the record then route to the right page ─ */
+async function resumeConsent(id) {
+  try {
+    const rec = await api('GET', `/consents/${id}`);
+    if (!rec) return;
+
+    // awaiting_signature = radiologist approved, now ready to sign
+    if (rec.status === 'awaiting_signature') {
+      navigate('consent-declaration', { consent: rec });
+      return;
+    }
+
+    // in_progress with screening already saved → skip straight to declaration
+    if (rec.status === 'in_progress' && rec.stage1?.screeningCompletedAt) {
+      navigate('consent-declaration', { consent: rec });
+      return;
+    }
+
+    // Otherwise resume screening (mriScrInit will restore answers)
+    if (rec.modality?.startsWith('mri_')) {
+      // Clear state so mriScrInit re-runs with fresh consent (answers restored inside)
+      mriScrState.consent = null;
+      navigate('mri-screening', { consent: rec });
+    } else if (rec.modality === 'mammography') {
+      navigate('mammography-screening', { consent: rec });
+    } else {
+      navigate('safety-screening', { consent: rec });
+    }
+  } catch (err) {
+    toast(err.message || 'Could not load consent record.', 'error');
+  }
+}
+
 function getRecordAction(rec, role) {
+  // In-progress (screening not yet done / interrupted)
+  if (rec.status === 'in_progress' && (role === 'radiographer' || role === 'nurse' || role === 'admin'))
+    return { label: 'Resume', cls: 'btn-primary btn-sm', page: 'resume' };
   if (rec.status === 'draft_stage1' && role === 'radiographer')
     return { label: 'File Report', cls: 'btn-primary btn-sm', page: 'stage2-report' };
   if (rec.status === 'draft_stage2' && role === 'nurse')
@@ -2101,7 +2147,7 @@ function getRecordAction(rec, role) {
       (role === 'radiologist' || role === 'admin'))
     return { label: 'Review', cls: 'btn-warning btn-sm', page: 'rad-review' };
   if (rec.status === 'awaiting_signature' && (role === 'radiographer' || role === 'nurse' || role === 'admin'))
-    return { label: 'Sign Consent', cls: 'btn-primary btn-sm', page: 'record-detail' };
+    return { label: 'Sign Consent', cls: 'btn-primary btn-sm', page: 'sign-consent-resume' };
   return { label: 'View', cls: 'btn-secondary btn-sm', page: 'record-detail' };
 }
 
@@ -4882,12 +4928,23 @@ function mriScrBuildSteps(consent, answers) {
 /* ── Initialise / reset for a new consent session ──────────── */
 function mriScrInit(consent) {
   if (mriScrState.consent?.id === consent.id) return; // already initialised
+  // Restore any previously saved raw answers (resume flow)
+  const savedAnswers = consent.stage1?.screening?.rawAnswers || {};
   mriScrState = {
     consent,
-    answers : {},
+    answers : savedAnswers,
     stepIdx : 0,
-    steps   : mriScrBuildSteps(consent, {}),
+    steps   : mriScrBuildSteps(consent, savedAnswers),
   };
+  // If answers exist, fast-forward stepIdx to the first unanswered step
+  if (Object.keys(savedAnswers).length > 0) {
+    const steps = mriScrState.steps;
+    let resumeIdx = 0;
+    for (let i = 0; i < steps.length; i++) {
+      if (savedAnswers[steps[i].id] !== undefined) resumeIdx = i + 1;
+    }
+    mriScrState.stepIdx = Math.min(resumeIdx, steps.length - 1);
+  }
 }
 
 /* ── Recompute active steps after each answer ──────────────── */
@@ -5118,7 +5175,7 @@ async function mriScrSubmit() {
 
   try {
     const updated = await api('PUT', `/consents/${consent.id}/screening`, {
-      screening,
+      screening: { ...screening, rawAnswers: mriScrState.answers },
       tierFlags: { tier1, tier2, tier3 },
     });
     if (!updated) return;
