@@ -394,7 +394,7 @@ npm install
 | Data file location | `C:\Users\<username>\radconsent\backend\src\db\data.json` |
 | Start command (manual) | `cd backend && node src\index.js` |
 | Stop server | `Ctrl + C` in the server terminal |
-| Admin login | `admin@radconsent.demo` / `demo1234` (change on go-live) |
+| Admin login | `Faith.olusegun@bthdc.com.ng` / `Faith@2026` (change on go-live) |
 | Node.js download | https://nodejs.org |
 | Git download | https://git-scm.com |
 

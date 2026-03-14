@@ -38,6 +38,9 @@ router.post('/sessions', (req, res) => {
       gender          : patient.gender          || null,
       phone           : patient.phone           || null,
       referringDoctor : patient.referringDoctor || null,
+      urea            : patient.urea            || null,
+      creatinine      : patient.creatinine      || null,
+      vitals          : patient.vitals          || null,
     },
     tierFlags        : { tier1: [], tier2: [], tier3: [] },
     stage1           : null,
@@ -345,6 +348,20 @@ router.get('/:id/pdf', (req, res) => {
   out += line('Record Created',   fmt(doc.createdAt));
   out += line('Record Closed',    fmt(doc.closedAt));
   out += '\n';
+
+  // ── Clinical Vitals & Labs (if recorded at session creation) ──
+  const v = p.vitals || {};
+  if (p.urea || p.creatinine || v.bp || v.pulse || v.spo2 || v.temperature || v.weight) {
+    out += 'Pre-Procedure Clinical Data:\n';
+    if (v.weight)      out += line('  Weight',      v.weight + ' kg', 20);
+    if (v.bp)          out += line('  BP',          v.bp + ' mmHg', 20);
+    if (v.pulse)       out += line('  Heart Rate',  v.pulse + ' bpm', 20);
+    if (v.spo2)        out += line('  SpO2',        v.spo2 + ' %', 20);
+    if (v.temperature) out += line('  Temperature', v.temperature + ' °C', 20);
+    if (p.urea)        out += line('  Urea',        p.urea + ' mmol/L', 20);
+    if (p.creatinine)  out += line('  Creatinine',  p.creatinine + ' µmol/L', 20);
+    out += '\n';
+  }
 
   // ── Section 2: MRI Safety Screening (MRI modalities only) ────
   if (isMri) {

@@ -1803,7 +1803,7 @@ function renderShell(pageHtml) {
   return `
     <div class="mobile-header">
       <button class="mobile-hamburger" onclick="toggleSidebar()">${IC.menu}</button>
-      <span class="mobile-logo-text">RadConsent</span>
+      <img src="logo-transparent.png" alt="RadConsent" style="height:32px;">
       <div class="mobile-header-right">
         <button class="mobile-dark-btn" onclick="toggleDark()">
           ${darkMode ? IC.sun : IC.moon}
@@ -1821,11 +1821,7 @@ function renderShell(pageHtml) {
         <button class="sidebar-close-btn" onclick="closeSidebar()">${IC.close}</button>
 
         <div class="sidebar-logo" onclick="navigate('dashboard');closeSidebar()" style="cursor:pointer">
-          <div class="logo-row">
-            <div class="logo-icon">RC</div>
-            <span class="logo-name">RadConsent</span>
-          </div>
-          <div class="logo-sub">Radiology Consent</div>
+          <img src="logo-transparent.png" alt="RadConsent" style="height:52px;display:block;margin:0 auto 2px;filter:brightness(0) invert(1);">
         </div>
 
         <nav class="sidebar-nav">
