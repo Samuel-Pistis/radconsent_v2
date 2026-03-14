@@ -4896,6 +4896,11 @@ const SCR_STEPS = [
     hint: 'Includes any surgical procedure not already mentioned above.',
     showIf: null,
   },
+  {
+    id: 'q4_surgery_details', domain: 4, domainName: 'Surgical History', type: 'text',
+    question: 'Please state the type of surgery:',
+    showIf: (a) => a.q4_surgery === 'yes',
+  },
 
   // Q5 — Shrapnel / blast
   {
@@ -5115,7 +5120,10 @@ function mriScrComputeResults() {
 
   // Q4 — Other surgery
   if (answers.q4_surgery === 'yes') flag('tier3', 'prior_other_surgery');
-  const surgicalHistory = { hadOtherSurgery: answers.q4_surgery === 'yes' };
+  const surgicalHistory = {
+    hadOtherSurgery: answers.q4_surgery === 'yes',
+    otherSurgeryDetails: answers.q4_surgery === 'yes' ? (answers.q4_surgery_details || null) : null,
+  };
 
   // Q5 — Shrapnel / blast
   if (answers.q5_shrapnel === 'yes') flag('tier1', 'shrapnel_blast_injury');
