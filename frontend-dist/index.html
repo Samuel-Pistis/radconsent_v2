@@ -664,6 +664,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
 .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.dash-split { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 /* Spacing */
 .mt-1{margin-top:4px;} .mt-2{margin-top:8px;} .mt-3{margin-top:12px;} .mt-4{margin-top:16px;} .mt-6{margin-top:24px;}
 .mb-1{margin-bottom:4px;} .mb-2{margin-bottom:8px;} .mb-3{margin-bottom:12px;} .mb-4{margin-bottom:16px;} .mb-6{margin-bottom:24px;}
@@ -740,10 +741,19 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 @media (max-width: 900px) {
   :root { --sidebar-w: 210px; }
   .main-inner { padding: 20px 22px; }
-  .form-row, .form-row-3 { grid-template-columns: 1fr; }
-  .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
-  .modality-grid { grid-template-columns: repeat(3, 1fr); }
-  .consent-mode-grid { grid-template-columns: 1fr; }
+
+  /* ── Grid collapses for tablets and mobile ── */
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr !important; }
+  .dash-split { grid-template-columns: 1fr !important; }
+  .stat-grid, .dash-stats { grid-template-columns: 1fr 1fr !important; }
+  .demo-grid { grid-template-columns: 1fr !important; }
+  .modality-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .consent-mode-grid { grid-template-columns: 1fr !important; }
+  .sex-btn-group { flex-wrap: wrap !important; }
+  .scr-meta-grid { grid-template-columns: 1fr !important; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr !important; }
+  .dash-action-row { flex-wrap: wrap !important; gap: 8px !important; }
+  .dash-action-row > div:first-child { width: 100% !important; }
 }
 
 @media (max-width: 600px) {
@@ -782,16 +792,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   .btn { min-height: 42px; padding: 8px 14px; }
   .btn-sm { min-height: 36px; font-size: 12px; }
   .btn-lg { min-height: 50px; }
-
-  /* ── Grid collapses ── */
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-  .stat-grid { grid-template-columns: 1fr 1fr; }
-  .demo-grid { grid-template-columns: 1fr; }
-  .modality-grid { grid-template-columns: repeat(2, 1fr); }
-  .consent-mode-grid { grid-template-columns: 1fr; }
-  .sex-btn-group { flex-wrap: wrap; }
-  .scr-meta-grid { grid-template-columns: 1fr !important; }
-  .form-row, .form-row-3 { grid-template-columns: 1fr; }
 
   /* ── Inline two-column grids in questionnaire forms ── */
   .card-body [style*="grid-template-columns:1fr 1fr"],
@@ -1177,19 +1177,53 @@ body.dark .table tbody tr:hover td  { background:#1A2640; }
 body.dark .screen-domain-header     { background:#172032; }
 
 /* ── Dark mode — interactive hover & selected states ── */
-body.dark .sex-btn:hover                           { background:#0C1A3A; }
+
+/* Sex toggle buttons */
+body.dark .sex-btn:hover                           { background:#0C1A3A; border-color:#3B82F6; }
+body.dark .sex-btn.selected                        { background:#0C1A3A; }
+
+/* Screening choice buttons */
 body.dark .scr-choice-btn:hover,
 body.dark .scr-choice-btn.selected                 { background:#0C1A3A; color:#93C5FD; }
-body.dark .scr-check-option:hover                  { background:#0F1E38; }
-body.dark .modality-card:hover                     { background:#172032; border-color:#5B9BC8; }
-body.dark .modality-card.selected                  { background:#0C1A3A; }
-body.dark .lang-btn:hover                          { background:#172032; }
-body.dark .consent-mode-card:hover                 { background:#172032; }
-body.dark .consent-mode-card.selected              { background:#0C1A3A; }
+body.dark .scr-check-option:hover                  { background:#0F1E38; border-color:#3B82F6; }
+
+/* Modality cards */
+body.dark .modality-card:hover                     { background:#172032; border-color:#3B82F6; }
+body.dark .modality-card.selected                  { background:#0C1A3A; border-color:#3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+
+/* Language buttons */
+body.dark .lang-btn:hover                          { background:#172032; border-color:#3B82F6; }
+body.dark .lang-btn.selected                       { background:#0C1A3A; border-color:#3B82F6; }
+
+/* Consent mode cards */
+body.dark .consent-mode-card:hover                 { background:#172032; border-color:#3B82F6; }
+body.dark .consent-mode-card.selected              { background:#0C1A3A; border-color:#3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+body.dark .consent-mode-card.selected .consent-mode-icon { background:#172032; color:#93C5FD; }
 body.dark .consent-mode-default                    { background:#052E16; color:#86EFAC; border-color:#166534; }
-body.dark .sig-upload-area:hover                   { background:#0C1A3A; color:var(--c-accent); }
+
+/* Signature & upload */
+body.dark .sig-upload-area:hover                   { background:#0C1A3A; color:var(--c-accent); border-color:#3B82F6; }
+body.dark .sig-pad-wrap                            { background:#1E293B; }
+body.dark .sig-img                                 { background:#1E293B; }
+
+/* Decision cards */
 body.dark .decision-card:hover,
-body.dark .decision-card.selected                  { background:#0C1A3A; }
+body.dark .decision-card.selected                  { background:#0C1A3A; border-color:#3B82F6; }
+
+/* Demo login buttons */
+body.dark .demo-btn:hover                          { background:#0C1A3A; border-color:#3B82F6; box-shadow: 0 2px 8px rgba(59,130,246,.12); }
+
+/* Buttons with hardcoded hover backgrounds */
+body.dark .btn-secondary:hover:not(:disabled)      { background:#172032; border-color:#475569; }
+body.dark .btn-ghost:hover:not(:disabled)           { background:#172032; }
+body.dark .btn-danger-outline:hover:not(:disabled)  { background:#2D0A0A; }
+
+/* Form focus ring — softer in dark */
+body.dark .form-control:focus,
+body.dark .form-select:focus                       { box-shadow: 0 0 0 3px rgba(59,130,246,.2); }
+
+/* Modal close hover */
+body.dark .modal-close:hover                       { background:#172032; }
 
 /* ── Dark mode — modality icons & tag ── */
 body.dark .mi-mri       { background:#0C1A3A; color:#93C5FD; }
@@ -1347,7 +1381,6 @@ const API_BASE = '/api';
 const MODALITY_LABELS = {
   mri_without_contrast : 'MRI (no contrast)',
   mri_with_gadolinium  : 'MRI + Gadolinium',
-  ct_without_contrast  : 'CT (no contrast)',
   ct_with_iv_contrast  : 'CT + IV Contrast',
   mammography          : 'Mammography',
 };
@@ -1434,6 +1467,11 @@ let recordsState = {
 };
 let recordDetailState = { record: null, loading: false };
 let stage2State       = { record: null, loading: false };
+let s2SigMode            = 'draw';
+let s2SigPadInstance     = null;
+let s2SigUploadedDataUrl = null;
+let s2SigTopazStatus     = 'idle';
+let s2SigTopazPreviewUrl = null;
 let stage3State       = { record: null, loading: false, confirmed: false, confirmedRecord: null };
 let s3SigMode            = 'draw';
 let s3SigPadInstance     = null;
@@ -1441,6 +1479,11 @@ let s3SigUploadedDataUrl = null;
 let s3SigTopazStatus     = 'idle';
 let s3SigTopazPreviewUrl = null;
 let radReviewState    = { record: null, loading: false };
+let rvSigMode            = 'draw';
+let rvSigPadInstance     = null;
+let rvSigUploadedDataUrl = null;
+let rvSigTopazStatus     = 'idle';
+let rvSigTopazPreviewUrl = null;
 let adminState        = { records: null, loading: false, tab: 'records', users: null, usersLoading: false, staffForm: null, pwdForm: null };
 let changePwdState    = { error: null, success: false };
 let dashboardState    = { records: null, loading: false };
@@ -2075,7 +2118,7 @@ function renderDashboard() {
 
     ${stats}
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="dash-split">
       <div class="card">
         <div class="card-header"><h3>${esc(actionLabel)}</h3></div>
         <div class="card-body" style="padding:0 20px">${actionRows}</div>
@@ -2318,7 +2361,7 @@ function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
             style="padding-left:32px" />
         </div>
         <!-- Status -->
-        <details style="position:relative;width:auto;min-width:180px">
+        <details style="position:relative;flex:1;min-width:180px">
           <summary class="form-control" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--c-bg);user-select:none;list-style:none">
             <span id="status-filter-text" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
               ${recordsState.statusFilter.length === 0 ? 'All Statuses' : recordsState.statusFilter.length + ' selected'}
@@ -2335,23 +2378,25 @@ function renderRecordsTable(title, subtitle, extraStatusFilter, showFilters) {
           </div>
         </details>
         <!-- Date from -->
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          <label style="font-size:12px;color:var(--c-text-muted);white-space:nowrap">From</label>
+        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:140px">
+          <label style="font-size:12px;color:var(--c-text-muted);white-space:nowrap;min-width:32px">From</label>
           <input class="form-control" type="date" id="rec-date-from"
             value="${recordsState.dateFrom}"
             onchange="recordsFilterDate('from', this.value)"
-            style="width:140px" />
+            style="width:100%" />
         </div>
         <!-- Date to -->
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          <label style="font-size:12px;color:var(--c-text-muted);white-space:nowrap">To</label>
+        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:140px">
+          <label style="font-size:12px;color:var(--c-text-muted);white-space:nowrap;min-width:32px">To</label>
           <input class="form-control" type="date" id="rec-date-to"
             value="${recordsState.dateTo}"
             onchange="recordsFilterDate('to', this.value)"
-            style="width:140px" />
+            style="width:100%" />
         </div>
         <!-- Clear -->
-        <button class="btn btn-ghost btn-sm" onclick="recordsClearDates()" style="white-space:nowrap;padding:6px 10px">Clear dates</button>
+        <div style="width:100%;display:flex;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="recordsClearDates()" style="white-space:nowrap;padding:6px 10px">Clear dates</button>
+        </div>
       </div>` : ''}
       <div class="consent-table-wrap table-wrap" style="border:none;border-radius:0">
         <table class="table">
@@ -2609,16 +2654,30 @@ function radReviewSelectDecision(val) {
 function radReviewCheckSubmit() {
   const decision = document.querySelector('input[name="rad-decision"]:checked')?.value;
   const notes    = document.getElementById('rv-notes')?.value?.trim();
-  const sig      = document.getElementById('rv-sig')?.value?.trim();
+  const sigOk = rvSigMode === 'upload' ? !!rvSigUploadedDataUrl
+              : rvSigMode === 'topaz'  ? !!rvSigTopazPreviewUrl
+              : (rvSigPadInstance && !rvSigPadInstance.isEmpty());
   const btn      = document.getElementById('rv-submit-btn');
-  if (btn) btn.disabled = !(decision && notes && sig);
+  if (btn) btn.disabled = !(decision && notes && sigOk);
 }
 
 async function radReviewSubmit() {
   const decision = document.querySelector('input[name="rad-decision"]:checked')?.value;
   const notes    = document.getElementById('rv-notes')?.value?.trim();
-  const sig      = document.getElementById('rv-sig')?.value?.trim();
-  if (!decision || !notes || !sig) { toast('Please complete all required fields.', 'error'); return; }
+  
+  let radiologistSignatureImage = null;
+  if (rvSigMode === 'upload') {
+    if (!rvSigUploadedDataUrl) { toast('Please upload a signature image.', 'warning'); return; }
+    radiologistSignatureImage = rvSigUploadedDataUrl;
+  } else if (rvSigMode === 'topaz') {
+    if (!rvSigTopazPreviewUrl) { toast('Please capture a signature on the Topaz pad.', 'warning'); return; }
+    radiologistSignatureImage = rvSigTopazPreviewUrl;
+  } else {
+    if (!rvSigPadInstance || rvSigPadInstance.isEmpty()) { toast('Please draw your signature.', 'warning'); return; }
+    radiologistSignatureImage = rvSigPadInstance.toDataURL('image/png');
+  }
+
+  if (!decision || !notes) { toast('Please complete all required fields.', 'error'); return; }
 
   const btn = document.getElementById('rv-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
@@ -2627,7 +2686,8 @@ async function radReviewSubmit() {
     await api('PUT', `/consents/${radReviewState.record.id}/review`, {
       decision,
       notes,
-      radiologistSignature: sig,
+      radiologistSignature: state.user?.name || '',
+      radiologistSignatureImage,
     });
     const id = radReviewState.record.id;
     radReviewState.record = null;
@@ -2780,14 +2840,49 @@ function renderRadReview() {
             oninput="radReviewCheckSubmit()"></textarea>
         </div>
         <div class="form-group mt-4">
-          <label class="form-label" for="rv-sig">
-            Radiologist Signature <span style="color:var(--c-danger)">*</span>
-          </label>
-          <input id="rv-sig" type="text" class="form-control"
-            value="${esc(userName)}"
-            placeholder="Type your full name to sign"
-            oninput="radReviewCheckSubmit()">
-          <div class="form-hint">Typing your name constitutes your electronic signature on this decision.</div>
+          <label class="form-label">Radiologist Name</label>
+          <input type="text" class="form-control mb-3"
+            value="${esc(userName)}" readonly
+            style="background:var(--c-bg);color:var(--c-text-sec);cursor:default;max-width:320px" />
+          <div class="form-label">Radiologist Signature <span style="color:var(--c-danger)">*</span></div>
+          <div class="sig-mode-tabs">
+            <button id="rv-sig-tab-draw"   type="button" class="sig-mode-tab${rvSigMode==='draw'  ?' sig-tab-active':''}" onclick="rvSigSwitchMode('draw')">&#9998; Draw</button>
+            <button id="rv-sig-tab-upload" type="button" class="sig-mode-tab${rvSigMode==='upload'?' sig-tab-active':''}" onclick="rvSigSwitchMode('upload')">&#8593; Upload image</button>
+            <button id="rv-sig-tab-topaz"  type="button" class="sig-mode-tab${rvSigMode==='topaz' ?' sig-tab-active':''}" onclick="rvSigSwitchMode('topaz')">&#128394; Topaz Pad</button>
+          </div>
+          <!-- Draw pane -->
+          <div id="rv-sig-draw-pane"${rvSigMode!=='draw'?' style="display:none"':''}>
+            <div class="sig-pad-wrap${rvSigPadInstance&&!rvSigPadInstance?.isEmpty()?' sig-pad-filled':''}">
+              <canvas id="rv-sigpad"></canvas>
+              <div class="sig-pad-toolbar">
+                <span class="sig-pad-hint">Sign using mouse, finger or stylus</span>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="rvSigClear()">Clear</button>
+              </div>
+            </div>
+          </div>
+          <!-- Upload pane -->
+          <div id="rv-sig-upload-pane"${rvSigMode!=='upload'?' style="display:none"':''}>
+            <label class="sig-upload-area" for="rv-sig-upload-input">
+              <span style="font-size:22px">&#8593;</span>
+              <span>Click to select a signature image</span>
+              <span style="font-size:11px">JPG, PNG or GIF accepted</span>
+            </label>
+            <input type="file" id="rv-sig-upload-input" accept="image/*" style="display:none" onchange="rvSigHandleUpload(this)" />
+            ${rvSigUploadedDataUrl ? `<img id="rv-sig-upload-preview" class="sig-img" src="${rvSigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="rv-sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
+          </div>
+          <!-- Topaz pane -->
+          <div id="rv-sig-topaz-pane" class="sig-topaz-pane"${rvSigMode!=='topaz'?' style="display:none"':''}>
+            <div class="sig-topaz-status">
+              <span id="rv-sig-topaz-dot" class="sig-topaz-dot${rvSigTopazStatus==='capturing'?' dot-capturing':rvSigTopazStatus==='captured'?' dot-captured':rvSigTopazStatus==='error'?' dot-error':''}"></span>
+              <span id="rv-sig-topaz-text">${rvSigTopazStatus==='capturing'?'Sign on the Topaz pad now\u2026':rvSigTopazStatus==='captured'?'Signature captured successfully.':rvSigTopazStatus==='error'?'SigPlusExtLite extension not detected. Install it in Chrome and reload.':'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.'}</span>
+            </div>
+            <div class="sig-topaz-actions">
+              <button type="button" class="btn btn-primary btn-sm" onclick="rvSigTopazSign()"${rvSigTopazStatus==='capturing'?' disabled':''}>Sign on Pad</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="rvSigTopazClear()"${rvSigTopazStatus!=='captured'?' disabled':''}>Clear</button>
+            </div>
+            ${rvSigTopazPreviewUrl ? `<img id="rv-sig-topaz-preview" class="sig-img" src="${rvSigTopazPreviewUrl}" alt="Radiologist signature" />` : `<img id="rv-sig-topaz-preview" class="sig-img" style="display:none" alt="Radiologist signature" />`}
+            <div class="form-hint" style="margin-top:4px">Requires the <a href="https://chrome.google.com/webstore/detail/sigplusextlite/gjaebefdmgmhgheehpjpeclhplpkdpbi" target="_blank" rel="noopener">SigPlusExtLite Chrome extension</a> and the Topaz L460 pad connected via USB.</div>
+          </div>
         </div>
         <button id="rv-submit-btn" class="btn btn-primary mt-4"
           onclick="radReviewSubmit()" disabled>
@@ -3511,6 +3606,7 @@ function downloadPDF(id) {
         ${row('Reviewed by', v(rv.reviewedByName))}
         ${row('Reviewed at', fmtDt(rv.reviewedAt))}
         ${rv.notes ? row('Notes', v(rv.notes)) : ''}
+        ${row('Radiologist Signature', (rv.radiologistSignature||'') + (rv.radiologistSignatureImage ? `<br><img src="${rv.radiologistSignatureImage}" style="max-height:50px;max-width:200px;margin-top:6px;mix-blend-mode:multiply">` : ''))}
       </table>`;
   }
 
@@ -3623,7 +3719,7 @@ function downloadPDF(id) {
     ${row('Procedure completed as planned', s2.completedAsPlanned)}
     ${row('Complications', s2.complications || '—')}
     ${s2.procedureNotes ? row('Procedure Notes', s2.procedureNotes) : ''}
-    ${row('Radiographer Signature', s2.radiographerSignature)}
+    ${row('Radiographer Signature', (s2.radiographerSignature||'') + (s2.radiographerSignatureImage ? `<br><img src="${s2.radiographerSignatureImage}" style="max-height:50px;max-width:200px;margin-top:6px;mix-blend-mode:multiply">` : ''))}
     ${row('Completed At', fmtDt(s2.completedAt))}
   </table>
 
@@ -3633,7 +3729,7 @@ function downloadPDF(id) {
     ${row('Blood Pressure', s3.vitals?.bp   ? s3.vitals.bp   + ' mmHg' : '—')}
     ${row('Pulse', s3.vitals?.pulse ? s3.vitals.pulse + ' bpm'  : '—')}
     ${row('Patient Condition', s3.patientCondition)}
-    ${row('Nurse Signature', s3.nurseSignature)}
+    ${row('Nurse Signature', (s3.nurseSignature||'') + (s3.nurseSignatureImage ? `<br><img src="${s3.nurseSignatureImage}" style="max-height:50px;max-width:200px;margin-top:6px;mix-blend-mode:multiply">` : ''))}
     ${row('Completed At', fmtDt(s3.completedAt))}
   </table>
 
@@ -3869,6 +3965,11 @@ function renderRecordDetail() {
               ${metaRow('Completed',     fmtDateTime(s2.completedAt))}
               ${metaRow('Contrast',      s2.contrastAdministered ? `${esc(s2.contrastAgent||'—')} ${esc(s2.contrastVolume||'')}` : 'None')}
               ${metaRow('Complications', esc(s2.complications))}
+              ${s2.radiographerSignatureImage ? `
+              <div class="scr-meta-item" style="grid-column:1/-1">
+                <div class="scr-meta-label">Radiographer Signature</div>
+                <img class="sig-img" src="${s2.radiographerSignatureImage}" alt="Radiographer signature" />
+              </div>` : ''}
             </div>
             ${s2.procedureNotes ? `<div class="divider"></div>
               <div class="section-label">Procedure Notes</div>
@@ -3909,6 +4010,11 @@ function renderRecordDetail() {
               ${s3.vitals?.spo2   ? metaRow('SpO₂',  esc(s3.vitals.spo2)  + '%') : ''}
               ${s3.vitals?.temperature ? metaRow('Temperature', esc(s3.vitals.temperature) + ' °C') : ''}
               ${s3.vitals?.rr    ? metaRow('Resp. Rate', esc(s3.vitals.rr) + ' /min') : ''}
+              ${s3.nurseSignatureImage ? `
+              <div class="scr-meta-item" style="grid-column:1/-1">
+                <div class="scr-meta-label">Nurse Signature</div>
+                <img class="sig-img" src="${s3.nurseSignatureImage}" alt="Nurse signature" />
+              </div>` : ''}
             </div>
             ${s3.patientCondition ? `<div class="divider"></div>
               <div class="section-label">Patient Condition</div>
@@ -3936,6 +4042,11 @@ function renderRecordDetail() {
               ${metaRow('Reviewed By', esc(rv.reviewedByName))}
               ${metaRow('Decision',    esc(DECISION_LABELS[rv.decision]||rv.decision))}
               ${metaRow('Reviewed',    fmtDateTime(rv.reviewedAt))}
+              ${rv.radiologistSignatureImage ? `
+              <div class="scr-meta-item" style="grid-column:1/-1">
+                <div class="scr-meta-label">Radiologist Signature</div>
+                <img class="sig-img" src="${rv.radiologistSignatureImage}" alt="Radiologist signature" />
+              </div>` : ''}
             </div>
             ${rv.notes ? `<div class="divider"></div>
               <div class="section-label">Notes</div>
@@ -4103,15 +4214,48 @@ function renderStage2Report() {
             <label class="form-label" for="s2-performer">Radiographer Name</label>
             <input class="form-control" type="text" id="s2-performer"
               value="${esc(state.user?.name || '')}" readonly
-              style="background:var(--c-bg);color:var(--c-text-sec);cursor:default" />
+              style="background:var(--c-bg);color:var(--c-text-sec);cursor:default;margin-bottom:12px" />
           </div>
-          <div>
-            <label class="form-label" for="s2-sig">Signature <span class="req">*</span></label>
-            <input class="form-control" type="text" id="s2-sig"
-              placeholder="Type your full name to sign"
-              autocomplete="off" oninput="stage2CheckSubmit()" />
-            <div class="form-hint">Typing your name constitutes a valid electronic signature.</div>
+          <div></div>
+        </div>
+        <div class="form-label">Radiographer Signature <span class="req">*</span></div>
+        <div class="sig-mode-tabs">
+          <button id="s2-sig-tab-draw"   type="button" class="sig-mode-tab${s2SigMode==='draw'  ?' sig-tab-active':''}" onclick="s2SigSwitchMode('draw')">&#9998; Draw</button>
+          <button id="s2-sig-tab-upload" type="button" class="sig-mode-tab${s2SigMode==='upload'?' sig-tab-active':''}" onclick="s2SigSwitchMode('upload')">&#8593; Upload image</button>
+          <button id="s2-sig-tab-topaz"  type="button" class="sig-mode-tab${s2SigMode==='topaz' ?' sig-tab-active':''}" onclick="s2SigSwitchMode('topaz')">&#128394; Topaz Pad</button>
+        </div>
+        <!-- Draw pane -->
+        <div id="s2-sig-draw-pane"${s2SigMode!=='draw'?' style="display:none"':''}>
+          <div class="sig-pad-wrap${s2SigPadInstance&&!s2SigPadInstance?.isEmpty()?' sig-pad-filled':''}">
+            <canvas id="s2-sigpad"></canvas>
+            <div class="sig-pad-toolbar">
+              <span class="sig-pad-hint">Sign using mouse, finger or stylus</span>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="s2SigClear()">Clear</button>
+            </div>
           </div>
+        </div>
+        <!-- Upload pane -->
+        <div id="s2-sig-upload-pane"${s2SigMode!=='upload'?' style="display:none"':''}>
+          <label class="sig-upload-area" for="s2-sig-upload-input">
+            <span style="font-size:22px">&#8593;</span>
+            <span>Click to select a signature image</span>
+            <span style="font-size:11px">JPG, PNG or GIF accepted</span>
+          </label>
+          <input type="file" id="s2-sig-upload-input" accept="image/*" style="display:none" onchange="s2SigHandleUpload(this)" />
+          ${s2SigUploadedDataUrl ? `<img id="s2-sig-upload-preview" class="sig-img" src="${s2SigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="s2-sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
+        </div>
+        <!-- Topaz pane -->
+        <div id="s2-sig-topaz-pane" class="sig-topaz-pane"${s2SigMode!=='topaz'?' style="display:none"':''}>
+          <div class="sig-topaz-status">
+            <span id="s2-sig-topaz-dot" class="sig-topaz-dot${s2SigTopazStatus==='capturing'?' dot-capturing':s2SigTopazStatus==='captured'?' dot-captured':s2SigTopazStatus==='error'?' dot-error':''}"></span>
+            <span id="s2-sig-topaz-text">${s2SigTopazStatus==='capturing'?'Sign on the Topaz pad now\u2026':s2SigTopazStatus==='captured'?'Signature captured successfully.':s2SigTopazStatus==='error'?'SigPlusExtLite extension not detected. Install it in Chrome and reload.':'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.'}</span>
+          </div>
+          <div class="sig-topaz-actions">
+            <button type="button" class="btn btn-primary btn-sm" onclick="s2SigTopazSign()"${s2SigTopazStatus==='capturing'?' disabled':''}>Sign on Pad</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="s2SigTopazClear()"${s2SigTopazStatus!=='captured'?' disabled':''}>Clear</button>
+          </div>
+          ${s2SigTopazPreviewUrl ? `<img id="s2-sig-topaz-preview" class="sig-img" src="${s2SigTopazPreviewUrl}" alt="Radiographer signature" />` : `<img id="s2-sig-topaz-preview" class="sig-img" style="display:none" alt="Radiographer signature" />`}
+          <div class="form-hint" style="margin-top:4px">Requires the <a href="https://chrome.google.com/webstore/detail/sigplusextlite/gjaebefdmgmhgheehpjpeclhplpkdpbi" target="_blank" rel="noopener">SigPlusExtLite Chrome extension</a> and the Topaz L460 pad connected via USB.</div>
         </div>
       </div>
       <div class="card-footer">
@@ -4130,9 +4274,11 @@ function stage2ToggleComplications(show) {
 
 function stage2CheckSubmit() {
   const notes = (document.getElementById('s2-notes')?.value || '').trim();
-  const sig   = (document.getElementById('s2-sig')?.value  || '').trim();
+  const sigOk = s2SigMode === 'upload' ? !!s2SigUploadedDataUrl
+              : s2SigMode === 'topaz'  ? !!s2SigTopazPreviewUrl
+              : (s2SigPadInstance && !s2SigPadInstance.isEmpty());
   const btn   = document.getElementById('s2-submit-btn');
-  if (btn) btn.disabled = !(notes && sig);
+  if (btn) btn.disabled = !(notes && sigOk);
 }
 
 async function stage2Submit() {
@@ -4140,10 +4286,19 @@ async function stage2Submit() {
   const procedureNotes      = (document.getElementById('s2-notes')?.value || '').trim();
   const hasComplications    = document.querySelector('[name="s2-complications"]:checked')?.value === 'yes';
   const complicationDetails = (document.getElementById('s2-complication-text')?.value || '').trim();
-  const radiographerSignature = (document.getElementById('s2-sig')?.value || '').trim();
+  let radiographerSignatureImage = null;
+  if (s2SigMode === 'upload') {
+    if (!s2SigUploadedDataUrl) { toast('Please upload a signature image.', 'warning'); return; }
+    radiographerSignatureImage = s2SigUploadedDataUrl;
+  } else if (s2SigMode === 'topaz') {
+    if (!s2SigTopazPreviewUrl) { toast('Please capture a signature on the Topaz pad.', 'warning'); return; }
+    radiographerSignatureImage = s2SigTopazPreviewUrl;
+  } else {
+    if (!s2SigPadInstance || s2SigPadInstance.isEmpty()) { toast('Please draw your signature.', 'warning'); return; }
+    radiographerSignatureImage = s2SigPadInstance.toDataURL('image/png');
+  }
 
-  if (!procedureNotes)         { toast('Procedure report is required.', 'warning'); return; }
-  if (!radiographerSignature)  { toast('Please type your name to sign.', 'warning'); return; }
+  if (!procedureNotes) { toast('Procedure report is required.', 'warning'); return; }
 
   const btn = document.getElementById('s2-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
@@ -4154,7 +4309,8 @@ async function stage2Submit() {
       procedureNotes,
       hasComplications,
       complicationDetails : hasComplications ? complicationDetails : null,
-      radiographerSignature,
+      radiographerSignature: state.user?.name || '',
+      radiographerSignatureImage,
     });
     toast('Stage 2 report filed.', 'success');
     stage2State.record = null;
@@ -4562,6 +4718,233 @@ async function stage3Submit() {
     toast(err.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Submit Vitals & Close Record'; }
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE 2 & RAD REVIEW — SIGNATURE HELPERS
+═══════════════════════════════════════════════════════════════ */
+// ── Stage-2 signature helpers ─────────────────────────────────────────────────
+function s2SigSwitchMode(mode) {
+  s2SigMode = mode;
+  document.getElementById('s2-sig-draw-pane')?.style.setProperty('display', mode === 'draw'   ? '' : 'none');
+  document.getElementById('s2-sig-upload-pane')?.style.setProperty('display', mode === 'upload' ? '' : 'none');
+  document.getElementById('s2-sig-topaz-pane')?.style.setProperty('display', mode === 'topaz'  ? '' : 'none');
+  document.getElementById('s2-sig-tab-draw')?.classList.toggle('sig-tab-active', mode === 'draw');
+  document.getElementById('s2-sig-tab-upload')?.classList.toggle('sig-tab-active', mode === 'upload');
+  document.getElementById('s2-sig-tab-topaz')?.classList.toggle('sig-tab-active', mode === 'topaz');
+  if (mode === 'draw') s2InitSigPad();
+  if (mode === 'topaz') s2SigLoadTopaz();
+  stage2CheckSubmit();
+}
+
+function s2InitSigPad() {
+  const canvas = document.getElementById('s2-sigpad');
+  if (!canvas || typeof SignaturePad === 'undefined') return;
+  if (s2SigPadInstance) s2SigPadInstance.off();
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  canvas.width  = (canvas.offsetWidth  || 600) * ratio;
+  canvas.height = (canvas.offsetHeight || 160) * ratio;
+  canvas.getContext('2d').scale(ratio, ratio);
+  s2SigPadInstance = new SignaturePad(canvas, { penColor: '#0F172A', backgroundColor: '#ffffff', minWidth: 0.5, maxWidth: 2.5 });
+  s2SigPadInstance.addEventListener('endStroke', () => {
+    canvas.closest('.sig-pad-wrap')?.classList.add('sig-pad-filled');
+    stage2CheckSubmit();
+  });
+}
+
+function s2SigClear() {
+  s2SigPadInstance?.clear();
+  document.getElementById('s2-sigpad')?.closest('.sig-pad-wrap')?.classList.remove('sig-pad-filled');
+  stage2CheckSubmit();
+}
+
+function s2SigHandleUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    s2SigUploadedDataUrl = e.target.result;
+    const preview = document.getElementById('s2-sig-upload-preview');
+    if (preview) { preview.src = s2SigUploadedDataUrl; preview.style.display = 'block'; }
+    stage2CheckSubmit();
+  };
+  reader.readAsDataURL(file);
+}
+
+function s2SigLoadTopaz() {
+  const installed = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+  if (!installed) {
+    s2SigTopazRenderStatus('error', 'SigPlusExtLite extension not detected. Install it in Chrome and reload.');
+    return;
+  }
+  s2SigTopazRenderStatus('idle', 'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.');
+}
+
+function s2SigTopazRenderStatus(status, msg) {
+  s2SigTopazStatus = status;
+  const el  = document.getElementById('s2-sig-topaz-text');
+  const dot = document.getElementById('s2-sig-topaz-dot');
+  if (el) el.textContent = msg;
+  if (dot) {
+    dot.className = 'sig-topaz-dot';
+    if (status === 'capturing') dot.classList.add('dot-capturing');
+    if (status === 'captured')  dot.classList.add('dot-captured');
+    if (status === 'error')     dot.classList.add('dot-error');
+  }
+}
+
+function s2SigTopazSign() {
+  const installed = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+  if (!installed) {
+    s2SigTopazRenderStatus('error', 'SigPlusExtLite extension not detected. Install it in Chrome and reload.');
+    return;
+  }
+  s2SigTopazRenderStatus('capturing', 'Sign on the Topaz pad now\u2026');
+  const msgEl = document.createElement('MyExtensionDataElement');
+  msgEl.setAttribute('messageAttribute', JSON.stringify({
+    firstName: '', lastName: '', eMail: '', location: '',
+    imageFormat: 1, imageX: 500, imageY: 100,
+    imageTransparency: false, imageScaling: false,
+    maxUpScalePercent: 0.0, rawDataFormat: 'ENC', minSigPoints: 25
+  }));
+  document.documentElement.appendChild(msgEl);
+  top.document.addEventListener('SignResponse', function handler(e) {
+    top.document.removeEventListener('SignResponse', handler);
+    msgEl.remove();
+    const obj = JSON.parse(e.target.getAttribute('msgAttribute') || '{}');
+    if (!obj.isSigned) {
+      s2SigTopazRenderStatus('idle', 'Signature cancelled \u2014 click \u201cSign on Pad\u201d to try again.');
+      return;
+    }
+    s2SigTopazPreviewUrl = 'data:image/png;base64,' + obj.imageData;
+    const preview = document.getElementById('s2-sig-topaz-preview');
+    if (preview) { preview.src = s2SigTopazPreviewUrl; preview.style.display = 'block'; }
+    s2SigTopazRenderStatus('captured', 'Signature captured successfully.');
+    stage2CheckSubmit();
+  }, false);
+  const evt = document.createEvent('Events');
+  evt.initEvent('SignStartEvent', true, false);
+  msgEl.dispatchEvent(evt);
+}
+
+function s2SigTopazClear() {
+  s2SigTopazPreviewUrl = null;
+  const preview = document.getElementById('s2-sig-topaz-preview');
+  if (preview) preview.style.display = 'none';
+  s2SigTopazRenderStatus('idle', 'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.');
+  stage2CheckSubmit();
+}
+
+// ── RadReview signature helpers ─────────────────────────────────────────────────
+function rvSigSwitchMode(mode) {
+  rvSigMode = mode;
+  document.getElementById('rv-sig-draw-pane')?.style.setProperty('display', mode === 'draw'   ? '' : 'none');
+  document.getElementById('rv-sig-upload-pane')?.style.setProperty('display', mode === 'upload' ? '' : 'none');
+  document.getElementById('rv-sig-topaz-pane')?.style.setProperty('display', mode === 'topaz'  ? '' : 'none');
+  document.getElementById('rv-sig-tab-draw')?.classList.toggle('sig-tab-active', mode === 'draw');
+  document.getElementById('rv-sig-tab-upload')?.classList.toggle('sig-tab-active', mode === 'upload');
+  document.getElementById('rv-sig-tab-topaz')?.classList.toggle('sig-tab-active', mode === 'topaz');
+  if (mode === 'draw') rvInitSigPad();
+  if (mode === 'topaz') rvSigLoadTopaz();
+  try { radReviewCheckSubmit(); } catch(e){}
+}
+
+function rvInitSigPad() {
+  const canvas = document.getElementById('rv-sigpad');
+  if (!canvas || typeof SignaturePad === 'undefined') return;
+  if (rvSigPadInstance) rvSigPadInstance.off();
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  canvas.width  = (canvas.offsetWidth  || 600) * ratio;
+  canvas.height = (canvas.offsetHeight || 160) * ratio;
+  canvas.getContext('2d').scale(ratio, ratio);
+  rvSigPadInstance = new SignaturePad(canvas, { penColor: '#0F172A', backgroundColor: '#ffffff', minWidth: 0.5, maxWidth: 2.5 });
+  rvSigPadInstance.addEventListener('endStroke', () => {
+    canvas.closest('.sig-pad-wrap')?.classList.add('sig-pad-filled');
+    radReviewCheckSubmit();
+  });
+}
+
+function rvSigClear() {
+  rvSigPadInstance?.clear();
+  document.getElementById('rv-sigpad')?.closest('.sig-pad-wrap')?.classList.remove('sig-pad-filled');
+  radReviewCheckSubmit();
+}
+
+function rvSigHandleUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    rvSigUploadedDataUrl = e.target.result;
+    const preview = document.getElementById('rv-sig-upload-preview');
+    if (preview) { preview.src = rvSigUploadedDataUrl; preview.style.display = 'block'; }
+    radReviewCheckSubmit();
+  };
+  reader.readAsDataURL(file);
+}
+
+function rvSigLoadTopaz() {
+  const installed = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+  if (!installed) {
+    rvSigTopazRenderStatus('error', 'SigPlusExtLite extension not detected. Install it in Chrome and reload.');
+    return;
+  }
+  rvSigTopazRenderStatus('idle', 'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.');
+}
+
+function rvSigTopazRenderStatus(status, msg) {
+  rvSigTopazStatus = status;
+  const el  = document.getElementById('rv-sig-topaz-text');
+  const dot = document.getElementById('rv-sig-topaz-dot');
+  if (el) el.textContent = msg;
+  if (dot) {
+    dot.className = 'sig-topaz-dot';
+    if (status === 'capturing') dot.classList.add('dot-capturing');
+    if (status === 'captured')  dot.classList.add('dot-captured');
+    if (status === 'error')     dot.classList.add('dot-error');
+  }
+}
+
+function rvSigTopazSign() {
+  const installed = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+  if (!installed) {
+    rvSigTopazRenderStatus('error', 'SigPlusExtLite extension not detected. Install it in Chrome and reload.');
+    return;
+  }
+  rvSigTopazRenderStatus('capturing', 'Sign on the Topaz pad now\u2026');
+  const msgEl = document.createElement('MyExtensionDataElement');
+  msgEl.setAttribute('messageAttribute', JSON.stringify({
+    firstName: '', lastName: '', eMail: '', location: '',
+    imageFormat: 1, imageX: 500, imageY: 100,
+    imageTransparency: false, imageScaling: false,
+    maxUpScalePercent: 0.0, rawDataFormat: 'ENC', minSigPoints: 25
+  }));
+  document.documentElement.appendChild(msgEl);
+  top.document.addEventListener('SignResponse', function handler(e) {
+    top.document.removeEventListener('SignResponse', handler);
+    msgEl.remove();
+    const obj = JSON.parse(e.target.getAttribute('msgAttribute') || '{}');
+    if (!obj.isSigned) {
+      rvSigTopazRenderStatus('idle', 'Signature cancelled \u2014 click \u201cSign on Pad\u201d to try again.');
+      return;
+    }
+    rvSigTopazPreviewUrl = 'data:image/png;base64,' + obj.imageData;
+    const preview = document.getElementById('rv-sig-topaz-preview');
+    if (preview) { preview.src = rvSigTopazPreviewUrl; preview.style.display = 'block'; }
+    rvSigTopazRenderStatus('captured', 'Signature captured successfully.');
+    radReviewCheckSubmit();
+  }, false);
+  const evt = document.createEvent('Events');
+  evt.initEvent('SignStartEvent', true, false);
+  msgEl.dispatchEvent(evt);
+}
+
+function rvSigTopazClear() {
+  rvSigTopazPreviewUrl = null;
+  const preview = document.getElementById('rv-sig-topaz-preview');
+  if (preview) preview.style.display = 'none';
+  rvSigTopazRenderStatus('idle', 'Extension ready \u2014 click \u201cSign on Pad\u201d to capture.');
+  radReviewCheckSubmit();
 }
 
 /* ═══════════════════════════════════════════════════════════════

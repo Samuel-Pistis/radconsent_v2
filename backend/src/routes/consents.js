@@ -154,6 +154,7 @@ router.put('/:id/stage2', (req, res) => {
     completedAsPlanned, procedureNotes,
     hasComplications, complicationDetails,
     radiographerSignature,
+    radiographerSignatureImage
   } = req.body || {};
 
   if (!procedureNotes?.trim())
@@ -181,6 +182,7 @@ router.put('/:id/stage2', (req, res) => {
                                ? (complicationDetails?.trim() || 'Yes — see notes')
                                : 'none',
       radiographerSignature: radiographerSignature.trim(),
+      radiographerSignatureImage: radiographerSignatureImage || null,
     },
   });
   return res.json(updated);
@@ -252,7 +254,6 @@ router.get('/:id/pdf', (req, res) => {
   const MODALITY_LABELS = {
     mri_without_contrast : 'MRI (no contrast)',
     mri_with_gadolinium  : 'MRI + Gadolinium',
-    ct_without_contrast  : 'CT (no contrast)',
     ct_with_iv_contrast  : 'CT + IV Contrast',
     mammography          : 'Mammography',
   };
@@ -455,7 +456,7 @@ router.put('/:id/review', (req, res) => {
   if (req.user.role !== 'radiologist' && req.user.role !== 'admin')
     return res.status(403).json({ error: 'Only radiologists can submit review decisions.' });
 
-  const { decision, notes, radiologistSignature } = req.body || {};
+  const { decision, notes, radiologistSignature, radiologistSignatureImage } = req.body || {};
 
   const VALID = ['approved', 'proceed_with_modifications', 'declined'];
   if (!VALID.includes(decision))
@@ -478,6 +479,7 @@ router.put('/:id/review', (req, res) => {
       decision,
       notes               : notes.trim(),
       radiologistSignature: radiologistSignature.trim(),
+      radiologistSignatureImage: radiologistSignatureImage || null,
       reviewedBy          : req.user.id,
       reviewedByName      : req.user.name,
       reviewedAt          : new Date().toISOString(),
