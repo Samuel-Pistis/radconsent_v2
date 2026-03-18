@@ -5,6 +5,7 @@ const bcrypt   = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const db       = require('../db/database');
 const { verifyToken } = require('../middleware/auth');
+const { logAction } = require('../utils/logger');
 
 const router = express.Router();
 const VALID_ROLES = ['radiographer', 'nurse', 'radiologist', 'admin'];
@@ -50,6 +51,7 @@ router.post('/', async (req, res) => {
     password: hashed,
   });
 
+  logAction(req, 'USER_CREATED', 'user', user.id, { role, email: normalEmail });
   return res.status(201).json({
     id: user.id, name: user.name, email: user.email,
     role: user.role, createdAt: user.createdAt,
@@ -83,6 +85,7 @@ router.put('/:id', (req, res) => {
     return res.status(400).json({ error: 'No valid fields to update.' });
 
   const updated = db.update('users', req.params.id, updates);
+  logAction(req, 'USER_UPDATED', 'user', updated.id, updates);
   return res.json({
     id: updated.id, name: updated.name, email: updated.email,
     role: updated.role, updatedAt: updated.updatedAt,
@@ -115,6 +118,7 @@ router.put('/:id/password', async (req, res) => {
 
   const hashed = await bcrypt.hash(newPassword, 10);
   db.update('users', req.params.id, { password: hashed });
+  logAction(req, 'PASSWORD_CHANGED', 'user', req.params.id);
   return res.json({ ok: true });
 });
 
@@ -127,6 +131,7 @@ router.delete('/:id', (req, res) => {
 
   const ok = db.remove('users', req.params.id);
   if (!ok) return res.status(404).json({ error: 'User not found.' });
+  logAction(req, 'USER_DELETED', 'user', req.params.id);
   return res.json({ ok: true });
 });
 

@@ -2,7 +2,8 @@
 
 const express    = require('express');
 const db         = require('../db/database');
-const { verifyToken } = require('../middleware/auth');
+const { verifyToken, requireRole } = require('../middleware/auth');
+const { logAction } = require('../utils/logger');
 
 const router = express.Router();
 
@@ -10,10 +11,9 @@ const router = express.Router();
 router.use(verifyToken);
 
 // POST /api/consents/seed-demo — admin loads demo consent records
-router.post('/seed-demo', (req, res) => {
-  if (req.user.role !== 'admin')
-    return res.status(403).json({ error: 'Only admins can load demo data.' });
+router.post('/seed-demo', requireRole('admin'), (req, res) => {
   const count = db.loadDemoConsents();
+  logAction(req, 'LOADED_DEMO_DATA', 'consent', null, { count });
   return res.json({ ok: true, loaded: count });
 });
 
@@ -50,6 +50,7 @@ router.post('/sessions', (req, res) => {
     closedAt         : null,
   });
 
+  logAction(req, 'CONSENT_CREATED', 'consent', doc.id, { modality });
   return res.status(201).json(doc);
 });
 
@@ -104,6 +105,7 @@ router.put('/:id/screening', (req, res) => {
   if (flaggedStatus) updateData.status = flaggedStatus;
 
   const updated = db.update('consents', req.params.id, updateData);
+  logAction(req, 'SCREENING_COMPLETED', 'consent', updated.id, { flagged: !!flaggedStatus });
   return res.json(updated);
 });
 
@@ -142,13 +144,12 @@ router.put('/:id/sign', (req, res) => {
       completedAt           : now,
     },
   });
+  logAction(req, 'PATIENT_SIGNED', 'consent', updated.id);
   return res.json(updated);
 });
 
 // PUT /api/consents/:id/stage2 — radiographer files post-procedure report
-router.put('/:id/stage2', (req, res) => {
-  if (req.user.role !== 'radiographer' && req.user.role !== 'admin')
-    return res.status(403).json({ error: 'Only radiographers can file procedure reports.' });
+router.put('/:id/stage2', requireRole('radiographer', 'admin'), (req, res) => {
 
   const {
     completedAsPlanned, procedureNotes,
@@ -185,13 +186,12 @@ router.put('/:id/stage2', (req, res) => {
       radiographerSignatureImage: radiographerSignatureImage || null,
     },
   });
+  logAction(req, 'STAGE2_COMPLETED', 'consent', updated.id);
   return res.json(updated);
 });
 
 // PUT /api/consents/:id/stage3 — nurse files post-procedure vitals check
-router.put('/:id/stage3', (req, res) => {
-  if (req.user.role !== 'nurse' && req.user.role !== 'admin')
-    return res.status(403).json({ error: 'Only nurses can submit vitals checks.' });
+router.put('/:id/stage3', requireRole('nurse', 'admin'), (req, res) => {
 
   const {
     bloodPressureSystolic, bloodPressureDiastolic,
@@ -241,6 +241,7 @@ router.put('/:id/stage3', (req, res) => {
       nurseSignatureImage : nurseSignatureImage || null,
     },
   });
+  logAction(req, 'STAGE3_COMPLETED', 'consent', updated.id);
   return res.json(updated);
 });
 
@@ -452,9 +453,7 @@ router.get('/:id/pdf', (req, res) => {
 });
 
 // PUT /api/consents/:id/review — radiologist records their decision
-router.put('/:id/review', (req, res) => {
-  if (req.user.role !== 'radiologist' && req.user.role !== 'admin')
-    return res.status(403).json({ error: 'Only radiologists can submit review decisions.' });
+router.put('/:id/review', requireRole('radiologist', 'admin'), (req, res) => {
 
   const { decision, notes, radiologistSignature, radiologistSignatureImage } = req.body || {};
 
@@ -485,13 +484,12 @@ router.put('/:id/review', (req, res) => {
       reviewedAt          : new Date().toISOString(),
     },
   });
+  logAction(req, 'RADIOLOGIST_REVIEWED', 'consent', updated.id, { decision });
   return res.json(updated);
 });
 
 // PUT /api/consents/:id/recall — admin recalls a declined record back to active queue
-router.put('/:id/recall', (req, res) => {
-  if (req.user.role !== 'admin')
-    return res.status(403).json({ error: 'Only admins can recall records.' });
+router.put('/:id/recall', requireRole('admin'), (req, res) => {
 
   const existing = db.findOne('consents', { id: req.params.id });
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
@@ -507,28 +505,23 @@ router.put('/:id/recall', (req, res) => {
     status: backStatus,
     radiologistReview: null
   });
+  logAction(req, 'CONSENT_RECALLED', 'consent', updated.id);
   return res.json(updated);
 });
 
 // DELETE /api/consents/:id — admin deletes a single consent record
-router.delete('/:id', (req, res) => {
-  if (req.user.role !== 'admin')
-    return res.status(403).json({ error: 'Only admins can delete records.' });
-
-  const ok = db.remove('consents', req.params.id);
-  if (!ok) return res.status(404).json({ error: 'Consent record not found.' });
+router.delete('/:id', requireRole('admin'), (req, res) => {
+  const removed = db.remove('consents', req.params.id);
+  if (!removed) return res.status(404).json({ error: 'Consent record not found.' });
+  logAction(req, 'CONSENT_DELETED', 'consent', req.params.id);
   return res.json({ ok: true });
 });
 
 // DELETE /api/consents — admin deletes all consent records
-router.delete('/', (req, res) => {
-  if (req.user.role !== 'admin')
-    return res.status(403).json({ error: 'Only admins can delete records.' });
+router.delete('/', requireRole('admin'), (req, res) => {
 
-  const data = db.read();
-  const count = (data.consents || []).length;
-  data.consents = [];
-  db.write(data);
+  const count = db.removeAll('consents');
+  logAction(req, 'ALL_CONSENTS_DELETED', 'consent', null, { count });
   return res.json({ ok: true, deleted: count });
 });
 
