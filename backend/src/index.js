@@ -20,11 +20,16 @@ const app = express();
 // local network — no need to accept cross-origin requests from
 // arbitrary external domains.
 const ALLOWED_ORIGINS = /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$/;
+// ALLOWED_ORIGIN env var lets cloud/production deployments whitelist their own public URL
+// e.g. ALLOWED_ORIGIN=https://stjude.radconsent.com or https://radconsent-v2.onrender.com
+const ALLOWED_ORIGIN_ENV = process.env.ALLOWED_ORIGIN || null;
 
 app.use(cors({
   origin: (origin, cb) => {
     // Allow requests with no origin (same-origin, mobile apps, Postman)
-    if (!origin || ALLOWED_ORIGINS.test(origin)) return cb(null, true);
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.test(origin)) return cb(null, true);
+    if (ALLOWED_ORIGIN_ENV && origin === ALLOWED_ORIGIN_ENV) return cb(null, true);
     cb(new Error(`CORS: origin not allowed — ${origin}`));
   },
   credentials: true,

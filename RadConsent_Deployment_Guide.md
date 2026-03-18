@@ -92,6 +92,7 @@ services:
     environment:
       - NODE_ENV=production
       - DB_PATH=/app/data/database.sqlite
+      - ALLOWED_ORIGIN=https://stjude.radconsent.com
       # Generate a strong secret: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
       - JWT_SECRET=REPLACE_WITH_STRONG_SECRET
     volumes:
