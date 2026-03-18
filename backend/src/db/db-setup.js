@@ -120,4 +120,36 @@ function runMigrations() {
 runMigrations();
 migrateFromJSON();
 
+// ═══════════════════════════════════════════════════════════════
+//  Seed default users if table is empty
+// ═══════════════════════════════════════════════════════════════
+function seedDefaultUsers() {
+  const count = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
+  if (count > 0) return;
+
+  const bcrypt = require('bcryptjs');
+  const { v4: uuidv4 } = require('uuid');
+  const now = new Date().toISOString();
+  const hash = bcrypt.hashSync('demo1234', 10);
+
+  const insert = db.prepare(`
+    INSERT INTO users (id, email, password, role, name, createdAt, updatedAt, failedAttempts, lockedUntil)
+    VALUES (@id, @email, @password, @role, @name, @createdAt, @updatedAt, 0, NULL)
+  `);
+
+  const users = [
+    { id: uuidv4(), email: 'radiographer@radconsent.demo', role: 'radiographer', name: 'Chidi Eze' },
+    { id: uuidv4(), email: 'nurse@radconsent.demo',        role: 'nurse',        name: 'Amaka Obi' },
+    { id: uuidv4(), email: 'radiologist@radconsent.demo',  role: 'radiologist',  name: 'Dr. Amara Okonkwo' },
+    { id: uuidv4(), email: 'admin@radconsent.demo',        role: 'admin',        name: 'Admin User' },
+  ];
+
+  const run = db.transaction(() => {
+    for (const u of users) insert.run({ ...u, password: hash, createdAt: now, updatedAt: now });
+  });
+  run();
+  console.log('[DB] Seeded 4 default demo users.');
+}
+seedDefaultUsers();
+
 module.exports = db;
