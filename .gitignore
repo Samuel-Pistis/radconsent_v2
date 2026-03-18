@@ -1,5 +1,9 @@
-# Database — keep out of git so admin deletes persist across deploys
+# Database — keep out of git (patient data must not be in version control)
 backend/src/db/data.json
+backend/src/db/*.sqlite
+backend/src/db/*.sqlite-shm
+backend/src/db/*.sqlite-wal
+backend/src/db/*.bak
 
 # Dependencies
 node_modules/

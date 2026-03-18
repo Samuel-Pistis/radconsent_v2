@@ -1,22 +1,49 @@
 'use strict';
 
-const fs   = require('fs');
-const path = require('path');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-const DB_PATH = path.join(__dirname, 'data.json');
+const db = require('./db-setup');
 
 // ═══════════════════════════════════════════════════════════════
-//  Core I/O
+//  Helper: parse/serialize JSON fields
 // ═══════════════════════════════════════════════════════════════
 
-function read() {
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+const JSON_FIELDS = {
+  consents: ['patient', 'tierFlags', 'stage1', 'stage2', 'stage3', 'radiologistReview']
+};
+
+function parseDoc(collection, row) {
+  if (!row) return null;
+  const parsed = { ...row };
+  const jsonFields = JSON_FIELDS[collection] || [];
+  
+  for (const field of jsonFields) {
+    if (parsed[field] !== undefined) {
+      if (parsed[field] === null) {
+        parsed[field] = null;
+      } else {
+        try {
+          parsed[field] = JSON.parse(parsed[field]);
+        } catch(e) {
+          console.error(`Failed to parse JSON for field ${field}`, e);
+        }
+      }
+    }
+  }
+  return parsed;
 }
 
-function write(data) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
+function serializeDoc(collection, doc) {
+  const serialized = { ...doc };
+  const jsonFields = JSON_FIELDS[collection] || [];
+  
+  for (const field of jsonFields) {
+    if (serialized[field] !== undefined) {
+      serialized[field] = serialized[field] === null ? null : JSON.stringify(serialized[field]);
+    }
+  }
+  return serialized;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -25,8 +52,14 @@ function write(data) {
 
 /** Return every document in a collection. */
 function all(collection) {
-  const db = read();
-  return db[collection] || [];
+  try {
+    const stmt = db.prepare(`SELECT * FROM ${collection}`);
+    const rows = stmt.all();
+    return rows.map(r => parseDoc(collection, r));
+  } catch (err) {
+    console.error(`Error in all(${collection}):`, err);
+    return [];
+  }
 }
 
 /**
@@ -35,8 +68,6 @@ function all(collection) {
  * Returns the inserted document.
  */
 function insert(collection, doc) {
-  const db = read();
-  if (!db[collection]) db[collection] = [];
   const now = new Date().toISOString();
   const newDoc = {
     id: uuidv4(),
@@ -44,9 +75,23 @@ function insert(collection, doc) {
     updatedAt: now,
     ...doc,
   };
-  db[collection].push(newDoc);
-  write(db);
-  return newDoc;
+  
+  const serialized = serializeDoc(collection, newDoc);
+  const keys = Object.keys(serialized);
+  
+  const placeholders = keys.map(k => `@${k}`).join(', ');
+  const colNames = keys.join(', ');
+  
+  const query = `INSERT INTO ${collection} (${colNames}) VALUES (${placeholders})`;
+  
+  try {
+    const stmt = db.prepare(query);
+    stmt.run(serialized);
+    return newDoc;
+  } catch(err) {
+    console.error(`Error in insert(${collection}):`, err);
+    throw err;
+  }
 }
 
 /**
@@ -54,14 +99,33 @@ function insert(collection, doc) {
  * Returns the updated document, or null if not found.
  */
 function update(collection, id, updates) {
-  const db = read();
-  const col = db[collection] || [];
-  const idx = col.findIndex(d => d.id === id);
-  if (idx === -1) return null;
-  col[idx] = { ...col[idx], ...updates, updatedAt: new Date().toISOString() };
-  db[collection] = col;
-  write(db);
-  return col[idx];
+  // First get the existing doc so we can merge updates into the nested JSON (if any)
+  const existing = findOne(collection, { id });
+  if (!existing) return null;
+  
+  const merged = { 
+    ...existing, 
+    ...updates, 
+    updatedAt: new Date().toISOString() 
+  };
+  
+  const serialized = serializeDoc(collection, merged);
+  
+  const updateFields = Object.keys(serialized)
+    .filter(k => k !== 'id')
+    .map(k => `${k} = @${k}`)
+    .join(', ');
+    
+  const query = `UPDATE ${collection} SET ${updateFields} WHERE id = @id`;
+  
+  try {
+    const stmt = db.prepare(query);
+    stmt.run({ ...serialized, id });
+    return merged;
+  } catch(err) {
+    console.error(`Error in update(${collection}):`, err);
+    throw err;
+  }
 }
 
 /**
@@ -69,14 +133,13 @@ function update(collection, id, updates) {
  * Returns true if removed, false if not found.
  */
 function remove(collection, id) {
-  const db = read();
-  const col = db[collection] || [];
-  const idx = col.findIndex(d => d.id === id);
-  if (idx === -1) return false;
-  col.splice(idx, 1);
-  db[collection] = col;
-  write(db);
-  return true;
+  try {
+    const info = db.prepare(`DELETE FROM ${collection} WHERE id = ?`).run(id);
+    return info.changes > 0;
+  } catch(err) {
+    console.error(`Error in remove(${collection}):`, err);
+    return false;
+  }
 }
 
 /**
@@ -84,6 +147,28 @@ function remove(collection, id) {
  * Returns the document or null.
  */
 function findOne(collection, query) {
+  // For SQLite, if the query includes json fields, we'll just fetch all and filter in memory, 
+  // since the dataset is relatively small and json querying varies.
+  // We can optimize simple queries like `id` here.
+  
+  const keys = Object.keys(query);
+  const jsonFields = JSON_FIELDS[collection] || [];
+  
+  const hasJsonFieldsInQuery = keys.some(k => jsonFields.includes(k));
+  
+  if (!hasJsonFieldsInQuery && keys.length > 0) {
+    // Normal SQL lookup
+    const conditions = keys.map(k => `${k} = @${k}`).join(' AND ');
+    const stmt = db.prepare(`SELECT * FROM ${collection} WHERE ${conditions} LIMIT 1`);
+    try {
+      const row = stmt.get(query);
+      return parseDoc(collection, row) || null;
+    } catch(err) {
+      console.error(`Error in findOne optimized(${collection}):`, err);
+    }
+  }
+  
+  // Fallback to in-memory filter
   const docs = all(collection);
   return docs.find(doc =>
     Object.entries(query).every(([k, v]) => doc[k] === v)
@@ -95,6 +180,24 @@ function findOne(collection, query) {
  * Returns an array (may be empty).
  */
 function findMany(collection, query) {
+  const keys = Object.keys(query);
+  const jsonFields = JSON_FIELDS[collection] || [];
+  
+  const hasJsonFieldsInQuery = keys.some(k => jsonFields.includes(k));
+  
+  if (!hasJsonFieldsInQuery && keys.length > 0) {
+    // Normal SQL lookup
+    const conditions = keys.map(k => `${k} = @${k}`).join(' AND ');
+    const stmt = db.prepare(`SELECT * FROM ${collection} WHERE ${conditions}`);
+    try {
+      const rows = stmt.all(query);
+      return rows.map(r => parseDoc(collection, r));
+    } catch(err) {
+      console.error(`Error in findMany optimized(${collection}):`, err);
+    }
+  }
+  
+  // Fallback to in-memory filter
   const docs = all(collection);
   return docs.filter(doc =>
     Object.entries(query).every(([k, v]) => doc[k] === v)
@@ -109,586 +212,132 @@ function filter(collection, fn) {
   return all(collection).filter(fn);
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  Seed data
-// ═══════════════════════════════════════════════════════════════
-
-// Fixed IDs so cross-references (e.g. stage2.performedBy) stay consistent
-// across every cold-start of the database.
-const IDS = {
-  radiographer : '11111111-0000-0000-0000-000000000001',
-  nurse        : '22222222-0000-0000-0000-000000000002',
-  radiologist  : '33333333-0000-0000-0000-000000000003',
-  admin        : '44444444-0000-0000-0000-000000000004',
-  con1         : 'c0000001-0000-0000-0000-000000000001', // draft_stage1
-  con2         : 'c0000002-0000-0000-0000-000000000002', // draft_stage2
-  con3         : 'c0000003-0000-0000-0000-000000000003', // flagged_tier1
-  con4         : 'c0000004-0000-0000-0000-000000000004', // pending_review
-  con5         : 'c0000005-0000-0000-0000-000000000005', // closed
-};
-
-function buildSeedData() {
-  const pw = bcrypt.hashSync('demo1234', 10);
-
-  // ── Users ──────────────────────────────────────────────────
-  const users = [
-    {
-      id: IDS.radiographer,
-      email: 'radiographer@radconsent.demo',
-      password: pw,
-      role: 'radiographer',
-      name: 'Chidi Eze',
-      createdAt: '2025-01-01T08:00:00.000Z',
-      updatedAt: '2025-01-01T08:00:00.000Z',
-    },
-    {
-      id: IDS.nurse,
-      email: 'nurse@radconsent.demo',
-      password: pw,
-      role: 'nurse',
-      name: 'Amaka Obi',
-      createdAt: '2025-01-01T08:00:00.000Z',
-      updatedAt: '2025-01-01T08:00:00.000Z',
-    },
-    {
-      id: IDS.radiologist,
-      email: 'radiologist@radconsent.demo',
-      password: pw,
-      role: 'radiologist',
-      name: 'Dr. Amara Okonkwo',
-      createdAt: '2025-01-01T08:00:00.000Z',
-      updatedAt: '2025-01-01T08:00:00.000Z',
-    },
-    {
-      id: IDS.admin,
-      email: 'admin@radconsent.demo',
-      password: pw,
-      role: 'admin',
-      name: 'Admin User',
-      createdAt: '2025-01-01T08:00:00.000Z',
-      updatedAt: '2025-01-01T08:00:00.000Z',
-    },
-  ];
-
-  // ── Screening templates ─────────────────────────────────────
-
-  // Full 12-domain MRI screening — clean except orthopaedic hardware >6 weeks (Tier 3)
-  const mriScreening_tier3_ortho = {
-    cardiac: {
-      hasPacemaker: false, pacemakerMRStatus: null,
-      hasICD: false, icdMRStatus: null,
-      hasCardiacMonitor: false,
-      hasCoronaryStent: false,
-      hasHeartValve: false,
-      hasVascularClipsCoils: false,
-    },
-    neurological: {
-      hasCochlearImplant: false, cochlearImplantType: null,
-      hasDeepBrainStimulator: false,
-      hasAneurysmClip: false, aneurysmClipType: null,
-      hasSpinalCordStimulator: false,
-      hasVPShunt: false,
-    },
-    ocular: {
-      hasWeldingGrindingHistory: false,
-      hasMetallicForeignBody: false,
-      foreignBodyClearedByXray: null,
-    },
-    orthopaedic: {
-      hasJointReplacement: false,
-      hasScrewsPlatesRods: true,
-      surgeryDescription: 'Right tibial fracture ORIF (2022)',
-      isLessThan6WeeksAgo: false,
-    },
-    otherImplants: {
-      hasInsulinPump: false,
-      hasIUD: false, iudType: null,
-      hasInfusionPort: false,
-      hasPenileImplant: false,
-      hasDrugPump: false,
-    },
-    renal: {
-      onDialysis: false,
-      hasCKD: false, ckdStage: null,
-      hasSingleKidney: false,
-    },
-    allergy: {
-      hasPriorContrastReaction: false,
-      reactionSeverity: null,
-    },
-    pregnancy: {
-      // Male patient — not applicable
-      isPossiblyPregnant: null,
-      trimester: null,
-      isBreastfeeding: null,
-    },
-    claustrophobia: {
-      hasClaustrophobia: false,
-      severity: null,
-      hadPriorMRIFailure: false,
-    },
-    surgical: {
-      hadPriorSurgery: true,
-      surgeryDetails: 'Right tibia ORIF 2022',
-    },
-    tattoosPiercings: {
-      hasPermanentTattoos: false,
-      hasNonRemovablePiercings: false,
-    },
-    transdermalPatches: {
-      hasTransdermalPatch: false,
-      patchDetails: null,
-    },
-  };
-
-  // Full 12-domain MRI screening — Tier 1: non-MR-conditional pacemaker
-  const mriScreening_tier1_pacemaker = {
-    cardiac: {
-      hasPacemaker: true, pacemakerMRStatus: 'non_mr_conditional',
-      hasICD: false, icdMRStatus: null,
-      hasCardiacMonitor: false,
-      hasCoronaryStent: false,
-      hasHeartValve: false,
-      hasVascularClipsCoils: false,
-    },
-    neurological: {
-      hasCochlearImplant: false, cochlearImplantType: null,
-      hasDeepBrainStimulator: false,
-      hasAneurysmClip: false, aneurysmClipType: null,
-      hasSpinalCordStimulator: false,
-      hasVPShunt: false,
-    },
-    ocular: {
-      hasWeldingGrindingHistory: false,
-      hasMetallicForeignBody: false,
-      foreignBodyClearedByXray: null,
-    },
-    orthopaedic: {
-      hasJointReplacement: false,
-      hasScrewsPlatesRods: false,
-      surgeryDescription: null,
-      isLessThan6WeeksAgo: null,
-    },
-    otherImplants: {
-      hasInsulinPump: false,
-      hasIUD: false, iudType: null,
-      hasInfusionPort: false,
-      hasPenileImplant: false,
-      hasDrugPump: false,
-    },
-    renal: {
-      onDialysis: false,
-      hasCKD: false, ckdStage: null,
-      hasSingleKidney: false,
-    },
-    allergy: {
-      hasPriorContrastReaction: false,
-      reactionSeverity: null,
-    },
-    pregnancy: {
-      isPossiblyPregnant: null, // Male patient
-      trimester: null,
-      isBreastfeeding: null,
-    },
-    claustrophobia: {
-      hasClaustrophobia: false,
-      severity: null,
-      hadPriorMRIFailure: false,
-    },
-    surgical: {
-      hadPriorSurgery: true,
-      surgeryDetails: 'Pacemaker implant 2018 — Medtronic Sigma SDR303, confirmed non-MR-conditional',
-    },
-    tattoosPiercings: {
-      hasPermanentTattoos: false,
-      hasNonRemovablePiercings: false,
-    },
-    transdermalPatches: {
-      hasTransdermalPatch: false,
-      patchDetails: null,
-    },
-  };
-
-  // Full 12-domain MRI screening — Tier 2: first-trimester pregnancy + gadolinium
-  const mriScreening_tier2_pregnancy = {
-    cardiac: {
-      hasPacemaker: false, pacemakerMRStatus: null,
-      hasICD: false, icdMRStatus: null,
-      hasCardiacMonitor: false,
-      hasCoronaryStent: false,
-      hasHeartValve: false,
-      hasVascularClipsCoils: false,
-    },
-    neurological: {
-      hasCochlearImplant: false, cochlearImplantType: null,
-      hasDeepBrainStimulator: false,
-      hasAneurysmClip: false, aneurysmClipType: null,
-      hasSpinalCordStimulator: false,
-      hasVPShunt: false,
-    },
-    ocular: {
-      hasWeldingGrindingHistory: false,
-      hasMetallicForeignBody: false,
-      foreignBodyClearedByXray: null,
-    },
-    orthopaedic: {
-      hasJointReplacement: false,
-      hasScrewsPlatesRods: false,
-      surgeryDescription: null,
-      isLessThan6WeeksAgo: null,
-    },
-    otherImplants: {
-      hasInsulinPump: false,
-      hasIUD: false, iudType: null,
-      hasInfusionPort: false,
-      hasPenileImplant: false,
-      hasDrugPump: false,
-    },
-    renal: {
-      onDialysis: false,
-      hasCKD: false, ckdStage: null,
-      hasSingleKidney: false,
-    },
-    allergy: {
-      hasPriorContrastReaction: false,
-      reactionSeverity: null,
-    },
-    pregnancy: {
-      isPossiblyPregnant: true,
-      trimester: 1,
-      isBreastfeeding: false,
-    },
-    claustrophobia: {
-      hasClaustrophobia: false,
-      severity: null,
-      hadPriorMRIFailure: false,
-    },
-    surgical: {
-      hadPriorSurgery: false,
-      surgeryDetails: null,
-    },
-    tattoosPiercings: {
-      hasPermanentTattoos: false,
-      hasNonRemovablePiercings: false,
-    },
-    transdermalPatches: {
-      hasTransdermalPatch: false,
-      patchDetails: null,
-    },
-  };
-
-  // CT screening — mild prior contrast reaction (Tier 3, awareness only)
-  const ctScreening_tier3_mildReaction = {
-    allergy: {
-      hasPriorContrastReaction: true,
-      reactionSeverity: 'mild',
-    },
-    renal: {
-      onDialysis: false,
-      hasCKD: false, ckdStage: null,
-      hasSingleKidney: false,
-    },
-    pregnancy: {
-      isPossiblyPregnant: false,
-      trimester: null,
-      isBreastfeeding: false,
-    },
-    surgical: {
-      hadPriorSurgery: false,
-      surgeryDetails: null,
-    },
-  };
-
-  // Mammography screening — clean
-  const mammographyScreening_clean = {
-    pregnancy: {
-      isPossiblyPregnant: false,
-      trimester: null,
-      isBreastfeeding: false,
-    },
-    breastHistory: {
-      hadPriorBreastSurgery: false,
-      hasBreastImplants: false,
-      implantType: null,
-    },
-    lastMammogramDate: '2023-04-15',
-    familyHistoryBreastCancer: false,
-    currentSymptoms: false,
-    symptomsDescription: null,
-  };
-
-  // ── Consent records ─────────────────────────────────────────
-  const consents = [
-
-    // ──────────────────────────────────────────────────────────
-    // Record 1 — draft_stage1
-    // MRI with Gadolinium. Patient signed + screened (Tier 3 only).
-    // Awaiting radiographer post-procedure report.
-    // ──────────────────────────────────────────────────────────
-    {
-      id: IDS.con1,
-      status: 'draft_stage1',
-      modality: 'mri_with_gadolinium',
-      language: 'en',
-      patient: {
-        name: 'Emeka Nwosu',
-        dob: '1980-03-15',
-        gender: 'male',
-        phone: '08012345678',
-        address: '14 Bode Thomas Street, Surulere, Lagos',
-      },
-      tierFlags: {
-        tier1: [],
-        tier2: [],
-        tier3: ['orthopaedic_hardware_over_6_weeks'],
-      },
-      stage1: {
-        completedAt: '2025-01-15T09:42:00.000Z',
-        consentVersion: 'v1.0-en',
-        consentAcknowledged: true,
-        patientSignature: 'Emeka Nwosu',
-        screening: mriScreening_tier3_ortho,
-      },
-      stage2: null,
-      stage3: null,
-      radiologistReview: null,
-      createdAt: '2025-01-15T09:30:00.000Z',
-      updatedAt: '2025-01-15T09:42:00.000Z',
-      closedAt: null,
-    },
-
-    // ──────────────────────────────────────────────────────────
-    // Record 2 — draft_stage2
-    // CT with IV contrast. Stages 1 & 2 complete.
-    // Awaiting nurse vitals check (Stage 3).
-    // ──────────────────────────────────────────────────────────
-    {
-      id: IDS.con2,
-      status: 'draft_stage2',
-      modality: 'ct_with_iv_contrast',
-      language: 'en',
-      patient: {
-        name: 'Ngozi Adekunle',
-        dob: '1987-07-22',
-        gender: 'female',
-        phone: '07098765432',
-        address: '5 Gana Street, Maitama, Abuja',
-      },
-      tierFlags: {
-        tier1: [],
-        tier2: [],
-        tier3: ['prior_mild_contrast_reaction'],
-      },
-      stage1: {
-        completedAt: '2025-01-10T10:15:00.000Z',
-        consentVersion: 'v1.0-en',
-        consentAcknowledged: true,
-        patientSignature: 'Ngozi Adekunle',
-        screening: ctScreening_tier3_mildReaction,
-      },
-      stage2: {
-        completedAt: '2025-01-10T12:30:00.000Z',
-        performedBy: IDS.radiographer,
-        performedByName: 'Chidi Eze',
-        procedureNotes: 'CT abdomen and pelvis with IV contrast. Patient tolerated procedure well. No acute adverse reaction observed. Images of diagnostic quality obtained.',
-        contrastAdministered: true,
-        contrastAgent: 'Omnipaque 300',
-        contrastVolume: '80ml',
-        complications: 'none',
-        radiographerSignature: 'Chidi Eze',
-      },
-      stage3: null,
-      radiologistReview: null,
-      createdAt: '2025-01-10T10:00:00.000Z',
-      updatedAt: '2025-01-10T12:30:00.000Z',
-      closedAt: null,
-    },
-
-    // ──────────────────────────────────────────────────────────
-    // Record 3 — flagged_tier1
-    // MRI without contrast. Absolute contraindication: non-MR-conditional
-    // pacemaker. Procedure locked; radiologist sign-off required.
-    // ──────────────────────────────────────────────────────────
-    {
-      id: IDS.con3,
-      status: 'flagged_tier1',
-      modality: 'mri_without_contrast',
-      language: 'en',
-      patient: {
-        name: 'Babatunde Okafor',
-        dob: '1963-11-05',
-        gender: 'male',
-        phone: '08098765432',
-        address: '22 Bodija Estate, Ibadan, Oyo State',
-      },
-      tierFlags: {
-        tier1: ['non_mr_conditional_pacemaker'],
-        tier2: [],
-        tier3: [],
-      },
-      stage1: {
-        completedAt: '2025-01-08T11:00:00.000Z',
-        consentVersion: 'v1.0-en',
-        consentAcknowledged: true,
-        patientSignature: 'Babatunde Okafor',
-        screening: mriScreening_tier1_pacemaker,
-      },
-      stage2: null,
-      stage3: null,
-      radiologistReview: {
-        reviewedAt: null,
-        reviewedBy: null,
-        reviewedByName: null,
-        decision: null,
-        notes: null,
-      },
-      createdAt: '2025-01-08T10:45:00.000Z',
-      updatedAt: '2025-01-08T11:00:00.000Z',
-      closedAt: null,
-    },
-
-    // ──────────────────────────────────────────────────────────
-    // Record 4 — pending_review
-    // MRI with Gadolinium. Tier 2 flag: first-trimester pregnancy.
-    // Procedure may proceed only after radiologist sign-off.
-    // ──────────────────────────────────────────────────────────
-    {
-      id: IDS.con4,
-      status: 'pending_review',
-      modality: 'mri_with_gadolinium',
-      language: 'en',
-      patient: {
-        name: 'Amina Yusuf',
-        dob: '2001-09-12',
-        gender: 'female',
-        phone: '08123456789',
-        address: '8 Nassarawa GRA, Kano, Kano State',
-      },
-      tierFlags: {
-        tier1: [],
-        tier2: ['first_trimester_pregnancy_with_gadolinium'],
-        tier3: [],
-      },
-      stage1: {
-        completedAt: '2025-01-20T08:55:00.000Z',
-        consentVersion: 'v1.0-en',
-        consentAcknowledged: true,
-        patientSignature: 'Amina Yusuf',
-        screening: mriScreening_tier2_pregnancy,
-      },
-      stage2: null,
-      stage3: null,
-      radiologistReview: {
-        reviewedAt: null,
-        reviewedBy: null,
-        reviewedByName: null,
-        decision: null,
-        notes: null,
-      },
-      createdAt: '2025-01-20T08:40:00.000Z',
-      updatedAt: '2025-01-20T08:55:00.000Z',
-      closedAt: null,
-    },
-
-    // ──────────────────────────────────────────────────────────
-    // Record 5 — closed
-    // Mammography. All three stages complete. PDF-exportable.
-    // ──────────────────────────────────────────────────────────
-    {
-      id: IDS.con5,
-      status: 'closed',
-      modality: 'mammography',
-      language: 'en',
-      patient: {
-        name: 'Chidinma Obi',
-        dob: '1971-04-30',
-        gender: 'female',
-        phone: '08034567890',
-        address: '3 Rumuola Road, Port Harcourt, Rivers State',
-      },
-      tierFlags: {
-        tier1: [],
-        tier2: [],
-        tier3: [],
-      },
-      stage1: {
-        completedAt: '2024-12-20T09:00:00.000Z',
-        consentVersion: 'v1.0-en',
-        consentAcknowledged: true,
-        patientSignature: 'Chidinma Obi',
-        screening: mammographyScreening_clean,
-      },
-      stage2: {
-        completedAt: '2024-12-20T10:15:00.000Z',
-        performedBy: IDS.radiographer,
-        performedByName: 'Chidi Eze',
-        procedureNotes: 'Bilateral mammography, CC and MLO views. Standard screening protocol followed. Patient cooperative throughout. No technical repeat required.',
-        contrastAdministered: false,
-        contrastAgent: null,
-        contrastVolume: null,
-        complications: 'none',
-        radiographerSignature: 'Chidi Eze',
-      },
-      stage3: {
-        completedAt: '2024-12-20T10:45:00.000Z',
-        performedBy: IDS.nurse,
-        performedByName: 'Amaka Obi',
-        vitals: {
-          bp: '118/76',
-          pulse: '72',
-          spo2: '99',
-          temperature: '36.5',
-          rr: '16',
-        },
-        patientCondition: 'Stable. Patient comfortable and fully oriented. No complaints. Cleared for discharge.',
-        nurseSignature: 'Amaka Obi',
-      },
-      radiologistReview: null,
-      createdAt: '2024-12-20T08:45:00.000Z',
-      updatedAt: '2024-12-20T10:45:00.000Z',
-      closedAt: '2024-12-20T10:45:00.000Z',
-    },
-  ];
-
-  return { users, consents };
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  Init / Seed
-// ═══════════════════════════════════════════════════════════════
-
-function seed() {
-  console.log('[DB] No database file found — initializing with demo users…');
-  const data = buildSeedData();
-  data.consents = []; // Start clean — no auto-populated consent records
-  write(data);
-  console.log(`[DB] Initialized with ${data.users.length} users and 0 consent records.`);
-}
-
-function loadDemoConsents() {
-  const data = read();
-  const { consents } = buildSeedData();
-  data.consents = consents;
-  write(data);
-  return consents.length;
-}
-
-function init() {
-  if (!fs.existsSync(DB_PATH)) {
-    seed();
-  } else {
-    const db = read();
-    console.log(
-      `[DB] Loaded: ${(db.users || []).length} users, ` +
-      `${(db.consents || []).length} consent records.`
-    );
+/**
+ * Remove ALL documents from a collection.
+ * Returns the number of deleted rows.
+ */
+function removeAll(collection) {
+  try {
+    const info = db.prepare(`DELETE FROM ${collection}`).run();
+    return info.changes;
+  } catch(err) {
+    console.error(`Error in removeAll(${collection}):`, err);
+    return 0;
   }
 }
 
-init();
+// ═══════════════════════════════════════════════════════════════
+//  Demo consent seed data
+// ═══════════════════════════════════════════════════════════════
+
+function loadDemoConsents() {
+  // Fixed IDs for cross-reference consistency
+  const IDS = {
+    radiographer : '11111111-0000-0000-0000-000000000001',
+    nurse        : '22222222-0000-0000-0000-000000000002',
+    con1         : 'c0000001-0000-0000-0000-000000000001',
+    con2         : 'c0000002-0000-0000-0000-000000000002',
+    con3         : 'c0000003-0000-0000-0000-000000000003',
+    con4         : 'c0000004-0000-0000-0000-000000000004',
+    con5         : 'c0000005-0000-0000-0000-000000000005',
+  };
+
+  const consents = [
+    // Record 1 — draft_stage1 (awaiting radiographer report)
+    {
+      id: IDS.con1, status: 'draft_stage1', modality: 'mri_with_gadolinium',
+      language: 'en', consentMode: 'assisted', bodyPart: null,
+      patient: { name: 'Emeka Nwosu', dob: '1980-03-15', gender: 'male', phone: '08012345678', hospitalNumber: null, referringDoctor: null },
+      tierFlags: { tier1: [], tier2: [], tier3: ['orthopaedic_hardware_over_6_weeks'] },
+      stage1: { completedAt: '2025-01-15T09:42:00.000Z', consentVersion: 'v1.0-en', consentAcknowledged: true, patientSignature: 'Emeka Nwosu', screening: { orthopaedic: { hasScrewsPlatesRods: true, isLessThan6WeeksAgo: false } } },
+      stage2: null, stage3: null, radiologistReview: null,
+      createdAt: '2025-01-15T09:30:00.000Z', updatedAt: '2025-01-15T09:42:00.000Z', closedAt: null,
+    },
+    // Record 2 — draft_stage2 (awaiting nurse vitals)
+    {
+      id: IDS.con2, status: 'draft_stage2', modality: 'ct_with_iv_contrast',
+      language: 'en', consentMode: 'assisted', bodyPart: null,
+      patient: { name: 'Ngozi Adekunle', dob: '1987-07-22', gender: 'female', phone: '07098765432', hospitalNumber: null, referringDoctor: null },
+      tierFlags: { tier1: [], tier2: [], tier3: ['prior_mild_contrast_reaction'] },
+      stage1: { completedAt: '2025-01-10T10:15:00.000Z', consentVersion: 'v1.0-en', consentAcknowledged: true, patientSignature: 'Ngozi Adekunle', screening: {} },
+      stage2: { completedAt: '2025-01-10T12:30:00.000Z', performedBy: IDS.radiographer, performedByName: 'Chidi Eze', procedureNotes: 'CT abdomen and pelvis with IV contrast. Patient tolerated procedure well. No acute adverse reaction observed.', contrastAdministered: true, contrastAgent: 'Omnipaque 300', contrastVolume: '80ml', complications: 'none', radiographerSignature: 'Chidi Eze' },
+      stage3: null, radiologistReview: null,
+      createdAt: '2025-01-10T10:00:00.000Z', updatedAt: '2025-01-10T12:30:00.000Z', closedAt: null,
+    },
+    // Record 3 — flagged_tier1 (absolute contraindication, awaiting radiologist)
+    {
+      id: IDS.con3, status: 'flagged_tier1', modality: 'mri_without_contrast',
+      language: 'en', consentMode: 'assisted', bodyPart: null,
+      patient: { name: 'Babatunde Okafor', dob: '1963-11-05', gender: 'male', phone: '08098765432', hospitalNumber: null, referringDoctor: null },
+      tierFlags: { tier1: ['non_mr_conditional_pacemaker'], tier2: [], tier3: [] },
+      stage1: { completedAt: '2025-01-08T11:00:00.000Z', consentVersion: 'v1.0-en', consentAcknowledged: true, patientSignature: 'Babatunde Okafor', screening: { cardiac: { hasPacemaker: true, pacemakerMRStatus: 'non_mr_conditional' } } },
+      stage2: null, stage3: null,
+      radiologistReview: { reviewedAt: null, reviewedBy: null, reviewedByName: null, decision: null, notes: null },
+      createdAt: '2025-01-08T10:45:00.000Z', updatedAt: '2025-01-08T11:00:00.000Z', closedAt: null,
+    },
+    // Record 4 — pending_review (tier2 flag, awaiting radiologist)
+    {
+      id: IDS.con4, status: 'pending_review', modality: 'mri_with_gadolinium',
+      language: 'en', consentMode: 'assisted', bodyPart: null,
+      patient: { name: 'Amina Yusuf', dob: '2001-09-12', gender: 'female', phone: '08123456789', hospitalNumber: null, referringDoctor: null },
+      tierFlags: { tier1: [], tier2: ['first_trimester_pregnancy_with_gadolinium'], tier3: [] },
+      stage1: { completedAt: '2025-01-20T08:55:00.000Z', consentVersion: 'v1.0-en', consentAcknowledged: true, patientSignature: 'Amina Yusuf', screening: { pregnancy: { isPossiblyPregnant: true, trimester: 1 } } },
+      stage2: null, stage3: null,
+      radiologistReview: { reviewedAt: null, reviewedBy: null, reviewedByName: null, decision: null, notes: null },
+      createdAt: '2025-01-20T08:40:00.000Z', updatedAt: '2025-01-20T08:55:00.000Z', closedAt: null,
+    },
+    // Record 5 — closed (all stages complete, PDF-exportable)
+    {
+      id: IDS.con5, status: 'closed', modality: 'mammography',
+      language: 'en', consentMode: 'assisted', bodyPart: null,
+      patient: { name: 'Chidinma Obi', dob: '1971-04-30', gender: 'female', phone: '08034567890', hospitalNumber: null, referringDoctor: null },
+      tierFlags: { tier1: [], tier2: [], tier3: [] },
+      stage1: { completedAt: '2024-12-20T09:00:00.000Z', consentVersion: 'v1.0-en', consentAcknowledged: true, patientSignature: 'Chidinma Obi', screening: {} },
+      stage2: { completedAt: '2024-12-20T10:15:00.000Z', performedBy: IDS.radiographer, performedByName: 'Chidi Eze', procedureNotes: 'Bilateral mammography, CC and MLO views. Standard screening protocol followed. Patient cooperative throughout.', contrastAdministered: false, contrastAgent: null, contrastVolume: null, complications: 'none', radiographerSignature: 'Chidi Eze' },
+      stage3: { completedAt: '2024-12-20T10:45:00.000Z', performedBy: IDS.nurse, performedByName: 'Amaka Obi', vitals: { bp: '118/76', pulse: '72', spo2: '99', temperature: '36.5', rr: '16' }, patientCondition: 'Stable. Patient comfortable and fully oriented. Cleared for discharge.', nurseSignature: 'Amaka Obi' },
+      radiologistReview: null,
+      createdAt: '2024-12-20T08:45:00.000Z', updatedAt: '2024-12-20T10:45:00.000Z', closedAt: '2024-12-20T10:45:00.000Z',
+    },
+  ];
+
+  // Replace all existing consents with demo records (transaction)
+  const deleteAll = db.prepare('DELETE FROM consents');
+  const insertOne = db.prepare(`
+    INSERT OR REPLACE INTO consents
+      (id, status, modality, language, consentMode, bodyPart, patient, tierFlags,
+       stage1, stage2, stage3, radiologistReview, createdAt, updatedAt, closedAt)
+    VALUES
+      (@id, @status, @modality, @language, @consentMode, @bodyPart, @patient, @tierFlags,
+       @stage1, @stage2, @stage3, @radiologistReview, @createdAt, @updatedAt, @closedAt)
+  `);
+
+  const run = db.transaction(() => {
+    deleteAll.run();
+    for (const c of consents) {
+      insertOne.run({
+        ...c,
+        patient           : JSON.stringify(c.patient),
+        tierFlags         : JSON.stringify(c.tierFlags),
+        stage1            : c.stage1            ? JSON.stringify(c.stage1)            : null,
+        stage2            : c.stage2            ? JSON.stringify(c.stage2)            : null,
+        stage3            : c.stage3            ? JSON.stringify(c.stage3)            : null,
+        radiologistReview : c.radiologistReview ? JSON.stringify(c.radiologistReview) : null,
+      });
+    }
+  });
+
+  run();
+  console.log(`[DB] Loaded ${consents.length} demo consent records.`);
+  return consents.length;
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  Exports
 // ═══════════════════════════════════════════════════════════════
 
-module.exports = { read, write, all, insert, update, remove, findOne, findMany, filter, loadDemoConsents };
+module.exports = { 
+  all, insert, update, remove, removeAll, findOne, findMany, filter, loadDemoConsents,
+  // the following are deprecated but kept for avoiding crashing external code
+  read: () => {}, 
+  write: () => {} 
+};

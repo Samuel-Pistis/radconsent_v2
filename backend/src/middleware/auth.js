@@ -1,8 +1,35 @@
 'use strict';
 
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
+const fs     = require('fs');
+const path   = require('path');
+const crypto = require('crypto');
 
-const JWT_SECRET     = process.env.JWT_SECRET     || 'radconsent_dev_secret_2025_change_in_production';
+// ── JWT Secret bootstrap ─────────────────────────────────────
+// If JWT_SECRET env var is set, use it directly.
+// Otherwise, auto-generate a strong random secret on first run
+// and persist it to backend/.env so it survives restarts.
+function loadOrGenerateSecret() {
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+
+  const envPath = path.join(__dirname, '..', '..', '.env');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const m = line.match(/^JWT_SECRET=(.+)$/);
+      if (m) return m[1].trim();
+    }
+  }
+
+  // Generate a fresh 64-byte hex secret
+  const secret = crypto.randomBytes(64).toString('hex');
+  const entry  = `JWT_SECRET=${secret}\n`;
+  fs.appendFileSync(envPath, entry, 'utf8');
+  console.log('[Auth] Generated new JWT_SECRET and saved to backend/.env');
+  return secret;
+}
+
+const JWT_SECRET     = loadOrGenerateSecret();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
 // ═══════════════════════════════════════════════════════════════
