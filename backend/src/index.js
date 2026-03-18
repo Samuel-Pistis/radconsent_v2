@@ -62,13 +62,7 @@ app.use('/api/audit',    auditRouter);
 app.use('/api/settings', settingsRouter);
 
 // ── Serve frontend ──────────────────────────────────────────
-const fs = require('fs');
 const FRONTEND = path.join(__dirname, '..', '..', 'frontend', 'dist');
-console.log('[FRONTEND] path:', FRONTEND);
-console.log('[FRONTEND] exists:', fs.existsSync(FRONTEND));
-if (fs.existsSync(FRONTEND)) {
-  console.log('[FRONTEND] contents:', fs.readdirSync(FRONTEND));
-}
 app.use(express.static(FRONTEND));
 
 // Catch-all: return index.html for any non-API route
