@@ -4,7 +4,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_FILE = path.join(__dirname, 'database.sqlite');
+const DB_FILE = process.env.DB_PATH || path.join(__dirname, 'database.sqlite');
 const LEGACY_JSON = path.join(__dirname, 'data.json');
 
 // Connect to SQLite

@@ -1,0 +1,14 @@
+node_modules
+backend/node_modules
+frontend/node_modules
+frontend/dist
+backend/src/db/*.sqlite
+backend/src/db/*.sqlite-shm
+backend/src/db/*.sqlite-wal
+backend/src/db/*.bak
+backend/src/db/data.json
+backend/.env
+.env
+*.log
+.DS_Store
+Thumbs.db
