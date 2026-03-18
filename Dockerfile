@@ -7,6 +7,7 @@ COPY frontend/package*.json frontend/
 RUN cd frontend && npm install
 
 COPY frontend/src frontend/src
+COPY frontend/public frontend/public
 COPY frontend/index.html frontend/index.html
 COPY frontend/vite.config.js frontend/vite.config.js
 RUN cd frontend && npm run build
