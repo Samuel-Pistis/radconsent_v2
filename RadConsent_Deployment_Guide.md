@@ -75,7 +75,7 @@ apt install docker.io docker-compose -y
 ### Step 3: Upload your Code
 You can clone your code onto the server via GitHub:
 ```bash
-git clone https://github.com/your-username/radconsent.git
+git clone https://github.com/Samuel-Pistis/radconsent_v2.git radconsent
 cd radconsent
 ```
 
@@ -89,9 +89,14 @@ services:
   app:
     build: .
     restart: always
+    environment:
+      - NODE_ENV=production
+      - DB_PATH=/app/data/database.sqlite
+      # Generate a strong secret: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+      - JWT_SECRET=REPLACE_WITH_STRONG_SECRET
     volumes:
       # This saves your SQLite database safely on the server's hard drive!
-      - ./data:/app/backend/data
+      - ./data:/app/data
       
   caddy:
     image: caddy:latest
