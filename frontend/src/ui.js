@@ -2223,11 +2223,13 @@ function downloadPDF(id) {
   toast('Generating PDF...', 'info', 2500);
 
   const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '0';
-  container.style.width = '800px'; 
+  container.style.position = 'fixed';
+  container.style.top = '-9999px';
+  container.style.left = '0';
+  container.style.width = '794px';
   container.style.background = '#fff';
+  container.style.color = '#111';
+  container.style.colorScheme = 'light';
   container.innerHTML = contentHtml;
   document.body.appendChild(container);
 
@@ -2235,7 +2237,7 @@ function downloadPDF(id) {
     margin:       10,
     filename:     `RadConsent-${rec.id}.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
+    html2canvas:  { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, backgroundColor: '#ffffff', logging: false },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak:    { mode: 'css', avoid: 'table, h2, h3, .sig-box, .footer' }
   };
