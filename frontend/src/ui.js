@@ -2222,7 +2222,7 @@ function downloadPDF(id) {
         ${row('Procedure completed as planned', s2.completedAsPlanned)}
         ${row('Complications', s2.complications || '—')}
         ${s2.procedureNotes ? row('Procedure Notes', s2.procedureNotes) : ''}
-        ${row('Radiographer Signature', (s2.radiographerSignature || '') + (s2.radiographerSignatureImage ? `<br><img src="\${s2.radiographerSignatureImage}" style="max-height:50px;max-width:200px;margin-top:6px;mix-blend-mode:multiply">` : ''))}
+        ${row('Radiographer Signature', (s2.radiographerSignature || '') + (s2.radiographerSignatureImage ? `<br><img src="${s2.radiographerSignatureImage}" style="max-height:50px;max-width:200px;margin-top:6px;mix-blend-mode:multiply">` : ''))}
         ${row('Completed At', fmtDt(s2.completedAt))}
       </table>
 
@@ -2232,7 +2232,7 @@ function downloadPDF(id) {
         ${row('Blood Pressure', s3.vitals?.bp ? s3.vitals.bp + ' mmHg' : '—')}
         ${row('Pulse', s3.vitals?.pulse ? s3.vitals.pulse + ' bpm' : '—')}
         ${row('Patient Condition', s3.patientCondition)}
-        ${row('Nurse Signature', (s3.nurseSignature || '') + (s3.nurseSignatureImage ? `<br><img src="\${s3.nurseSignatureImage}" style="max-height:50px;max-width:200px;margin-top:6px;mix-blend-mode:multiply">` : ''))}
+        ${row('Nurse Signature', (s3.nurseSignature || '') + (s3.nurseSignatureImage ? `<br><img src="${s3.nurseSignatureImage}" style="max-height:50px;max-width:200px;margin-top:6px;mix-blend-mode:multiply">` : ''))}
         ${row('Completed At', fmtDt(s3.completedAt))}
       </table>
 
@@ -3480,15 +3480,18 @@ function rvSigTopazClear() {
    NEW CONSENT — RENDER
 ═══════════════════════════════════════════════════════════════ */
 function renderNewConsent() {
+  const lang = state.lang || 'en';
+  const L = NC_LABELS[lang] || NC_LABELS.en;
+
   return `
     <div class="page-header">
       <div>
         <button class="btn btn-ghost btn-sm" onclick="navigate('consents')"
           style="margin-bottom:6px;margin-left:-6px;gap:4px">
-          ← Back to Records
+          ← ${lang === 'yo' ? 'Padà sí Àkọsílẹ̀' : 'Back to Records'}
         </button>
-        <div class="page-title">New Consent Session</div>
-        <div class="page-subtitle">Complete the form below to start the patient consent workflow</div>
+        <div class="page-title">${L.submit.replace(' →', '')}</div>
+        <div class="page-subtitle">${lang === 'yo' ? 'Kọ fọ́ọ̀mù ìsàlẹ̀ yìí láti bẹ̀rẹ̀ ìlànà ìfohùnsí' : 'Complete the form below to start the patient consent workflow'}</div>
       </div>
     </div>
 
@@ -3496,43 +3499,43 @@ function renderNewConsent() {
     <div class="card mb-4">
       <div class="nc-section-header">
         <div class="nc-section-num">1</div>
-        <div class="nc-section-title">Patient Details</div>
+        <div class="nc-section-title">${L.details}</div>
       </div>
       <div class="nc-section-body">
         <div class="form-row mb-3">
           <div class="form-group">
-            <label class="form-label" for="nc-name">Full Name <span class="req">*</span></label>
+            <label class="form-label" for="nc-name">${L.name} <span class="req">*</span></label>
             <input class="form-control" type="text" id="nc-name"
               placeholder="e.g. Emeka Nwosu" autocomplete="off" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="nc-hosp-num">Hospital Number / Patient ID</label>
+            <label class="form-label" for="nc-hosp-num">${L.hospNum}</label>
             <input class="form-control" type="text" id="nc-hosp-num"
               placeholder="e.g. HN/2025/00123" />
           </div>
         </div>
         <div class="form-row mb-3">
           <div class="form-group">
-            <label class="form-label" for="nc-dob">Date of Birth</label>
+            <label class="form-label" for="nc-dob">${L.dob}</label>
             <input class="form-control" type="date" id="nc-dob" />
           </div>
           <div class="form-group">
-            <label class="form-label">Sex <span class="req">*</span></label>
+            <label class="form-label">${L.sex} <span class="req">*</span></label>
             <div class="sex-btn-group">
-              <button class="sex-btn" data-sex="male"   onclick="selectSex('male')">Male</button>
-              <button class="sex-btn" data-sex="female" onclick="selectSex('female')">Female</button>
-              <button class="sex-btn" data-sex="other"  onclick="selectSex('other')">Other</button>
+              <button class="sex-btn" data-sex="male"   onclick="selectSex('male')">${L.male}</button>
+              <button class="sex-btn" data-sex="female" onclick="selectSex('female')">${L.female}</button>
+              <button class="sex-btn" data-sex="other"  onclick="selectSex('other')">${L.other}</button>
             </div>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="nc-phone">Phone Number</label>
+            <label class="form-label" for="nc-phone">${L.phone}</label>
             <input class="form-control" type="tel" id="nc-phone"
               placeholder="e.g. 08012345678" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="nc-ref-doctor">Referring Doctor</label>
+            <label class="form-label" for="nc-ref-doctor">${L.refDr}</label>
             <input class="form-control" type="text" id="nc-ref-doctor"
               placeholder="e.g. Dr. Adeyemi" />
           </div>
@@ -3544,7 +3547,7 @@ function renderNewConsent() {
     <div class="card mb-4">
       <div class="nc-section-header">
         <div class="nc-section-num">2</div>
-        <div class="nc-section-title">Procedure &amp; Modality <span class="req">*</span></div>
+        <div class="nc-section-title">${L.modality} <span class="req">*</span></div>
       </div>
       <div class="nc-section-body">
         <div class="modality-grid mb-4">
@@ -3554,8 +3557,8 @@ function renderNewConsent() {
             <div class="modality-check">${IC.check}</div>
             <div class="modality-icon mi-mri">MRI</div>
             <div class="modality-name">MRI</div>
-            <div class="modality-desc">Without contrast agent</div>
-            <span class="modality-tag">Safety screening</span>
+            <div class="modality-desc">${lang === 'yo' ? 'Láìlo oògùn ìfohùn-hàn' : 'Without contrast agent'}</div>
+            <span class="modality-tag">${lang === 'yo' ? 'Àyẹ̀wò àìbò' : 'Safety screening'}</span>
           </div>
 
           <div class="modality-card" data-mod="mri_with_gadolinium"
@@ -3563,8 +3566,8 @@ function renderNewConsent() {
             <div class="modality-check">${IC.check}</div>
             <div class="modality-icon mi-mri">MRI<sup>+</sup></div>
             <div class="modality-name">MRI + Gadolinium</div>
-            <div class="modality-desc">With gadolinium contrast</div>
-            <span class="modality-tag">Safety screening</span>
+            <div class="modality-desc">${lang === 'yo' ? 'Lílo oògùn ìfohùn-hàn gadolinium' : 'With gadolinium contrast'}</div>
+            <span class="modality-tag">${lang === 'yo' ? 'Àyẹ̀wò àìbò' : 'Safety screening'}</span>
           </div>
 
           <div class="modality-card" data-mod="ct_without_contrast"
@@ -3572,7 +3575,7 @@ function renderNewConsent() {
             <div class="modality-check">${IC.check}</div>
             <div class="modality-icon mi-ct">CT</div>
             <div class="modality-name">CT Scan</div>
-            <div class="modality-desc">Without contrast agent</div>
+            <div class="modality-desc">${lang === 'yo' ? 'Láìlo oògùn ìfohùn-hàn' : 'Without contrast agent'}</div>
           </div>
 
           <div class="modality-card" data-mod="ct_with_iv_contrast"
@@ -3580,7 +3583,7 @@ function renderNewConsent() {
             <div class="modality-check">${IC.check}</div>
             <div class="modality-icon mi-ct">CT<sup>+</sup></div>
             <div class="modality-name">CT + IV Contrast</div>
-            <div class="modality-desc">With intravenous contrast</div>
+            <div class="modality-desc">${lang === 'yo' ? 'Lílo oògùn ìfohùn-hàn' : 'With intravenous contrast'}</div>
           </div>
 
           <div class="modality-card" data-mod="mammography"
@@ -3588,12 +3591,12 @@ function renderNewConsent() {
             <div class="modality-check">${IC.check}</div>
             <div class="modality-icon mi-mmg">MMG</div>
             <div class="modality-name">Mammography</div>
-            <div class="modality-desc">Breast X-ray imaging</div>
+            <div class="modality-desc">${lang === 'yo' ? 'Àyẹ̀wò ọmú' : 'Breast X-ray imaging'}</div>
           </div>
 
         </div>
         <div class="form-group" style="max-width:500px">
-          <label class="form-label" for="nc-body-part">Body Part / Region <span class="req">*</span></label>
+          <label class="form-label" for="nc-body-part">${L.bodyPart} <span class="req">*</span></label>
           <input class="form-control" type="text" id="nc-body-part"
             placeholder="e.g. Brain, Lumbar spine, Right knee, Abdomen &amp; pelvis" />
         </div>
@@ -3601,31 +3604,30 @@ function renderNewConsent() {
     </div>
 
     <!-- ── Section 3: Pre-Procedure Clinical Data ── -->
-    <!-- Hidden by default, toggled via selectModality() if CT or MRI -->
     <div class="card mb-4" id="nc-clinical-params" style="display: none;">
       <div class="nc-section-header">
         <div class="nc-section-num">3</div>
-        <div class="nc-section-title">Pre-Procedure Clinical Data <span class="text-sm font-normal text-muted">(Optional)</span></div>
+        <div class="nc-section-title">${L.clinical} <span class="text-sm font-normal text-muted">(${L.optional})</span></div>
       </div>
       <div class="nc-section-body">
         <div style="font-size:13px;color:var(--c-text-sec);margin-bottom:16px">
-          Enter latest relevant laboratory results and pre-procedure vitals for CT and MRI patients.
+          ${L.clinicalHint}
         </div>
         
         <div class="form-row mb-3">
           <div class="form-group">
-            <label class="form-label" for="nc-urea">Urea <span class="text-muted">(mmol/L)</span></label>
+            <label class="form-label" for="nc-urea">${L.urea} <span class="text-muted">(mmol/L)</span></label>
             <input class="form-control" type="number" step="0.1" id="nc-urea" placeholder="e.g. 5.1" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="nc-creatinine">Creatinine <span class="text-muted">(µmol/L)</span></label>
+            <label class="form-label" for="nc-creatinine">${L.creatinine} <span class="text-muted">(µmol/L)</span></label>
             <input class="form-control" type="number" step="1" id="nc-creatinine" placeholder="e.g. 85" />
           </div>
         </div>
 
         <div class="form-row mb-3">
           <div class="form-group">
-            <label class="form-label">Blood Pressure <span class="text-muted">(mmHg)</span></label>
+            <label class="form-label">${L.bp} <span class="text-muted">(mmHg)</span></label>
             <div style="display:flex;align-items:center;gap:8px">
               <input class="form-control" type="number" id="nc-bp-sys" placeholder="Sys" style="flex:1" />
               <span style="color:var(--c-border)">/</span>
@@ -3633,25 +3635,25 @@ function renderNewConsent() {
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label" for="nc-pulse">Heart Rate <span class="text-muted">(bpm)</span></label>
+            <label class="form-label" for="nc-pulse">${L.hr} <span class="text-muted">(bpm)</span></label>
             <input class="form-control" type="number" id="nc-pulse" placeholder="e.g. 72" />
           </div>
         </div>
 
         <div class="form-row mb-3">
           <div class="form-group">
-            <label class="form-label" for="nc-spo2">SpO2 <span class="text-muted">(%)</span></label>
+            <label class="form-label" for="nc-spo2">${L.spo2} <span class="text-muted">(%)</span></label>
             <input class="form-control" type="number" id="nc-spo2" placeholder="e.g. 98" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="nc-temp">Temperature <span class="text-muted">(°C)</span></label>
+            <label class="form-label" for="nc-temp">${L.temp} <span class="text-muted">(°C)</span></label>
             <input class="form-control" type="number" step="0.1" id="nc-temp" placeholder="e.g. 36.6" />
           </div>
         </div>
         
         <div class="form-row">
           <div class="form-group" style="max-width:300px">
-            <label class="form-label" for="nc-weight">Weight <span class="text-muted">(kg)</span></label>
+            <label class="form-label" for="nc-weight">${L.weight} <span class="text-muted">(kg)</span></label>
             <input class="form-control" type="number" step="0.1" id="nc-weight" placeholder="e.g. 75.5" />
           </div>
         </div>
@@ -3663,7 +3665,7 @@ function renderNewConsent() {
     <div class="card mb-4">
       <div class="nc-section-header">
         <div class="nc-section-num">4</div>
-        <div class="nc-section-title">Patient's Preferred Language</div>
+        <div class="nc-section-title">${L.lang}</div>
       </div>
       <div class="nc-section-body">
         <div class="lang-btn-group">
@@ -3674,7 +3676,6 @@ function renderNewConsent() {
           <button class="lang-btn" data-lang="yo" onclick="selectLanguage('yo')">
             <span class="lang-flag">🟢</span>
             <span class="lang-code">Yorùbá</span>
-            <span class="lang-phase">EN only</span>
           </button>
           <button class="lang-btn" data-lang="ig" onclick="selectLanguage('ig')">
             <span class="lang-flag">🔴</span>
@@ -3688,8 +3689,7 @@ function renderNewConsent() {
           </button>
         </div>
         <p class="form-hint mt-3">
-          The selected language is recorded on the consent record.
-          All Phase 1 content is displayed in English.
+          ${L.langHint}
         </p>
       </div>
     </div>
@@ -3698,14 +3698,14 @@ function renderNewConsent() {
     <div class="card mb-6">
       <div class="nc-section-header">
         <div class="nc-section-num">5</div>
-        <div class="nc-section-title">Consent Mode</div>
+        <div class="nc-section-title">${L.modeTitle}</div>
       </div>
       <div class="nc-section-body">
         <div class="consent-mode-grid">
 
           <div class="consent-mode-card selected" data-mode="assisted"
             onclick="selectConsentMode('assisted')">
-            <div class="consent-mode-default">Default</div>
+            <div class="consent-mode-default">${lang === 'yo' ? 'Aiyipada' : 'Default'}</div>
             <div class="consent-mode-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -3715,10 +3715,9 @@ function renderNewConsent() {
                 <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
             </div>
-            <div class="consent-mode-name">Staff-Assisted</div>
+            <div class="consent-mode-name">${L.assisted}</div>
             <div class="consent-mode-desc">
-              A radiographer or nurse guides the patient through the form.
-              Recommended for most patients.
+              ${L.assistedDesc}
             </div>
           </div>
 
@@ -3731,10 +3730,9 @@ function renderNewConsent() {
                 <circle cx="12" cy="7" r="4"/>
               </svg>
             </div>
-            <div class="consent-mode-name">Patient Self-Service</div>
+            <div class="consent-mode-name">${L.self}</div>
             <div class="consent-mode-desc">
-              The patient completes the form independently on a tablet or screen.
-              Suitable for tech-comfortable patients.
+              ${L.selfDesc}
             </div>
           </div>
 
@@ -3745,11 +3743,11 @@ function renderNewConsent() {
     <!-- ── Submit ── -->
     <div class="nc-submit-row">
       <p class="text-muted text-sm">
-        Fields marked <span class="text-danger font-semibold">*</span> are required to continue
+        ${L.reqHint}
       </p>
       <button id="nc-submit-btn" class="btn btn-primary btn-lg" disabled
         onclick="submitNewConsent()">
-        Start Consent Workflow →
+        ${L.submit}
       </button>
     </div>
   `;
@@ -4297,6 +4295,107 @@ const SCR_FLAG_LABELS = {
   tattoos: 'Tattoos (possible metallic ink)',
 };
 
+const SCR_FLAG_LABELS_YO = {
+  pacemaker_icd: 'Ẹ̀rọ ìṣàkóso ọkàn (pacemaker) tàbí ICD',
+  aneurysm_clip: 'Àwọn clips aneurysm (ọpọlọ)',
+  cochlear_ear_implant: 'Ẹ̀rọ cochlear tàbí ẹ̀rọ etí',
+  shrapnel_blast_injury: 'Ọgbẹ́ ìbọn, shrapnel tàbí bọ́ǹbù',
+  metallic_ocular_fragment_unremoved: 'Irin nínú ojú — a kò tíì yọ kúrò',
+  heart_valve: 'Fáàfù ọkàn arọ tàbí ẹ̀rọ REVEAL',
+  hydro_shunt: 'Shunt hydrocephalus tí a lè ṣètò',
+  body_stent: 'Stent nínú ara',
+  pain_drug_device: 'Ẹ̀rọ ìdènà ìrora tàbí oògùn nínú ara',
+  clips_pins_plates: 'Clips, pins, plates tàbí coils',
+  recent_surgery_under_6wks: 'Iṣẹ́ abẹ nínú ọ̀sẹ̀ 6 sẹ́yìn',
+  pregnancy: 'Ewu oyún',
+  breastfeeding: 'Ìfọmọ lọ́yàn lọ́wọ́lọ́wọ́',
+  epilepsy: 'Wàràpá (Epilepsy)',
+  blackouts: 'Ìdákú',
+  angina: 'Ìrora àyà (Angina)',
+  hearing_aid_not_removed: 'Ẹ̀rọ ìgbọ́ránṣé — a kò tíì yọ kúrò',
+  metallic_ocular_fragment_cleared: 'Irin nínú ojú — a ti yọ kúrò',
+  prior_other_surgery: 'Ìtàn iṣẹ́ abẹ mìíràn — ewu irin nínú ara',
+  asthma: 'Ikọ́-fèé (Asthma)',
+  tattoos: 'Àmì ara (Tattoo — ewu inki irin)',
+};
+
+const NC_LABELS = {
+  en: {
+    details: 'Patient Details', name: 'Full Name', hospNum: 'Hospital Number / Patient ID',
+    dob: 'Date of Birth', sex: 'Sex', male: 'Male', female: 'Female', other: 'Other',
+    phone: 'Phone Number', refDr: 'Referring Doctor', modality: 'Procedure & Modality',
+    bodyPart: 'Body Part / Region', clinical: 'Pre-Procedure Clinical Data', optional: 'Optional',
+    clinicalHint: 'Enter latest relevant laboratory results and pre-procedure vitals for CT and MRI patients.',
+    urea: 'Urea', creatinine: 'Creatinine', bp: 'Blood Pressure', hr: 'Heart Rate',
+    spo2: 'SpO2', temp: 'Temperature', weight: 'Weight', lang: "Patient's Preferred Language",
+    langHint: 'The selected language is recorded on the consent record. All Phase 1 content is displayed in English.',
+    modeTitle: 'Consent Mode', assisted: 'Staff-Assisted', assistedDesc: 'A radiographer or nurse guides the patient through the form. Recommended for most patients.',
+    self: 'Patient Self-Service', selfDesc: 'The patient completes the form independently on a tablet or screen. Suitable for tech-comfortable patients.',
+    reqHint: 'Fields marked * are required to continue', submit: 'Start Consent Workflow →'
+  },
+  yo: {
+    details: 'Àkọsílẹ̀ Aláìsàn', name: 'Orúkọ Kíkún', hospNum: 'Nọ́mbà Ilé-ìwòsàn / ID Aláìsàn',
+    dob: 'Ọjọ́ Ìbí', sex: 'Akọ/Abo', male: 'Akọ', female: 'Abo', other: 'Mìíràn',
+    phone: 'Nọ́mbà Tẹlifóònù', refDr: 'Dọ́kítà tí ó tọ́kasí', modality: 'Ìlànà & Irú Àyẹ̀wò',
+    bodyPart: 'Apá Ara / Agbègbè', clinical: 'Àkọsílẹ̀ Ìṣègùn ṣáájú Ìlànà', optional: 'Ìfẹ́ni',
+    clinicalHint: 'Tẹ àwọn èsì yàrá ìdánrawò tuntun àti àwọn vitals ṣáájú ìlànà fún àwọn aláìsàn CT àti MRI.',
+    urea: 'Urea', creatinine: 'Creatinine', bp: 'Ìfúnpá (Blood Pressure)', hr: 'Ìlùkìkì Ọkàn',
+    spo2: 'SpO2', temp: 'Ìgbóná-ara (Temp)', weight: 'Ìwọ̀n-ara (Weight)', lang: "Èdè tí Aláìsàn fẹ́ràn",
+    langHint: 'A ó ṣe àkọsílẹ̀ èdè tí ẹ yàn sínú ìwé ì fohùnsí. Gbogbo àkọsílẹ̀ Ìpele 1 ni a ó fi hàn ní èdè Gẹ̀ẹ́sì.',
+    modeTitle: 'Ìlànà Ìfohùnsí', assisted: 'Ìrànlọ́wọ́ Òṣìṣẹ́', assistedDesc: 'Radiographer tàbí nọ́ọ̀sì yóò ṣe amọ̀nà aláìsàn gba inú fọ́ọ̀mù náà.',
+    self: 'Aláìsàn fúnra rẹ̀', selfDesc: 'Aláìsàn yóò kọ fọ́ọ̀mù náà lórí tabulẹti tàbí ẹ̀rọ fúnra rẹ̀.',
+    reqHint: 'Àwọn ibi tí a fi * sí jẹ́ dandan láti kọ kún láti tẹ̀síwájú', submit: 'Bẹ̀rẹ̀ Ìlànà Ìfohùnsí →'
+  }
+};
+
+const MMG_UI_LABELS_YO = {
+  title: 'Àyẹ̀wò Ààbò Mammography',
+  check: 'Àyẹ̀wò Ààbò ṣáájú ìlànà',
+  hint: 'Jọ̀wọ́ dáhùn gbogbo ìbéèrè ṣáájú kí o tó tẹ̀síwájú.',
+  q1: '1. Ṣé aláìsàn ti pé ọdún ogójì (40) tàbí jù bẹ́ẹ̀ lọ?',
+  q1Hint: 'A gba Mammography nímọ̀ràn láti ọdún ogójì. A ó ṣe àmì sí àkọsílẹ̀ yìí fún àtúnyẹ̀wò dọ́kítà ṣáájú kí o tó tẹ̀síwájú.',
+  q2: '2. Ṣé aláìsàn lóyún lọ́wọ́lọ́wọ́, tàbí ṣé ó ṣeéṣe kí ó lóyún?',
+  q2Hint: '<strong>Mammography léwu nígbà oyún.</strong> A ó ṣe àmì sí àkọsílẹ̀ yìí fún àtúnyẹ̀wò dọ́kítà ṣáájú kí o tó tẹ̀síwájú.',
+  continue: 'Tẹ̀síwájú sí Ìbéèrè →',
+  q_title: 'Ìbéèrè Mammography (Àkọsílẹ̀ Aláìsàn)',
+  sec_gyn: 'Ìtàn Gynaecology',
+  lmp: 'Àsìkò nǹkan oṣù ìkẹyìn (LMP)',
+  menarche: 'Ọjọ́ orí nígbà nǹkan oṣù àkọ́kọ́',
+  first_preg: 'Ọjọ́ orí nígbà oyún àkọ́kọ́',
+  num_preg: 'Iye oyún tí o ti ní',
+  num_births: 'Iye ọmọ tí o bí láàyè',
+  hormone: 'Ṣé o ti lo oògùn hormone rí?',
+  hormone_hint: 'Sọ orúkọ oògùn àti ìgbà tí o lò ó…',
+  sec_fam: 'Ìtàn Ìdílé',
+  fam_bc: 'Ṣé ìtàn àìsàn jẹjẹrẹ ọmú wà nínú ìdílé rẹ?',
+  relatives: 'Àwọn wo nínú mọ̀lẹ́bí rẹ? (yan gbogbo èyí tí ó bá kan ọ́)',
+  rels: { Mother:'Ìyá', Sister:'Arábìnrin', Daughter:'Ọmọbìnrin', Grandmother:'Ìyá-àgbà', Cousin:'Ọmọ-ẹ̀gbọ́n', Aunty:'Àǹtí' },
+  sec_breast: 'Ìtàn Ọmú',
+  prev_surg: 'Ṣé o ti ṣe iṣẹ́ abẹ ọmú rí?',
+  which_breast: 'Ọmú wo?',
+  sides: { right:'Ọ̀tún', left:'Òsì', both:'Méjèèjì', none:'Kò sí' },
+  surg_hint: 'Ṣàpèjúwe iṣẹ́ abẹ náà àti ọjọ́…',
+  mastectomy: 'Mastectomy (Yíyọ ọmú kúrò)',
+  biopsy: 'Ọjọ́ tí a ṣe biopsy (bí o bá mọ̀)',
+  implant: 'Ṣé o ní breast implant?',
+  sec_symp: 'Àwọn Àmì Ọmú Lọ́wọ́lọ́wọ́',
+  complaints: 'Àwọn ohun tí ń yọ ọ́ lẹ́nu lọ́wọ́lọ́wọ́',
+  complaints_hint: 'Ṣàpèjúwe àwọn ohun tí ń yọ ọ́ lẹ́nu…',
+  discharge: 'Omi tí ń jáde láti orí ọmú',
+  tenderness: 'Ìrora ọmú (Tenderness)',
+  lump_pain: 'Odidi ọmú / Ìrora',
+  sec_life: 'Ìgbé-ayé & Àwọn Oògùn',
+  caffeine: 'Ṣé o ń lo caffeine (kọfí, tii, bẹ́ẹ̀ bẹ́ẹ̀ lọ)?',
+  caff_last: 'Ọjọ́ ìkẹyìn tí o lo caffeine',
+  caff_diet: 'Iye caffeine tí o ń lo lójúmọ́ / ìtàn oúnjẹ',
+  breastfeeding: 'Ṣé o ń fọmọ lọ́yàn lọ́wọ́lọ́wọ́?',
+  duration: 'Ìgbà tí o ti bẹ̀rẹ̀ (osu/ọdun)',
+  bf_last: 'Ọjọ́ ìkẹyìn tí o fọmọ lọ́yàn',
+  menopausal: 'Ṣé o ti dúró nǹkan oṣù (Menopausal)?',
+  payment: 'Ìlànà Ìsanwó',
+  referral: 'Orísun Ìtọ́kasí (Referral source)',
+};
+
 /* ── Submit screening results to backend ─────────────────────  */
 async function mriScrSubmit() {
   const consent = gState.mriScrState.consent || state.pageData?.consent;
@@ -4517,21 +4616,26 @@ function mmgScrAnswer(key, value) {
 
 function renderMammographyScreening() {
   const consent = gState.mmgScrState.consent;
+  const lang = gState.consentDeclState.lang || 'en';
+  const L = lang === 'yo' ? MMG_UI_LABELS_YO : null;
+
   const subtitle = consent
-    ? esc(consent.patient?.name) + ' · Mammography'
+    ? esc(consent.patient?.name) + ' · ' + (L ? L.title : 'Mammography Safety Screening')
     : '';
   const a = gState.mmgScrState.answers;
   const answered = a.age_40_plus !== undefined && a.pregnancy !== undefined;
 
   function yesno(key, name) {
+    const yesLab = lang === 'yo' ? 'Bẹ́ẹ̀ni' : 'Yes';
+    const noLab = lang === 'yo' ? 'Rárá' : 'No';
     return `<div style="display:flex;gap:24px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
         <input type="radio" name="${name}" value="yes" ${a[key] === 'yes' ? 'checked' : ''}
-          onchange="mmgScrAnswer('${key}','yes')" style="accent-color:var(--c-accent)"> Yes
+          onchange="mmgScrAnswer('${key}','yes')" style="accent-color:var(--c-accent)"> ${yesLab}
       </label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px">
         <input type="radio" name="${name}" value="no" ${a[key] === 'no' ? 'checked' : ''}
-          onchange="mmgScrAnswer('${key}','no')" style="accent-color:var(--c-accent)"> No
+          onchange="mmgScrAnswer('${key}','no')" style="accent-color:var(--c-accent)"> ${noLab}
       </label>
     </div>`;
   }
@@ -4539,39 +4643,39 @@ function renderMammographyScreening() {
   return `
     <div class="page-header">
       <div>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')" style="margin-bottom:6px;margin-left:-6px">← Back</button>
-        <div class="page-title">Mammography Safety Screening</div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')" style="margin-bottom:6px;margin-left:-6px">← ${lang === 'yo' ? 'Padà' : 'Back'}</button>
+        <div class="page-title">${L ? L.title : 'Mammography Safety Screening'}</div>
         <div class="page-subtitle">${subtitle}</div>
       </div>
     </div>
     <div class="card">
-      <div class="card-header"><h3>${IC.medical}&nbsp; Pre-Procedure Safety Check</h3></div>
+      <div class="card-header"><h3>${IC.medical}&nbsp; ${L ? L.check : 'Pre-Procedure Safety Check'}</h3></div>
       <div class="card-body">
         <p style="font-size:13.5px;color:var(--c-text-sec);margin-bottom:20px">
-          Please answer all questions before proceeding.
+          ${L ? L.hint : 'Please answer all questions before proceeding.'}
         </p>
 
         <div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">1. Is the patient 40 years of age or above?</div>
+          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">${L ? L.q1 : '1. Is the patient 40 years of age or above?'}</div>
           ${yesno('age_40_plus', 'mmg-age')}
           ${a.age_40_plus === 'no' ? `<div class="alert alert-warning mt-3" style="font-size:13px">
-            ${IC.warning}&nbsp; Routine mammography is recommended from age 40. This record will be flagged for radiologist review before proceeding.
+            ${IC.warning}&nbsp; ${L ? L.q1Hint : 'Routine mammography is recommended from age 40. This record will be flagged for radiologist review before proceeding.'}
           </div>` : ''}
         </div>
 
         <div class="mb-4" style="padding:14px 16px;border:1px solid var(--c-border);border-radius:var(--radius);background:var(--c-surface)">
-          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">2. Is the patient currently pregnant, or is pregnancy possible?</div>
+          <div style="font-size:14px;font-weight:500;color:var(--c-text);margin-bottom:10px">${L ? L.q2 : '2. Is the patient currently pregnant, or is pregnancy possible?'}</div>
           ${yesno('pregnancy', 'mmg-pregnancy')}
           ${a.pregnancy === 'yes' ? `<div class="alert alert-danger mt-3" style="font-size:13px">
-            ${IC.warning}&nbsp; <strong>Mammography is contraindicated in pregnancy.</strong> This record will be flagged for radiologist review before proceeding.
+            ${IC.warning}&nbsp; ${L ? L.q2Hint : '<strong>Mammography is contraindicated in pregnancy.</strong> This record will be flagged for radiologist review before proceeding.'}
           </div>` : ''}
         </div>
 
       </div>
       <div class="card-footer">
-        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')">Cancel</button>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('new-consent')">${lang === 'yo' ? 'Kùnà' : 'Cancel'}</button>
         <button class="btn btn-primary" onclick="mmgScrSubmit()" ${answered ? '' : 'disabled'}>
-          Continue to Questionnaire →
+          ${L ? L.continue : 'Continue to Questionnaire →'}
         </button>
       </div>
     </div>`;
@@ -5831,4 +5935,4 @@ async function init() {
   }
   navigate('login');
 }
-export { esc, statusBadge, roleBadge, formatDate, formatDateTime, initials, toast, openModal, closeModal, getNavItems, renderLogin, fillDemo, bindLoginEvents, renderShell, renderPage, renderDashboard, highestTier, fmtDate, fmtDateTime, resumeConsent, getRecordAction, getFilteredRecords, buildRecordsRows, recordsSearch, recordsToggleStatus, recordsFilterDate, recordsClearDates, renderRecordsTable, renderConsents, renderFlagged, buildFlaggedCard, scrDomainSummary, radReviewSelectDecision, radReviewCheckSubmit, radReviewSubmit, renderRadReview, renderAdminPanel, adminRecallRecord, adminDeleteRecord, adminLoadDemo, adminDeleteAll, adminSwitchTab, adminRefreshAudit, adminHandleLogoUpload, staffFormNew, staffFormCancel, staffEditStart, staffFormSubmit, staffPwdStart, staffPwdCancel, staffPwdSubmit, staffDelete, renderChangePassword, changePasswordSubmit, selectModality, selectLanguage, selectConsentMode, selectSex, updateNcSubmit, submitNewConsent, navigateToSignConsent, downloadPDF, renderRecordDetail, renderStage2Report, stage2ToggleComplications, stage2CheckSubmit, stage2Submit, renderStage3Vitals, s3SigSwitchMode, s3InitSigPad, s3SigClear, s3SigHandleUpload, s3SigLoadTopaz, s3SigTopazRenderStatus, s3SigTopazSign, s3SigTopazClear, stage3CheckSubmit, stage3Submit, s2SigSwitchMode, s2InitSigPad, s2SigClear, s2SigHandleUpload, s2SigLoadTopaz, s2SigTopazRenderStatus, s2SigTopazSign, s2SigTopazClear, rvSigSwitchMode, rvInitSigPad, rvSigClear, rvSigHandleUpload, rvSigLoadTopaz, rvSigTopazRenderStatus, rvSigTopazSign, rvSigTopazClear, renderNewConsent, mriScrBuildSteps, mriScrInit, mriScrRefreshSteps, scrMultiToggle, mriScrAnswer, mriScrNext, mriScrBack, mriScrComputeResults, mriScrSubmit, scrSwitchLang, renderMriStep, renderMriResults, mmgScrAnswer, renderMammographyScreening, mmgScrSubmit, mmgQuestAnswer, mmgQuestToggleRelative, mmgQuestBack, mmgQuestNext, renderMammographyQuestionnaire, mmgQuestSubmit, safetyScrBack, safetyScrNext, renderSafetyScreening, safetyScrAnswer, safetyScrSubmit, renderMriScreening, renderMriScreeningPlaceholder, consentDeclInit, consentDeclSetLang, initSigPad, consentDeclClearSig, sigSwitchMode, sigHandleUpload, sigTopazRenderStatus, sigLoadTopaz, sigTopazSign, sigTopazClear, consentDeclCheckSubmit, consentDeclSubmit, renderConsentDeclaration, renderConsentDeclarationPlaceholder, render, bindPageEvents, bindMriScreeningEvents, bindNewConsentEvents, init, IC, LANG_FLAG, STATUS_FILTER_OPTS, SCR_STEPS, SCR_STEPS_YO, SCR_UI_LABELS, SCR_FLAG_LABELS, MMG_SECTION_KEYS, SAFETY_QUESTIONS, MODALITY_RISKS, MODALITY_RISKS_YO, CONSENT_LABELS, CONSENT_TEXT };
+export { esc, statusBadge, roleBadge, formatDate, formatDateTime, initials, toast, openModal, closeModal, getNavItems, renderLogin, fillDemo, bindLoginEvents, renderShell, renderPage, renderDashboard, highestTier, fmtDate, fmtDateTime, resumeConsent, getRecordAction, getFilteredRecords, buildRecordsRows, recordsSearch, recordsToggleStatus, recordsFilterDate, recordsClearDates, renderRecordsTable, renderConsents, renderFlagged, buildFlaggedCard, scrDomainSummary, radReviewSelectDecision, radReviewCheckSubmit, radReviewSubmit, renderRadReview, renderAdminPanel, adminRecallRecord, adminDeleteRecord, adminLoadDemo, adminDeleteAll, adminSwitchTab, adminRefreshAudit, adminHandleLogoUpload, staffFormNew, staffFormCancel, staffEditStart, staffFormSubmit, staffPwdStart, staffPwdCancel, staffPwdSubmit, staffDelete, renderChangePassword, changePasswordSubmit, selectModality, selectLanguage, selectConsentMode, selectSex, updateNcSubmit, submitNewConsent, navigateToSignConsent, downloadPDF, renderRecordDetail, renderStage2Report, stage2ToggleComplications, stage2CheckSubmit, stage2Submit, renderStage3Vitals, s3SigSwitchMode, s3InitSigPad, s3SigClear, s3SigHandleUpload, s3SigLoadTopaz, s3SigTopazRenderStatus, s3SigTopazSign, s3SigTopazClear, stage3CheckSubmit, stage3Submit, s2SigSwitchMode, s2InitSigPad, s2SigClear, s2SigHandleUpload, s2SigLoadTopaz, s2SigTopazRenderStatus, s2SigTopazSign, s2SigTopazClear, rvSigSwitchMode, rvInitSigPad, rvSigClear, rvSigHandleUpload, rvSigLoadTopaz, rvSigTopazRenderStatus, rvSigTopazSign, rvSigTopazClear, renderNewConsent, mriScrBuildSteps, mriScrInit, mriScrRefreshSteps, scrMultiToggle, mriScrAnswer, mriScrNext, mriScrBack, mriScrComputeResults, mriScrSubmit, scrSwitchLang, renderMriStep, renderMriResults, mmgScrAnswer, renderMammographyScreening, mmgScrSubmit, mmgQuestAnswer, mmgQuestToggleRelative, mmgQuestBack, mmgQuestNext, renderMammographyQuestionnaire, mmgQuestSubmit, safetyScrBack, safetyScrNext, renderSafetyScreening, safetyScrAnswer, safetyScrSubmit, renderMriScreening, renderMriScreeningPlaceholder, consentDeclInit, consentDeclSetLang, initSigPad, consentDeclClearSig, sigSwitchMode, sigHandleUpload, sigTopazRenderStatus, sigLoadTopaz, sigTopazSign, sigTopazClear, consentDeclCheckSubmit, consentDeclSubmit, renderConsentDeclaration, renderConsentDeclarationPlaceholder, render, bindPageEvents, bindMriScreeningEvents, bindNewConsentEvents, init, IC, LANG_FLAG, STATUS_FILTER_OPTS, SCR_STEPS, SCR_STEPS_YO, SCR_UI_LABELS, SCR_FLAG_LABELS, SCR_FLAG_LABELS_YO, MMG_SECTION_KEYS, MMG_UI_LABELS_YO, SAFETY_QUESTIONS, SAFETY_QUESTIONS_YO, NC_LABELS, MODALITY_RISKS, MODALITY_RISKS_YO, CONSENT_LABELS, CONSENT_TEXT };
