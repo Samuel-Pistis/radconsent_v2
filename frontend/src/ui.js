@@ -1734,7 +1734,7 @@ async function staffFormSubmit() {
       toast(`Account updated for ${updated.name}.`, 'success');
       if (gState.adminState.users) {
         const idx = gState.adminState.users.findIndex(u => u.id === sf.id);
-        if (idx !== -1) gState.adminState.users[idx] = { ...adminState.users[idx], ...updated };
+        if (idx !== -1) gState.adminState.users[idx] = { ...gState.adminState.users[idx], ...updated };
       }
     }
     gState.adminState.staffForm = null;
