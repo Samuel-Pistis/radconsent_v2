@@ -2215,46 +2215,18 @@ function downloadPDF(id) {
     </div>
   `;
 
-  if (!window.html2pdf) {
-    toast('PDF library failed to load.', 'error');
+  // Open content in a new window and trigger print-to-PDF
+  const printWin = window.open('', '_blank', 'width=900,height=700');
+  if (!printWin) {
+    toast('Pop-up blocked — please allow pop-ups for this site and try again.', 'error');
     return;
   }
-
-  toast('Generating PDF...', 'info', 2500);
-
-  const container = document.createElement('div');
-  container.style.position = 'fixed';
-  container.style.top = '-9999px';
-  container.style.left = '0';
-  container.style.width = '794px';
-  container.style.background = '#fff';
-  container.style.color = '#111';
-  container.style.colorScheme = 'light';
-  container.innerHTML = contentHtml;
-  document.body.appendChild(container);
-
-  const opt = {
-    margin:       10,
-    filename:     `RadConsent-${rec.id}.pdf`,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, backgroundColor: '#ffffff', logging: false },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak:    { mode: 'css', avoid: 'table, h2, h3, .sig-box, .footer' }
-  };
-
-  html2pdf().set(opt).from(container).save().then(() => {
-    container.remove();
-    // Using typeof window.toast to be safe if modules get shuffled later
-    if (typeof window.toast === 'function') {
-      window.toast('PDF downloaded successfully.', 'success');
-    }
-  }).catch(err => {
-    container.remove();
-    if (typeof window.toast === 'function') {
-      window.toast('Error generating PDF.', 'error');
-    }
-    console.error(err);
-  });
+  printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>RadConsent-${rec.id}</title></head><body style="margin:0;padding:0">${contentHtml}</body></html>`);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(() => {
+    printWin.print();
+  }, 500);
 }
 
 function renderRecordDetail() {
