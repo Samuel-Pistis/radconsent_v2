@@ -1300,13 +1300,16 @@ function renderAdminPanel() {
   // Load audit logs when on the audit tab
   if (gState.adminState.tab === 'audit' && !gState.adminState.auditLogs && !gState.adminState.auditLoading) {
     gState.adminState.auditLoading = true;
-    api('GET', '/audit').then(data => {
-      gState.adminState.auditLogs = data;
+    const auditPage = gState.adminState.auditPage || 1;
+    api('GET', `/audit?page=${auditPage}`).then(data => {
+      gState.adminState.auditLogs   = data.logs;
+      gState.adminState.auditTotal  = data.total;
+      gState.adminState.auditPages  = data.pages;
       gState.adminState.auditLoading = false;
       if (state.page === 'admin') render();
     }).catch(err => {
       toast(err.message, 'error');
-      gState.adminState.auditLogs = [];
+      gState.adminState.auditLogs   = [];
       gState.adminState.auditLoading = false;
       if (state.page === 'admin') render();
     });
@@ -1501,7 +1504,10 @@ function renderAdminPanel() {
   // ── Audit Logs tab ───────────────────────────────────────────
   let auditContent = '';
   if (gState.adminState.tab === 'audit') {
-    const logs = gState.adminState.auditLogs;
+    const logs       = gState.adminState.auditLogs;
+    const auditPage  = gState.adminState.auditPage  || 1;
+    const auditPages = gState.adminState.auditPages || 1;
+    const auditTotal = gState.adminState.auditTotal ?? '…';
     let logsBody = '';
     if (!logs) {
       logsBody = `<tr><td colspan="6" style="text-align:center;padding:24px"><span class="spinner spinner-dark"></span>&nbsp;Loading…</td></tr>`;
@@ -1521,10 +1527,17 @@ function renderAdminPanel() {
       });
     }
 
+    const pagination = auditPages > 1 ? `
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--c-border);font-size:13px">
+        <button class="btn btn-ghost btn-sm" onclick="auditGoPage(${auditPage - 1})" ${auditPage <= 1 ? 'disabled' : ''}>&#8592; Prev</button>
+        <span style="color:var(--c-text-muted)">Page ${auditPage} of ${auditPages}</span>
+        <button class="btn btn-ghost btn-sm" onclick="auditGoPage(${auditPage + 1})" ${auditPage >= auditPages ? 'disabled' : ''}>Next &#8594;</button>
+      </div>` : '';
+
     auditContent = `
       <div class="card mb-4" style="overflow-x:auto">
         <div class="card-header" style="justify-content:space-between;align-items:center">
-          <h3>System Audit Logs <span style="font-size:13px;font-weight:400;color:var(--c-text-muted)">(${logs?.length ?? '…'})</span></h3>
+          <h3>System Audit Logs <span style="font-size:13px;font-weight:400;color:var(--c-text-muted)">(${auditTotal} total)</span></h3>
           <button class="btn btn-ghost btn-sm" onclick="adminRefreshAudit()">&#x21bb; Refresh</button>
         </div>
         <div class="card-body" style="padding:0">
@@ -1542,6 +1555,7 @@ function renderAdminPanel() {
             <tbody style="font-size:13.5px">${logsBody}</tbody>
           </table>
         </div>
+        ${pagination}
       </div>`;
   }
 
@@ -1680,6 +1694,16 @@ async function adminHandleLogoUpload(event) {
 }
 
 function adminRefreshAudit() {
+  gState.adminState.auditLogs  = null;
+  gState.adminState.auditPage  = 1;
+  gState.adminState.auditPages = 1;
+  gState.adminState.auditTotal = null;
+  render();
+}
+
+function auditGoPage(page) {
+  if (page < 1 || page > (gState.adminState.auditPages || 1)) return;
+  gState.adminState.auditPage = page;
   gState.adminState.auditLogs = null;
   render();
 }
@@ -4900,6 +4924,14 @@ const SAFETY_QUESTIONS = [
   { key: 'metallic_implant', label: 'Does the patient have any other metallic or electronic implants (e.g. cochlear implant, neurostimulator, insulin pump)?' },
 ];
 
+const SAFETY_QUESTIONS_YO = [
+  { key: 'pregnancy', label: 'Ṣé aláìsàn lóyún, tàbí ṣé ó ṣeéṣe kí ó lóyún?' },
+  { key: 'renal_impairment', label: 'Ṣé aláìsàn ní àìsàn kíndìnrín, iṣẹ́ kíndìnrín tí ó dínkù, tàbí creatinine tí ó ga?' },
+  { key: 'contrast_reaction', label: 'Ṣé aláìsàn ti ní ìhùwàsí tí kò dára sí omi ìfohùn-hàn tàbí iodine rí?' },
+  { key: 'cardiac_implant', label: 'Ṣé aláìsàn ní ẹ̀rọ ìṣàkóso ọkàn (pacemaker), ICD, tàbí ẹ̀rọ abẹ́rẹ́ ọkàn mìíràn?' },
+  { key: 'metallic_implant', label: 'Ṣé aláìsàn ní èyíkéyìí irin tàbí ẹ̀rọ mìíràn nínú ara (bíi cochlear implant, neurostimulator, insulin pump)?' },
+];
+
 function safetyScrBack() {
   if (gState.safetyScrState.stepIdx > 0) {
     gState.safetyScrState.stepIdx--;
@@ -4910,13 +4942,15 @@ function safetyScrBack() {
 }
 
 function safetyScrNext() {
-  const currentKey = SAFETY_QUESTIONS[gState.safetyScrState.stepIdx].key;
+  const lang = gState.consentDeclState.lang || 'en';
+  const questions = lang === 'yo' ? SAFETY_QUESTIONS_YO : SAFETY_QUESTIONS;
+  const currentKey = questions[gState.safetyScrState.stepIdx].key;
   if (!gState.safetyScrState.answers[currentKey]) {
-    toast('Please answer this question to proceed.', 'warning');
+    toast(lang === 'yo' ? 'Jọ̀wọ́ dáhùn ìbéèrè yìí láti tẹ̀síwájú.' : 'Please answer this question to proceed.', 'warning');
     return;
   }
 
-  if (gState.safetyScrState.stepIdx < SAFETY_QUESTIONS.length - 1) {
+  if (gState.safetyScrState.stepIdx < questions.length - 1) {
     gState.safetyScrState.stepIdx++;
     render();
   } else {
@@ -4930,19 +4964,29 @@ function renderSafetyScreening() {
     ? esc(consent.patient?.name) + ' · ' + esc(MODALITY_LABELS[consent.modality] || consent.modality)
     : '';
   const ans = gState.safetyScrState.answers;
+  const lang = gState.consentDeclState.lang || 'en';
+  const questions = lang === 'yo' ? SAFETY_QUESTIONS_YO : SAFETY_QUESTIONS;
+  const SL = getScrLabels();
 
   const stepIdx = gState.safetyScrState.stepIdx || 0;
-  const q = SAFETY_QUESTIONS[stepIdx];
-  const isLast = stepIdx === SAFETY_QUESTIONS.length - 1;
+  const q = questions[stepIdx];
+  const isLast = stepIdx === questions.length - 1;
   const hasAnswer = ans[q.key] !== undefined;
 
-  const pct = Math.round(((stepIdx + 1) / SAFETY_QUESTIONS.length) * 100);
+  const pct = Math.round(((stepIdx + 1) / questions.length) * 100);
+
+  const langToggle = `
+    <div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px">
+      <button class="btn btn-ghost btn-sm${lang === 'en' ? ' btn-primary' : ''}" style="padding:4px 10px;font-size:11px" onclick="scrSwitchLang('en')">🇬🇧 EN</button>
+      <button class="btn btn-ghost btn-sm${lang === 'yo' ? ' btn-primary' : ''}" style="padding:4px 10px;font-size:11px" onclick="scrSwitchLang('yo')">🟢 YO</button>
+    </div>`;
 
   const progressBar = `
+    ${langToggle}
     <div class="scr-progress-wrap">
       <div class="scr-step-label">
-        <span>Safety Question</span>
-        <span>Step ${stepIdx + 1} of ${SAFETY_QUESTIONS.length}</span>
+        <span>${lang === 'yo' ? 'Ìbéèrè Ààbò' : 'Safety Question'}</span>
+        <span>${SL.step} ${stepIdx + 1} ${SL.of} ${questions.length}</span>
       </div>
       <div class="scr-progress-bar"><div class="scr-progress-fill" style="width:${pct}%"></div></div>
     </div>`;
@@ -4951,33 +4995,33 @@ function renderSafetyScreening() {
     <div class="page-header">
       <div>
         <button class="btn btn-ghost btn-sm" onclick="safetyScrBack()"
-          style="margin-bottom:6px;margin-left:-6px">← Back</button>
-        <div class="page-title">Safety Screening</div>
+          style="margin-bottom:6px;margin-left:-6px">${SL.prev}</button>
+        <div class="page-title">${lang === 'yo' ? 'Àyẹ̀wò Ààbò' : 'Safety Screening'}</div>
         <div class="page-subtitle">${subtitle}</div>
       </div>
     </div>
     ${progressBar}
     <div class="card">
-      <div class="card-header"><h3>${IC.medical}&nbsp; Pre-Procedure Safety Check</h3></div>
+      <div class="card-header"><h3>${IC.medical}&nbsp; ${lang === 'yo' ? 'Àyẹ̀wò Ààbò ṣáájú ìlànà' : 'Pre-Procedure Safety Check'}</h3></div>
       <div class="card-body" style="padding:28px">
         <div class="scr-question">${stepIdx + 1}. ${esc(q.label)}</div>
-        <div class="scr-question-hint">Any <strong>Yes</strong> answer will be flagged for radiologist review before the procedure proceeds.</div>
+        <div class="scr-question-hint">${lang === 'yo' ? 'Ìdáhùn <strong>Bẹ́ẹ̀ni</strong> èyíkéyìí yóò jẹ́ àmì fún àtúnyẹ̀wò dọ́kítà ṣáájú kí ìlànà tó tẹ̀síwájú.' : 'Any <strong>Yes</strong> answer will be flagged for radiologist review before the procedure proceeds.'}</div>
         <div class="scr-choice-grid two-col" style="margin-top:20px;margin-bottom:12px">
           <button class="scr-choice-btn ${ans[q.key] === 'yes' ? 'selected' : ''}" onclick="safetyScrAnswer('${q.key}','yes')">
-            <span class="scr-choice-label">Yes</span>
+            <span class="scr-choice-label">${SL.yes}</span>
           </button>
           <button class="scr-choice-btn ${ans[q.key] === 'no' ? 'selected' : ''}" onclick="safetyScrAnswer('${q.key}','no')">
-            <span class="scr-choice-label">No</span>
+            <span class="scr-choice-label">${SL.no}</span>
           </button>
         </div>
       </div>
       <div class="card-footer" style="padding:16px 24px;display:flex;justify-content:space-between">
         ${stepIdx === 0
       ? '<div></div>'
-      : '<button class="btn btn-secondary btn-sm" onclick="safetyScrBack()">← Previous</button>'}
+      : `<button class="btn btn-secondary btn-sm" onclick="safetyScrBack()">${SL.prev}</button>`}
         ${isLast
-      ? `<button class="btn btn-primary" onclick="safetyScrNext()" ${hasAnswer ? '' : 'disabled'}>Proceed to Consent Declaration →</button>`
-      : `<button class="btn btn-primary" onclick="safetyScrNext()" ${hasAnswer ? '' : 'disabled'}>Next →</button>`
+      ? `<button class="btn btn-primary" onclick="safetyScrNext()" ${hasAnswer ? '' : 'disabled'}>${SL.proceed}</button>`
+      : `<button class="btn btn-primary" onclick="safetyScrNext()" ${hasAnswer ? '' : 'disabled'}>${SL.next}</button>`
     }
       </div>
     </div>`;

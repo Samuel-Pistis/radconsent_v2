@@ -6,9 +6,13 @@ const db = require('../db/db-setup');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 
+const ALLOWED_KEYS = new Set(['center_logo', 'center_name', 'center_address']);
+
 // GET /api/settings/:key
 // Public endpoint
 router.get('/:key', (req, res) => {
+  if (!ALLOWED_KEYS.has(req.params.key))
+    return res.status(400).json({ error: 'Unknown setting key.' });
   try {
     const setting = db.prepare('SELECT value FROM settings WHERE key = ?').get(req.params.key);
     if (!setting) return res.json({ value: null });
@@ -22,6 +26,8 @@ router.get('/:key', (req, res) => {
 // PUT /api/settings/:key
 // Admin only
 router.put('/:key', verifyToken, requireRole('admin'), (req, res) => {
+  if (!ALLOWED_KEYS.has(req.params.key))
+    return res.status(400).json({ error: 'Unknown setting key.' });
   const { value } = req.body || {};
   if (value === undefined) return res.status(400).json({ error: 'Value is required' });
 
