@@ -1732,10 +1732,7 @@ async function staffFormSubmit() {
     } else {
       const updated = await api('PUT', `/users/${sf.id}`, { name, email, role });
       toast(`Account updated for ${updated.name}.`, 'success');
-      if (gState.adminState.users) {
-        const idx = gState.adminState.users.findIndex(u => u.id === sf.id);
-        if (idx !== -1) gState.adminState.users[idx] = { ...gState.adminState.users[idx], ...updated };
-      }
+      gState.adminState.users = null; // reload list from server
     }
     gState.adminState.staffForm = null;
     render();
