@@ -72,6 +72,8 @@ input, select, textarea { font-family: inherit; }
     --c-text:           #F8FAFC;
     --c-text-sec:       #CBD5E1;
     --c-text-muted:     #94A3B8;
+    color: var(--c-text);
+    background: var(--c-bg);
   }
   body:not(.light) .logo-img, 
   body:not(.light) .hero-logo-img, 
@@ -93,6 +95,8 @@ body.dark {
   --c-text:           #F8FAFC;
   --c-text-sec:       #CBD5E1;
   --c-text-muted:     #94A3B8;
+  color: var(--c-text);
+  background: var(--c-bg);
 }
 
 body.dark .logo-img, 
