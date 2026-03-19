@@ -110,7 +110,7 @@ router.put('/:id/screening', (req, res) => {
 });
 
 // PUT /api/consents/:id/sign — patient signs the consent declaration (Stage 1)
-router.put('/:id/sign', (req, res) => {
+router.put('/:id/sign', requireRole('radiographer', 'nurse', 'admin'), (req, res) => {
   const { patientSignature, patientSignatureImage, witnessName, language } = req.body || {};
   if (!patientSignature?.trim()) {
     return res.status(400).json({ error: 'Patient signature is required.' });

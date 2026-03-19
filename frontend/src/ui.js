@@ -1051,6 +1051,8 @@ async function radReviewSubmit() {
 
   if (!decision || !notes) { toast('Please complete all required fields.', 'error'); return; }
 
+  if (!gState.radReviewState.record?.id) { toast('Session error — please reload the page.', 'error'); return; }
+
   const btn = document.getElementById('rv-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
 
@@ -2779,6 +2781,8 @@ async function stage2Submit() {
 
   if (!procedureNotes) { toast('Procedure report is required.', 'warning'); return; }
 
+  if (!gState.stage2State.record?.id) { toast('Session error — please reload the page.', 'error'); return; }
+
   const btn = document.getElementById('s2-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
 
@@ -3179,6 +3183,8 @@ async function stage3Submit() {
   }
 
   if (!condition) { toast('Please select a patient condition.', 'warning'); return; }
+
+  if (!gState.stage3State.record?.id) { toast('Session error — please reload the page.', 'error'); return; }
 
   const btn = document.getElementById('s3-submit-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>&nbsp;Submitting…`; }
