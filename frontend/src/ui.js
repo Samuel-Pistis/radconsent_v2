@@ -1895,7 +1895,9 @@ function updateNcSubmit() {
 ═══════════════════════════════════════════════════════════════ */
 async function submitNewConsent() {
   const name = (document.getElementById('nc-name')?.value || '').trim();
+  const bodyPart = (document.getElementById('nc-body-part')?.value || '').trim();
   if (!name || !gState.ncState.modality || !gState.ncState.sex) return;
+  if (!bodyPart) { toast('Body part / region is required.', 'warning'); return; }
 
   const btn = document.getElementById('nc-submit-btn');
   btn.disabled = true;
@@ -3567,7 +3569,7 @@ function renderNewConsent() {
 
         </div>
         <div class="form-group" style="max-width:500px">
-          <label class="form-label" for="nc-body-part">Body Part / Region</label>
+          <label class="form-label" for="nc-body-part">Body Part / Region <span class="req">*</span></label>
           <input class="form-control" type="text" id="nc-body-part"
             placeholder="e.g. Brain, Lumbar spine, Right knee, Abdomen &amp; pelvis" />
         </div>

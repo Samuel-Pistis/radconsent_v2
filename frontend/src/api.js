@@ -219,6 +219,17 @@ function doLogout() {
   state.page = 'login'; state.pageData = {};
   localStorage.removeItem('radconsent_token');
   localStorage.removeItem('radconsent_user');
+  // Clear all cached patient data so it doesn't leak to the next user
+  gState.recordsState        = { records: null, loading: false, search: '', statusFilter: [], dateFrom: new Date().toISOString().slice(0,10), dateTo: '' };
+  gState.recordDetailState   = { record: null, loading: false };
+  gState.dashboardState      = { records: null, loading: false };
+  gState.stage2State         = { record: null, loading: false };
+  gState.stage3State         = { record: null, loading: false, confirmed: false, confirmedRecord: null };
+  gState.radReviewState      = { record: null, loading: false };
+  gState.adminState          = { records: null, loading: false, tab: 'records', users: null, usersLoading: false, staffForm: null, pwdForm: null };
+  gState.s2SigPadInstance    = null; gState.s2SigUploadedDataUrl = null;
+  gState.s3SigPadInstance    = null; gState.s3SigUploadedDataUrl = null;
+  gState.rvSigPadInstance    = null; gState.rvSigUploadedDataUrl = null;
   render();
 }
 
