@@ -1253,6 +1253,9 @@ body.dark .btn-danger-outline:hover:not(:disabled)  { background:#2D0A0A; }
 body.dark .form-control:focus,
 body.dark .form-select:focus                       { box-shadow: 0 0 0 3px rgba(59,130,246,.2); }
 
+/* Bare labels (radio/checkbox wrappers with no class) must be explicitly light in dark mode */
+body.dark label:not(.form-label):not(.form-check-label) { color: var(--c-text); }
+
 /* Modal close hover */
 body.dark .modal-close:hover                       { background:#172032; }
 
