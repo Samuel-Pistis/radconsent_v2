@@ -2215,18 +2215,17 @@ function downloadPDF(id) {
     </div>
   `;
 
-  // Open content in a new window and trigger print-to-PDF
-  const printWin = window.open('', '_blank', 'width=900,height=700');
-  if (!printWin) {
-    toast('Pop-up blocked — please allow pop-ups for this site and try again.', 'error');
-    return;
-  }
-  printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>RadConsent-${rec.id}</title></head><body style="margin:0;padding:0">${contentHtml}</body></html>`);
-  printWin.document.close();
-  printWin.focus();
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentWindow.document;
+  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>RadConsent-${rec.id}</title></head><body style="margin:0;padding:0">${contentHtml}</body></html>`);
+  doc.close();
+  iframe.contentWindow.focus();
   setTimeout(() => {
-    printWin.print();
-  }, 500);
+    iframe.contentWindow.print();
+    setTimeout(() => iframe.remove(), 1000);
+  }, 400);
 }
 
 function renderRecordDetail() {
