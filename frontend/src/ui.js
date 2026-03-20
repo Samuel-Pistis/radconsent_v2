@@ -1323,7 +1323,7 @@ function renderAdminPanel() {
     const recs = gState.adminState.records;
     const MODALITY_SHORT = {
       mri_without_contrast: 'MRI', mri_with_gadolinium: 'MRI+Gad',
-      ct_without_contrast: 'CT', ct_with_iv_contrast: 'CT+IV', mammography: 'Mammo',
+      ct_with_iv_contrast: 'CT+IV', mammography: 'Mammo',
     };
     let tableBody = '';
     if (!recs) {
@@ -2026,7 +2026,6 @@ function downloadPDF(id) {
   const MLABELS = {
     mri_without_contrast: 'MRI (no contrast)',
     mri_with_gadolinium: 'MRI + Gadolinium',
-    ct_without_contrast: 'CT (no contrast)',
     ct_with_iv_contrast: 'CT + IV Contrast',
     mammography: 'Mammography',
   };
@@ -3568,14 +3567,6 @@ function renderNewConsent() {
             <div class="modality-name">MRI + Gadolinium</div>
             <div class="modality-desc">${lang === 'yo' ? 'Lílo oògùn ìfohùn-hàn gadolinium' : 'With gadolinium contrast'}</div>
             <span class="modality-tag">${lang === 'yo' ? 'Àyẹ̀wò àìbò' : 'Safety screening'}</span>
-          </div>
-
-          <div class="modality-card" data-mod="ct_without_contrast"
-            onclick="selectModality('ct_without_contrast')">
-            <div class="modality-check">${IC.check}</div>
-            <div class="modality-icon mi-ct">CT</div>
-            <div class="modality-name">CT Scan</div>
-            <div class="modality-desc">${lang === 'yo' ? 'Láìlo oògùn ìfohùn-hàn' : 'Without contrast agent'}</div>
           </div>
 
           <div class="modality-card" data-mod="ct_with_iv_contrast"
@@ -5244,11 +5235,6 @@ const MODALITY_RISKS = {
     'Some patients experience mild dizziness or claustrophobia. You may alert staff at any time.',
     'MRI does not use ionising radiation.',
   ],
-  ct_without_contrast: [
-    'CT uses a low dose of ionising X-ray radiation. The diagnostic benefit of the scan outweighs this small risk.',
-    'You will be asked to remain still and may be asked to hold your breath briefly during the scan.',
-    'Some patients experience mild discomfort lying on the scan table. Please inform staff of any pain or mobility issues.',
-  ],
   ct_with_iv_contrast: [
     'CT uses a low dose of ionising X-ray radiation. The diagnostic benefit outweighs this small risk.',
     'Iodinated contrast will be given by intravenous injection. Common side effects include a warm flushing sensation and a metallic taste — both are brief and harmless.',
@@ -5278,11 +5264,6 @@ const MODALITY_RISKS_YO = {
     'Fún àwọn tí kíndìnrín wọn kò ṣiṣẹ́ dáadáa, gadolinium lè fa àìsàn tí a ń pè ní NSF — a ti ṣàyẹ̀wò iṣẹ́ kíndìnrín yín.',
     'Àwọn aláìsàn kan lè ní ìrírí ìyí kékeré tàbí ìpayà. Ẹ lè sọ fún àwọn oṣiṣẹ́ nígbàkigbà.',
     'MRI kò lo ìtànṣán tí ó léwu.',
-  ],
-  ct_without_contrast: [
-    'CT lo ìtànṣán X-ray kékeré. Àǹfààní àyẹ̀wò náà pọ̀ ju ewu kékeré yìí lọ.',
-    'A ó béèrè pé kí ẹ dúró lójú kan, a sì lè béèrè pé kí ẹ dá ẹ̀mí dúró fún ìgbà díẹ̀.',
-    'Àwọn aláìsàn kan lè ní ìrírí àìbalẹ̀ díẹ̀ lórí tábìlì àyẹ̀wò. Jọ̀wọ́ sọ fún àwọn oṣiṣẹ́ nípa ìrora tàbí ìṣòro gbígbé.',
   ],
   ct_with_iv_contrast: [
     'CT lo ìtànṣán X-ray kékeré. Àǹfààní àyẹ̀wò náà pọ̀ ju ewu yìí lọ.',
