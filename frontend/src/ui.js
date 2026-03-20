@@ -2244,7 +2244,7 @@ function downloadPDF(id) {
   `;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden';
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:1px;border:0;opacity:0;pointer-events:none';
   document.body.appendChild(iframe);
   const doc = iframe.contentWindow.document;
   doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>RadConsent-${rec.id}</title></head><body style="margin:0;padding:0">${contentHtml}</body></html>`);
@@ -5891,6 +5891,22 @@ function bindNewConsentEvents() {
    INIT — Session restore from localStorage
 ═══════════════════════════════════════════════════════════════ */
 async function init() {
+  window.addEventListener('theme-toggled', () => {
+    const btn = document.getElementById('dark-toggle-btn');
+    if (btn) btn.innerHTML = gState.darkMode
+      ? IC.sun  + '<span>Light mode</span>'
+      : IC.moon + '<span>Dark mode</span>';
+    
+    const mBtn = document.querySelector('.mobile-dark-btn');
+    if (mBtn) mBtn.innerHTML = gState.darkMode ? IC.sun : IC.moon;
+
+    if (state.page === 'dashboard' && gState.dashboardState.records) {
+      if (typeof initDashboardCharts === 'function') {
+        initDashboardCharts(gState.dashboardState.records);
+      }
+    }
+  });
+
   // Fetch custom center logo before rendering
   try {
     const res = await fetch('/api/settings/center_logo');
