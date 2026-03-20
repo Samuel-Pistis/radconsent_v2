@@ -510,7 +510,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 .login-hero::before {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(160deg, rgba(11,37,69,.72) 0%, rgba(11,37,69,.85) 50%, rgba(11,37,69,.92) 100%);
+  background: linear-gradient(160deg, rgba(7,22,41,.75) 0%, rgba(7,22,41,.88) 50%, rgba(7,22,41,.94) 100%);
   z-index: 1;
 }
 .login-hero-content { position: relative; z-index: 2; margin-top: 12%; }
@@ -566,11 +566,11 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .login-logo { text-align: center; margin-bottom: 32px; }
 .login-logo-mark {
   width: 52px; height: 52px;
-  background: linear-gradient(135deg, #0B2545 0%, #1B6CA8 100%);
+  background: linear-gradient(135deg, #071629 0%, #00C4E4 100%);
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 12px;
-  box-shadow: 0 4px 12px rgba(27,108,168,.25);
+  box-shadow: 0 4px 18px rgba(0,196,228,.3);
 }
 .login-logo-mark svg { width: 26px; height: 26px; color: #fff; }
 .login-app-name  { color: var(--c-text); font-size: 22px; font-weight: 700; letter-spacing: -.4px; }
@@ -579,7 +579,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .login-card {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 20px rgba(0,0,0,.06);
+  border-top: 2px solid var(--c-accent);
+  box-shadow: 0 4px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(0,196,228,.06);
   padding: 28px; margin-bottom: 18px;
 }
 .login-card h2 {
@@ -1345,6 +1346,31 @@ body.dark .modality-tag { background:#071829; color:#67E8F9; }
   overflow-y: auto;
   height: 0; /* needed for flex scroll */
 }
+
+/* ── Dark mode — login page ── */
+body.dark .login-form-panel,
+body:not(.light) .login-form-panel {
+  background: #081524;
+}
+body.dark .login-card,
+body:not(.light) .login-card {
+  background: #0F2538;
+  border-color: #1C3650;
+  border-top-color: #00C4E4;
+  box-shadow: 0 8px 48px rgba(0,0,0,.5), 0 0 0 1px rgba(0,196,228,.1);
+}
+body.dark .demo-panel,
+body:not(.light) .demo-panel {
+  background: #0A1E32;
+  border-color: #1C3650;
+}
+body.dark .demo-btn,
+body:not(.light) .demo-btn {
+  background: #0F2538;
+  border-color: #1C3650;
+}
+body.dark .login-error,
+body:not(.light) .login-error { color: #FCA5A5; }
 
 /* ── Signature pad ── */
 .sig-pad-wrap { border: 2px solid var(--c-border); border-radius: var(--radius); background: #fff; overflow: hidden; transition: border-color var(--t); }

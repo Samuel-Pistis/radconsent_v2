@@ -150,7 +150,7 @@ function renderLogin() {
                 <input class="form-control" type="password" id="login-password" name="password"
                   placeholder="••••••••" autocomplete="current-password" required />
               </div>
-              <button type="submit" id="login-btn" class="btn btn-dark btn-lg btn-block">Sign In</button>
+              <button type="submit" id="login-btn" class="btn btn-primary btn-lg btn-block">Sign In</button>
             </form>
           </div>
 
