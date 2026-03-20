@@ -436,20 +436,36 @@ function renderDashboard() {
   const stats = `
     <div class="dash-stats">
       <div class="dash-stat accent-blue">
+        <div class="dash-stat-header">
+          <div class="dash-stat-label">Total Records</div>
+          <div class="dash-stat-icon">${IC.records}</div>
+        </div>
         <div class="dash-stat-num">${total}</div>
-        <div class="dash-stat-label">Total Records</div>
+        <div class="dash-stat-sub">All consents</div>
       </div>
       <div class="dash-stat accent-amber">
+        <div class="dash-stat-header">
+          <div class="dash-stat-label">${esc(actionLabel)}</div>
+          <div class="dash-stat-icon">${IC.warning}</div>
+        </div>
         <div class="dash-stat-num">${actionItems.length}</div>
-        <div class="dash-stat-label">${esc(actionLabel)}</div>
+        <div class="dash-stat-sub">Require action</div>
       </div>
       <div class="dash-stat accent-red">
+        <div class="dash-stat-header">
+          <div class="dash-stat-label">Flagged</div>
+          <div class="dash-stat-icon">${IC.flagged}</div>
+        </div>
         <div class="dash-stat-num">${flagged}</div>
-        <div class="dash-stat-label">Flagged</div>
+        <div class="dash-stat-sub">Pending review</div>
       </div>
       <div class="dash-stat accent-green">
+        <div class="dash-stat-header">
+          <div class="dash-stat-label">Closed</div>
+          <div class="dash-stat-icon">${IC.check}</div>
+        </div>
         <div class="dash-stat-num">${closed}</div>
-        <div class="dash-stat-label">Closed</div>
+        <div class="dash-stat-sub">Completed</div>
       </div>
     </div>`;
 
