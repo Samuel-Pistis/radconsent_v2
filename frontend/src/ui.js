@@ -218,6 +218,26 @@ function bindLoginEvents() {
 /* ═══════════════════════════════════════════════════════════════
    RENDER — APP SHELL
 ═══════════════════════════════════════════════════════════════ */
+function getPageLabel(page, navItems) {
+  const found = navItems.find(n => n.id === page);
+  if (found) return found.label;
+  const labels = {
+    'new-consent': 'New Consent',
+    'record-detail': 'Record Detail',
+    'stage2-report': 'Procedure Report',
+    'stage3-vitals': 'Vitals Check',
+    'rad-review': 'Radiologist Review',
+    'sign-consent': 'Sign Consent',
+    'consent-declaration': 'Consent Declaration',
+    'mri-screening': 'MRI Safety Screening',
+    'safety-screening': 'Safety Screening',
+    'mammography-screening': 'Mammography Screening',
+    'mammography-questionnaire': 'Mammography Questionnaire',
+    'change-password': 'Change Password',
+  };
+  return labels[page] || 'RadConsent';
+}
+
 function renderShell(pageHtml) {
   const role = state.user?.role || '';
   const navItems = getNavItems(role);
@@ -284,13 +304,30 @@ function renderShell(pageHtml) {
         </div>
       </aside>
 
-      <main class="main-content" style="position: relative;">
-        ${window.gState?.settings?.center_logo ? `
-          <div class="center-logo-topright">
-            <img src="${window.gState.settings.center_logo}" alt="Center Logo" style="max-height: 48px; object-fit: contain;">
+      <main class="main-content">
+        <div class="top-bar">
+          <div class="top-bar-page">${getPageLabel(state.page, navItems)}</div>
+          <div class="top-bar-right">
+            ${window.gState?.settings?.center_logo ? `
+              <img src="${window.gState.settings.center_logo}" alt="Center Logo" style="max-height:32px;object-fit:contain;">
+              <div class="top-bar-divider"></div>
+            ` : ''}
+            <button class="top-bar-icon-btn" onclick="toggleDark()" title="Toggle theme">
+              ${gState.darkMode ? IC.sun : IC.moon}
+            </button>
+            <div class="top-bar-divider"></div>
+            <div class="top-bar-user">
+              <div class="top-bar-user-info">
+                <div class="top-bar-user-name">${esc(state.user?.name)}</div>
+                <div class="top-bar-user-role">${ROLE_LABELS[role] || role}</div>
+              </div>
+              <div class="top-bar-avatar">${initials(state.user?.name)}</div>
+            </div>
           </div>
-        ` : ''}
-        <div class="main-inner">${pageHtml}</div>
+        </div>
+        <div class="main-scroll">
+          <div class="main-inner">${pageHtml}</div>
+        </div>
       </main>
     </div>
   `;

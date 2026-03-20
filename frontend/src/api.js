@@ -113,11 +113,15 @@ gState.changePwdState = { error: null, success: false };
 gState.dashboardState = { records: null, loading: false };
 
 /* Dark mode — applied immediately so there's no flash */
-gState.darkMode = localStorage.getItem('radconsent_dark') === '1';
+const savedDark = localStorage.getItem('radconsent_dark');
+gState.darkMode = savedDark !== '0';
+
 if (gState.darkMode) {
   document.body.classList.add('dark');
-} else if (localStorage.getItem('radconsent_dark') === '0') {
+  document.body.classList.remove('light');
+} else {
   document.body.classList.add('light');
+  document.body.classList.remove('dark');
 }
 
 function toggleDark() {
@@ -125,10 +129,7 @@ function toggleDark() {
   document.body.classList.toggle('dark', gState.darkMode);
   document.body.classList.toggle('light', !gState.darkMode);
   localStorage.setItem('radconsent_dark', gState.darkMode ? '1' : '0');
-  const btn = document.getElementById('dark-toggle-btn');
-  if (btn) btn.innerHTML = gState.darkMode
-    ? IC.sun  + '<span>Light mode</span>'
-    : IC.moon + '<span>Dark mode</span>';
+  window.dispatchEvent(new CustomEvent('theme-toggled'));
 }
 
 /* ═══════════════════════════════════════════════════════════════
