@@ -294,3 +294,17 @@ code {
     border-right-color: var(--border);
   }
 }
+
+.center-logo-topright {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .center-logo-topright {
+    display: none;
+  }
+}

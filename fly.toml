@@ -1,6 +1,6 @@
 # fly.toml — Fly.io deployment config for RadConsent demo
 # After running `fly apps create`, replace "radconsent-demo" below with your chosen app name.
-app = "radconsent-demo"
+app = "radconsent-test"
 primary_region = "lhr"
 
 [build]
