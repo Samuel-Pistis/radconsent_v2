@@ -5835,15 +5835,17 @@ function initDashboardCharts(records) {
   
   // Status colours keyed to site semantics
   const STATUS_COLORS = {
-    'In Progress':          '#00C4E4',
-    'Awaiting Radiographer':'#38BDF8',
-    'Awaiting Nurse':       '#818CF8',
+    'In Progress':          '#02BCDB',
+    'Stage 1 Complete':     '#0C1A3A',
+    'Stage 2 Complete':     '#0C1A3A',
     'Pending Review':       '#F59E0B',
-    'Flagged':              '#EF4444',
-    'Awaiting Signature':   '#A78BFA',
-    'Closed':               '#10B981',
-    'Declined':             '#F87171',
-    'Voided':               '#64748B',
+    'Tier 1 Flagged':       '#2D0A0A',
+    'Tier 2 Flagged':       '#2D0A0A',
+    'Tier 3 Flagged':       '#2D0A0A',
+    'Awaiting Signature':   '#1E3A5F',
+    'Closed':               '#052E16',
+    'Declined':             '#450A0A',
+    'Voided':               '#1E293B',
   };
   const statusLabels = Object.keys(statusCounts);
   const statusColors = statusLabels.map(l => STATUS_COLORS[l] || '#00C4E4');
