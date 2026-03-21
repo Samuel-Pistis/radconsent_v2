@@ -5847,17 +5847,17 @@ function initDashboardCharts(records) {
     'Declined':             '#450A0A',
     'Voided':               '#1E293B',
   } : {
-    'In Progress':          '#00C4E4',
-    'Stage 1 Complete':     '#38BDF8',
-    'Stage 2 Complete':     '#818CF8',
+    'In Progress':          '#F1F5F9',
+    'Stage 1 Complete':     '#DBEAFE',
+    'Stage 2 Complete':     '#DBEAFE',
     'Pending Review':       '#F59E0B',
-    'Tier 1 Flagged':       '#EF4444',
-    'Tier 2 Flagged':       '#EF4444',
-    'Tier 3 Flagged':       '#EF4444',
-    'Awaiting Signature':   '#A78BFA',
-    'Closed':               '#10B981',
-    'Declined':             '#F87171',
-    'Voided':               '#64748B',
+    'Tier 1 Flagged':       '#FEE2E2',
+    'Tier 2 Flagged':       '#FEE2E2',
+    'Tier 3 Flagged':       '#FEE2E2',
+    'Awaiting Signature':   '#EDE9FE',
+    'Closed':               '#DCFCE7',
+    'Declined':             '#FEE2E2',
+    'Voided':               '#F1F5F9',
   };
   const statusLabels = Object.keys(statusCounts);
   const statusColors = statusLabels.map(l => STATUS_COLORS[l] || '#00C4E4');
