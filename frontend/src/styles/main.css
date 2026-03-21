@@ -787,6 +787,80 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   SIDEBAR — INTELLIGENT SCALING
+═══════════════════════════════════════════════════════════════ */
+
+/* Wide screens: slightly expanded sidebar */
+@media (min-width: 1600px) {
+  :root { --sidebar-w: 264px; }
+}
+
+/* Slim icon-only sidebar: 901px–1320px */
+@media (min-width: 901px) and (max-width: 1320px) {
+  :root { --sidebar-w: 68px; }
+
+  .sidebar { width: 68px; min-width: 68px; overflow: visible; }
+
+  /* Hide all text labels */
+  .nav-label,
+  .nav-section-label,
+  .sidebar-user-name,
+  .sidebar-user-role,
+  .btn-dark-toggle span,
+  .sidebar-logo .logo-name,
+  .sidebar-logo .logo-sub { display: none; }
+
+  /* Logo: just the icon square */
+  .sidebar-logo { padding: 14px 0; display: flex; justify-content: center; }
+  .sidebar-logo img { display: none; }
+  .logo-row { justify-content: center; }
+
+  /* Nav items: centred icon */
+  .nav-section-label { display: none; }
+  .nav-item {
+    justify-content: center;
+    padding: 11px 0;
+    border-left-width: 3px;
+    position: relative;
+  }
+  .nav-item svg { width: 20px; height: 20px; }
+
+  /* Tooltip on hover using title — enhance with CSS pseudo-tooltip */
+  .nav-item::after {
+    content: attr(title);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%; transform: translateY(-50%);
+    background: #0F2744;
+    color: #fff;
+    font-size: 12px; font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s ease;
+    z-index: 300;
+    box-shadow: 0 4px 12px rgba(0,0,0,.35);
+  }
+  .nav-item:hover::after { opacity: 1; }
+
+  /* New consent button: icon only */
+  .sidebar-actions { padding: 0 0 12px; display: flex; justify-content: center; }
+  .sidebar-new-btn { padding: 10px; justify-content: center; width: 44px; border-radius: 10px; }
+  .sidebar-new-btn svg { width: 18px; height: 18px; }
+
+  /* Footer: centred icon stack */
+  .sidebar-footer { padding: 12px 0; align-items: center; }
+  .sidebar-user { justify-content: center; margin-bottom: 8px; }
+  .sidebar-avatar { margin: 0; }
+  .btn-dark-toggle { justify-content: center; padding: 8px 0; }
+  .btn-dark-toggle svg { width: 17px; height: 17px; }
+  .btn-signout { justify-content: center; padding: 8px 0; gap: 0; }
+  .btn-signout svg { width: 17px; height: 17px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 900px) {

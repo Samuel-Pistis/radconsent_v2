@@ -243,8 +243,8 @@ function renderShell(pageHtml) {
   const navItems = getNavItems(role);
 
   const navLinks = navItems.map(item => `
-    <div class="nav-item${state.page === item.id ? ' active' : ''}" onclick="navigate('${item.id}')">
-      ${item.icon}<span>${item.label}</span>
+    <div class="nav-item${state.page === item.id ? ' active' : ''}" onclick="navigate('${item.id}')" title="${item.label}">
+      ${item.icon}<span class="nav-label">${item.label}</span>
     </div>
   `).join('');
 
@@ -279,8 +279,8 @@ function renderShell(pageHtml) {
 
         <div class="sidebar-actions">
           <button class="sidebar-new-btn${state.page === 'new-consent' ? ' active' : ''}"
-            onclick="navigate('new-consent');closeSidebar()">
-            ${IC.plus} New Consent
+            onclick="navigate('new-consent');closeSidebar()" title="New Consent">
+            ${IC.plus} <span class="nav-label">New Consent</span>
           </button>
         </div>
 
@@ -298,8 +298,8 @@ function renderShell(pageHtml) {
           <button class="btn-dark-toggle" onclick="navigate('change-password')">
             ${IC.lock} <span>Change Password</span>
           </button>
-          <button class="btn-signout" onclick="doLogout()">
-            ${IC.logout} Sign Out
+          <button class="btn-signout" onclick="doLogout()" title="Sign Out">
+            ${IC.logout} <span class="nav-label">Sign Out</span>
           </button>
         </div>
       </aside>
@@ -1411,14 +1411,14 @@ function renderAdminPanel() {
           </div>
         </div>
         <div class="card-body" style="padding:0">
-          <table style="width:100%;border-collapse:collapse">
+          <table class="admin-table">
             <thead>
-              <tr style="border-bottom:1px solid var(--c-border);background:var(--c-bg)">
-                <th style="${thStyle}">Patient</th>
-                <th style="${thStyle}">Procedure</th>
-                <th style="${thStyle}">Status</th>
-                <th style="${thStyle}">Created</th>
-                <th style="padding:10px 16px"></th>
+              <tr>
+                <th>Patient</th>
+                <th>Procedure</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th></th>
               </tr>
             </thead>
             <tbody style="font-size:13.5px">${tableBody}</tbody>
@@ -1538,14 +1538,14 @@ function renderAdminPanel() {
           <button class="btn btn-primary btn-sm" onclick="staffFormNew()">${IC.plus} Add Staff</button>
         </div>
         <div class="card-body" style="padding:0">
-          <table style="width:100%;border-collapse:collapse">
+          <table class="admin-table">
             <thead>
-              <tr style="border-bottom:1px solid var(--c-border);background:var(--c-bg)">
-                <th style="${thStyle}">Name</th>
-                <th style="${thStyle}">Email</th>
-                <th style="${thStyle}">Role</th>
-                <th style="${thStyle}">Created</th>
-                <th style="padding:10px 16px"></th>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Created</th>
+                <th></th>
               </tr>
             </thead>
             <tbody style="font-size:13.5px">${usersBody}</tbody>
@@ -1594,15 +1594,15 @@ function renderAdminPanel() {
           <button class="btn btn-ghost btn-sm" onclick="adminRefreshAudit()">&#x21bb; Refresh</button>
         </div>
         <div class="card-body" style="padding:0">
-          <table style="width:100%;border-collapse:collapse;min-width:700px">
+          <table class="admin-table" style="min-width:700px">
             <thead>
-              <tr style="border-bottom:1px solid var(--c-border);background:var(--c-bg)">
-                <th style="${thStyle}">Time</th>
-                <th style="${thStyle}">User</th>
-                <th style="${thStyle}">Action</th>
-                <th style="${thStyle}">Resource</th>
-                <th style="${thStyle}">Details</th>
-                <th style="${thStyle}">IP Address</th>
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Resource</th>
+                <th>Details</th>
+                <th>IP Address</th>
               </tr>
             </thead>
             <tbody style="font-size:13.5px">${logsBody}</tbody>
