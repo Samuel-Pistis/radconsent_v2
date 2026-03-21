@@ -326,6 +326,18 @@ body.dark .login-logo img {
 .btn-sm svg { width: 12px; height: 12px; }
 .btn-lg  { padding: 10px 22px; font-size: 14.5px; border-radius: var(--radius); }
 .btn-lg svg { width: 16px; height: 16px; }
+
+/* Primary page-level action button — e.g. "New Consent" in page header */
+.page-primary-action {
+  padding: 10px 22px;
+  font-size: 14px; font-weight: 700;
+  border-radius: var(--radius);
+  letter-spacing: -.2px;
+  box-shadow: 0 4px 16px rgba(0,196,228,.35);
+  transition: background var(--t), box-shadow var(--t), transform var(--t);
+}
+.page-primary-action svg { width: 16px; height: 16px; }
+.page-primary-action:hover:not(:disabled) { box-shadow: 0 6px 22px rgba(0,196,228,.5); transform: translateY(-1px); }
 .btn-block { width: 100%; }
 .btn-icon { padding: 6px; border-radius: var(--radius-sm); }
 .btn-icon svg { width: 16px; height: 16px; }

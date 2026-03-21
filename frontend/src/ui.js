@@ -519,7 +519,7 @@ function renderDashboard() {
         <div class="page-title">Dashboard</div>
         <div class="page-subtitle">Welcome back, ${esc(state.user?.name)}</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="navigate('new-consent')">${IC.plus} New Consent</button>
+      <button class="btn btn-primary page-primary-action" onclick="navigate('new-consent')">${IC.plus} New Consent</button>
     </div>
 
     ${stats}
