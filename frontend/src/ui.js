@@ -5833,32 +5833,56 @@ function initDashboardCharts(records) {
     statusCounts[label] = (statusCounts[label] || 0) + 1;
   });
   
+  // Status colours keyed to site semantics
+  const STATUS_COLORS = {
+    'In Progress':          '#00C4E4',
+    'Awaiting Radiographer':'#38BDF8',
+    'Awaiting Nurse':       '#818CF8',
+    'Pending Review':       '#F59E0B',
+    'Flagged':              '#EF4444',
+    'Awaiting Signature':   '#A78BFA',
+    'Closed':               '#10B981',
+    'Declined':             '#F87171',
+    'Voided':               '#64748B',
+  };
+  const statusLabels = Object.keys(statusCounts);
+  const statusColors = statusLabels.map(l => STATUS_COLORS[l] || '#00C4E4');
+
   const statusChart = new Chart(statusCanvas, {
     type: 'doughnut',
     data: {
-      labels: Object.keys(statusCounts),
+      labels: statusLabels,
       datasets: [{
         data: Object.values(statusCounts),
-        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'],
-        borderWidth: 0,
-        hoverOffset: 4
+        backgroundColor: statusColors,
+        borderWidth: gState.darkMode ? 2 : 1,
+        borderColor: gState.darkMode ? '#0D2137' : '#fff',
+        hoverOffset: 6
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'right', labels: { boxWidth: 12 } }
+        legend: {
+          position: 'right',
+          labels: { boxWidth: 11, padding: 14, font: { size: 11 } }
+        }
       }
     }
   });
 
-  // ── Modality Chart Data ──
+  // ── Modality Chart — cyan gradient bars ──
   const modalityCounts = {};
   records.forEach(r => {
     const label = MODALITY_LABELS[r.modality] || r.modality;
     modalityCounts[label] = (modalityCounts[label] || 0) + 1;
   });
+
+  const barCtx = modalityCanvas.getContext('2d');
+  const barGradient = barCtx.createLinearGradient(0, 0, 0, 230);
+  barGradient.addColorStop(0, 'rgba(0, 196, 228, 0.90)');
+  barGradient.addColorStop(1, 'rgba(0, 196, 228, 0.20)');
 
   const modalityChart = new Chart(modalityCanvas, {
     type: 'bar',
@@ -5867,8 +5891,10 @@ function initDashboardCharts(records) {
       datasets: [{
         label: 'Records',
         data: Object.values(modalityCounts),
-        backgroundColor: '#3b82f6',
-        borderRadius: 4
+        backgroundColor: barGradient,
+        hoverBackgroundColor: 'rgba(0,196,228,0.95)',
+        borderRadius: 6,
+        borderSkipped: false
       }]
     },
     options: {
@@ -5876,8 +5902,8 @@ function initDashboardCharts(records) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { stepSize: 1 } },
-        x: { grid: { display: false } }
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { stepSize: 1, color: textColor } },
+        x: { grid: { display: false }, ticks: { color: textColor } }
       }
     }
   });
