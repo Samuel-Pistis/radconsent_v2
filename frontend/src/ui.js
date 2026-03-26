@@ -3874,7 +3874,14 @@ const SCR_STEPS = [
   },
   {
     id: 'q4_surgery_details', domain: 4, domainName: 'Surgical History', type: 'text',
-    question: 'Please state the type of surgery:',
+    question: 'What was the surgery for?',
+    placeholder: 'e.g. Appendectomy, knee replacement…',
+    showIf: (a) => a.q4_surgery === 'yes',
+  },
+  {
+    id: 'q4_surgery_implant', domain: 4, domainName: 'Surgical History', type: 'yesno',
+    question: 'Do you know if anything was inserted or implanted into your body during the surgery?',
+    hint: 'e.g. screws, plates, clips, mesh, wires, pins or any other device.',
     showIf: (a) => a.q4_surgery === 'yes',
   },
 
@@ -3987,7 +3994,14 @@ const SCR_STEPS_YO = [
   },
   {
     id: 'q4_surgery_details', domain: 4, domainName: 'Ìtàn Iṣẹ́ Abẹ', type: 'text',
-    question: 'Jọ̀wọ́ sọ irú iṣẹ́ abẹ náà:',
+    question: 'Kí ni wọ́n ṣe iṣẹ́ abẹ náà fún?',
+    placeholder: 'Fun apẹẹrẹ: Yiyọ appendix, rirọpọ kíní orúnkú…',
+    showIf: (a) => a.q4_surgery === 'yes',
+  },
+  {
+    id: 'q4_surgery_implant', domain: 4, domainName: 'Ìtàn Iṣẹ́ Abẹ', type: 'yesno',
+    question: 'Ṣé o mọ bóyá wọ́n fi ohun kan sínú ara rẹ nígbà iṣẹ́ abẹ náà?',
+    hint: 'Fun apẹẹrẹ: ẹ̀kọ́, àwo, kílíìpù, ọ̀wọ̀ tàbí ẹrọ mìíràn.',
     showIf: (a) => a.q4_surgery === 'yes',
   },
   {
@@ -4189,6 +4203,11 @@ function mriScrNext(stepId, isMulti) {
     const step = gState.mriScrState.steps[gState.mriScrState.stepIdx];
     if (step.type === 'info') {
       gState.mriScrState.answers[stepId] = 'acknowledged';
+    } else if (step.type === 'text') {
+      const val = (gState.mriScrState.answers[stepId] || '').trim();
+      if (!val) { toast('Please provide an answer to proceed.', 'warning'); return; }
+      gState.mriScrState.answers[stepId] = val;
+      mriScrRefreshSteps();
     } else {
       if (gState.mriScrState.answers[stepId] === undefined) {
         toast('Please answer this step to proceed.', 'warning');
@@ -4547,10 +4566,24 @@ function renderMriStep(step, stepNum, totalSteps) {
       <div class="scr-question">${esc(step.question)}</div>
       ${step.hint ? `<div class="scr-question-hint">${esc(step.hint)}</div>` : ''}
       <div class="scr-check-list">${opts}</div>`;
+
+  } else if (step.type === 'text') {
+    body = `
+      <div class="scr-question">${esc(step.question)}</div>
+      ${step.hint ? `<div class="scr-question-hint">${esc(step.hint)}</div>` : ''}
+      <div style="max-width:480px;margin:0 auto;margin-top:24px">
+        <input class="form-control" type="text" id="scr-text-${step.id}"
+          placeholder="${esc(step.placeholder || 'Type your answer here…')}"
+          value="${esc(ans || '')}"
+          oninput="mriScrAnswer('${step.id}', this.value)" />
+      </div>`;
   }
 
   const isMulti = step.type === 'multicheck';
-  const hasAnswer = (isMulti && ans && ans.length > 0) || (!isMulti && ans !== undefined);
+  const isText  = step.type === 'text';
+  const hasAnswer = (isMulti && ans && ans.length > 0)
+    || (isText && ans && ans.trim().length > 0)
+    || (!isMulti && !isText && ans !== undefined);
 
   return `${progressBar}
     <div class="card">
