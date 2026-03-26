@@ -1,155 +1,115 @@
 'use strict';
 
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const { Pool } = require('pg');
+const bcrypt   = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
 
-const DB_FILE = process.env.DB_PATH || path.join(__dirname, 'database.sqlite');
-const LEGACY_JSON = path.join(__dirname, 'data.json');
+// ── Pool ──────────────────────────────────────────────────────
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
 
-// Connect to SQLite
-const db = new Database(DB_FILE, { verbose: null }); // Set to console.log for debugging
+// ── Schema ────────────────────────────────────────────────────
+async function initSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS clinics (
+      id          TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      slug        TEXT UNIQUE NOT NULL,
+      logo        TEXT,
+      "isActive"  BOOLEAN DEFAULT TRUE,
+      "createdAt" TEXT NOT NULL,
+      "updatedAt" TEXT NOT NULL
+    );
 
-// ═══════════════════════════════════════════════════════════════
-//  Schema Setup
-// ═══════════════════════════════════════════════════════════════
-function initSchema() {
-  db.exec(`
+    CREATE TABLE IF NOT EXISTS super_admins (
+      id          TEXT PRIMARY KEY,
+      email       TEXT UNIQUE NOT NULL,
+      password    TEXT NOT NULL,
+      name        TEXT NOT NULL,
+      "createdAt" TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      role TEXT NOT NULL,
-      name TEXT NOT NULL,
-      createdAt TEXT NOT NULL,
-      updatedAt TEXT NOT NULL
+      id                TEXT PRIMARY KEY,
+      "clinicId"        TEXT REFERENCES clinics(id) ON DELETE CASCADE,
+      email             TEXT NOT NULL,
+      password          TEXT NOT NULL,
+      role              TEXT NOT NULL,
+      name              TEXT NOT NULL,
+      "failedAttempts"  INTEGER DEFAULT 0,
+      "lockedUntil"     TEXT,
+      "createdAt"       TEXT NOT NULL,
+      "updatedAt"       TEXT NOT NULL,
+      UNIQUE("clinicId", email)
     );
 
     CREATE TABLE IF NOT EXISTS consents (
-      id TEXT PRIMARY KEY,
-      status TEXT NOT NULL,
-      modality TEXT NOT NULL,
-      language TEXT DEFAULT 'en',
-      consentMode TEXT,              -- Stored as string
-      bodyPart TEXT,                 -- Stored as string
-      patient TEXT NOT NULL,         -- Stored as JSON string
-      tierFlags TEXT NOT NULL,       -- Stored as JSON string
-      stage1 TEXT,                   -- Stored as JSON string
-      stage2 TEXT,                   -- Stored as JSON string
-      stage3 TEXT,                   -- Stored as JSON string
-      radiologistReview TEXT,        -- Stored as JSON string
-      createdAt TEXT NOT NULL,
-      updatedAt TEXT NOT NULL,
-      closedAt TEXT
+      id                   TEXT PRIMARY KEY,
+      "clinicId"           TEXT REFERENCES clinics(id) ON DELETE CASCADE,
+      status               TEXT NOT NULL,
+      modality             TEXT NOT NULL,
+      language             TEXT DEFAULT 'en',
+      "consentMode"        TEXT,
+      "bodyPart"           TEXT,
+      patient              JSONB,
+      "tierFlags"          JSONB,
+      stage1               JSONB,
+      stage2               JSONB,
+      stage3               JSONB,
+      "radiologistReview"  JSONB,
+      "createdAt"          TEXT NOT NULL,
+      "updatedAt"          TEXT NOT NULL,
+      "closedAt"           TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id               SERIAL PRIMARY KEY,
+      "clinicId"       TEXT,
+      timestamp        TEXT NOT NULL,
+      "userId"         TEXT,
+      action           TEXT NOT NULL,
+      "resourceType"   TEXT,
+      "resourceId"     TEXT,
+      details          TEXT,
+      "ipAddress"      TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      "clinicId"  TEXT REFERENCES clinics(id) ON DELETE CASCADE,
+      key         TEXT NOT NULL,
+      value       TEXT,
+      PRIMARY KEY ("clinicId", key)
     );
   `);
+  console.log('[DB] Schema ready');
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  Data Migration (JSON -> SQLite)
-// ═══════════════════════════════════════════════════════════════
-function migrateFromJSON() {
-  if (!fs.existsSync(LEGACY_JSON)) return;
+// ── Seed default super-admin ──────────────────────────────────
+async function seedSuperAdmin() {
+  const res = await pool.query('SELECT COUNT(*) AS n FROM super_admins');
+  if (parseInt(res.rows[0].n) > 0) return;
 
-  console.log('[DB] Found legacy data.json, migrating to SQLite...');
-  const data = JSON.parse(fs.readFileSync(LEGACY_JSON, 'utf8'));
-
-  const insertUser = db.prepare(`
-    INSERT OR IGNORE INTO users (id, email, password, role, name, createdAt, updatedAt)
-    VALUES (@id, @email, @password, @role, @name, @createdAt, @updatedAt)
-  `);
-
-  const insertConsent = db.prepare(`
-    INSERT OR IGNORE INTO consents (
-      id, status, modality, language, patient, tierFlags, stage1, stage2, stage3, radiologistReview, createdAt, updatedAt, closedAt
-    ) VALUES (
-      @id, @status, @modality, @language, @patient, @tierFlags, @stage1, @stage2, @stage3, @radiologistReview, @createdAt, @updatedAt, @closedAt
-    )
-  `);
-
-  const transaction = db.transaction((users, consents) => {
-    for (const u of users || []) {
-      insertUser.run(u);
-    }
-    for (const c of consents || []) {
-      insertConsent.run({
-        ...c,
-        patient: JSON.stringify(c.patient || {}),
-        tierFlags: JSON.stringify(c.tierFlags || {}),
-        stage1: c.stage1 ? JSON.stringify(c.stage1) : null,
-        stage2: c.stage2 ? JSON.stringify(c.stage2) : null,
-        stage3: c.stage3 ? JSON.stringify(c.stage3) : null,
-        radiologistReview: c.radiologistReview ? JSON.stringify(c.radiologistReview) : null
-      });
-    }
-  });
-
-  transaction(data.users, data.consents);
-  console.log('[DB] Migration complete. Renaming legacy data.json to data.json.bak');
-  fs.renameSync(LEGACY_JSON, LEGACY_JSON + '.bak');
+  const now  = new Date().toISOString();
+  const hash = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD || 'superadmin1234', 10);
+  await pool.query(
+    `INSERT INTO super_admins (id, email, password, name, "createdAt") VALUES ($1,$2,$3,$4,$5)`,
+    [uuidv4(), process.env.SUPER_ADMIN_EMAIL || 'super@radconsent.io', hash, 'Super Admin', now]
+  );
+  console.log('[DB] Super-admin seeded: ' + (process.env.SUPER_ADMIN_EMAIL || 'super@radconsent.io'));
 }
 
-initSchema();
-
-// ═══════════════════════════════════════════════════════════════
-//  Schema Migrations
-// ═══════════════════════════════════════════════════════════════
-function runMigrations() {
-  const migrations = [
-    `ALTER TABLE users ADD COLUMN failedAttempts INTEGER DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN lockedUntil TEXT DEFAULT NULL`,
-    `CREATE TABLE IF NOT EXISTS audit_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      timestamp TEXT NOT NULL,
-      userId TEXT,
-      action TEXT NOT NULL,
-      resourceType TEXT,
-      resourceId TEXT,
-      details TEXT,
-      ipAddress TEXT
-    )`,
-    `CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT
-    )`
-  ];
-  for (const sql of migrations) {
-    try { db.exec(sql); } catch { /* column already exists */ }
-  }
+// ── Bootstrap ─────────────────────────────────────────────────
+async function setup() {
+  const client = await pool.connect();
+  client.release();
+  console.log('[DB] Connected to PostgreSQL');
+  await initSchema();
+  await seedSuperAdmin();
 }
-runMigrations();
-migrateFromJSON();
 
-// ═══════════════════════════════════════════════════════════════
-//  Seed default users if table is empty
-// ═══════════════════════════════════════════════════════════════
-function seedDefaultUsers() {
-  const count = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
-  if (count > 0) return;
-
-  const bcrypt = require('bcryptjs');
-  const { v4: uuidv4 } = require('uuid');
-  const now = new Date().toISOString();
-  const hash = bcrypt.hashSync('demo1234', 10);
-
-  const insert = db.prepare(`
-    INSERT INTO users (id, email, password, role, name, createdAt, updatedAt, failedAttempts, lockedUntil)
-    VALUES (@id, @email, @password, @role, @name, @createdAt, @updatedAt, 0, NULL)
-  `);
-
-  const users = [
-    { id: uuidv4(), email: 'radiographer@radconsent.demo', role: 'radiographer', name: 'Chidi Eze' },
-    { id: uuidv4(), email: 'nurse@radconsent.demo',        role: 'nurse',        name: 'Amaka Obi' },
-    { id: uuidv4(), email: 'radiologist@radconsent.demo',  role: 'radiologist',  name: 'Dr. Amara Okonkwo' },
-    { id: uuidv4(), email: 'admin@radconsent.demo',        role: 'admin',        name: 'Admin User' },
-  ];
-
-  const run = db.transaction(() => {
-    for (const u of users) insert.run({ ...u, password: hash, createdAt: now, updatedAt: now });
-  });
-  run();
-  console.log('[DB] Seeded 4 default demo users.');
-}
-seedDefaultUsers();
-
-module.exports = db;
+module.exports = { pool, setup };

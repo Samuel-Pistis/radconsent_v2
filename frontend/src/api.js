@@ -205,11 +205,19 @@ function clearExpiryTimer() {
   if (_expiryLogoutTimer) { clearTimeout(_expiryLogoutTimer); _expiryLogoutTimer = null; }
 }
 
-function doLogin(user, token) {
+async function doLogin(user, token) {
   state.user  = user;
   state.token = token;
   localStorage.setItem('radconsent_token', token);
   localStorage.setItem('radconsent_user',  JSON.stringify(user));
+  // Fetch clinic logo now that we have auth
+  try {
+    const logoRes = await api('GET', '/settings/center_logo');
+    if (logoRes?.value) {
+      gState.settings = gState.settings || {};
+      gState.settings.center_logo = logoRes.value;
+    }
+  } catch (e) { /* ignore */ }
   startExpiryTimer(token);
   navigate('dashboard');
 }

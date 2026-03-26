@@ -6102,18 +6102,6 @@ async function init() {
     }
   });
 
-  // Fetch custom center logo before rendering
-  try {
-    const res = await fetch('/api/settings/center_logo');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.value) {
-        window.gState.settings = window.gState.settings || {};
-        window.gState.settings.center_logo = data.value;
-      }
-    }
-  } catch (err) { /* ignore */ }
-
   const savedToken = localStorage.getItem('radconsent_token');
   const savedUser = localStorage.getItem('radconsent_user');
 
@@ -6131,6 +6119,14 @@ async function init() {
           // Token is valid — use fresh user data from the server
           state.user = freshUser;
           localStorage.setItem('radconsent_user', JSON.stringify(freshUser));
+          // Fetch clinic logo now that we have auth
+          try {
+            const logoRes = await api('GET', '/settings/center_logo');
+            if (logoRes?.value) {
+              window.gState.settings = window.gState.settings || {};
+              window.gState.settings.center_logo = logoRes.value;
+            }
+          } catch (e) { /* ignore */ }
           startExpiryTimer(savedToken);
           navigate('dashboard');
           return;
