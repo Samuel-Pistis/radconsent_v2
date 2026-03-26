@@ -38,9 +38,17 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
 /**
  * Sign a JWT with the given payload.
- * Payload should include: { id, email, role, name }
+ * Payload should include: { id, email, role, name, clinicId }
  */
 function signToken(payload) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+/**
+ * Sign a super-admin JWT.
+ * Payload should include: { id, email, role: 'super_admin' }
+ */
+function signSuperToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
@@ -67,7 +75,42 @@ function verifyToken(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { id, email, role, name, iat, exp }
+    req.user = decoded; // { id, email, role, name, clinicId, iat, exp }
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+    return res.status(401).json({ error: 'Invalid token. Please log in again.' });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Middleware: verifySuperToken
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Express middleware for super-admin routes.
+ * Verifies the Bearer token and enforces role === 'super_admin'.
+ *
+ * Usage:
+ *   router.get('/clinics', verifySuperToken, handler)
+ */
+function verifySuperToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required. Please log in.' });
+  }
+
+  const token = authHeader.slice(7);
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Super-admin access required.' });
+    }
+    req.user = decoded; // { id, email, role: 'super_admin', iat, exp }
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
@@ -110,4 +153,12 @@ function requireRole(...roles) {
 //  Exports
 // ═══════════════════════════════════════════════════════════════
 
-module.exports = { JWT_SECRET, JWT_EXPIRES_IN, signToken, verifyToken, requireRole };
+module.exports = {
+  JWT_SECRET,
+  JWT_EXPIRES_IN,
+  signToken,
+  signSuperToken,
+  verifyToken,
+  verifySuperToken,
+  requireRole,
+};

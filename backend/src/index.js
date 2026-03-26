@@ -1,14 +1,19 @@
 'use strict';
 
+require('dotenv').config();
+
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
+
+const { setup } = require('./db/db-setup');
 
 const authRouter     = require('./routes/auth');
 const consentsRouter = require('./routes/consents');
 const usersRouter    = require('./routes/users');
 const auditRouter    = require('./routes/audit');
 const settingsRouter = require('./routes/settings');
+const clinicsRouter  = require('./routes/clinics');
 
 const PORT = process.env.PORT || 4000;
 
@@ -45,10 +50,10 @@ app.use((req, res, next) => {
     [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
       "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
       "img-src 'self' data: blob:",
-      "font-src 'self' data:",
+      "font-src 'self' data: https://fonts.gstatic.com",
     ].join('; ')
   );
   next();
@@ -60,6 +65,7 @@ app.use('/api/consents', consentsRouter);
 app.use('/api/users',    usersRouter);
 app.use('/api/audit',    auditRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api',          clinicsRouter);  // mounts /api/clinics and /api/super/login
 
 // ── Serve frontend ──────────────────────────────────────────
 const FRONTEND = path.join(__dirname, '..', '..', 'frontend', 'dist');
@@ -70,7 +76,14 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(FRONTEND, 'index.html'));
 });
 
-// ── Start ───────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`RadConsent running at http://localhost:${PORT}`);
-});
+// ── Bootstrap DB then start server ──────────────────────────
+setup()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`RadConsent running at http://localhost:${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('[Startup] Database setup failed:', err);
+    process.exit(1);
+  });

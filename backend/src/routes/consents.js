@@ -11,21 +11,21 @@ const router = express.Router();
 router.use(verifyToken);
 
 // POST /api/consents/seed-demo — admin loads demo consent records
-router.post('/seed-demo', requireRole('admin'), (req, res) => {
-  const count = db.loadDemoConsents();
-  logAction(req, 'LOADED_DEMO_DATA', 'consent', null, { count });
+router.post('/seed-demo', requireRole('admin'), async (req, res) => {
+  const count = await db.loadDemoConsents(req.user.clinicId);
+  await logAction(req, 'LOADED_DEMO_DATA', 'consent', null, { count });
   return res.json({ ok: true, loaded: count });
 });
 
 // POST /api/consents/sessions — create a new consent record
-router.post('/sessions', (req, res) => {
+router.post('/sessions', async (req, res) => {
   const { patient, modality, language, consentMode, bodyPart } = req.body || {};
 
   if (!patient?.name || !modality) {
     return res.status(400).json({ error: 'Patient name and modality are required.' });
   }
 
-  const doc = db.insert('consents', {
+  const doc = await db.insert('consents', {
     status   : 'in_progress',
     modality,
     language : language || 'en',
@@ -48,15 +48,15 @@ router.post('/sessions', (req, res) => {
     stage3           : null,
     radiologistReview: null,
     closedAt         : null,
-  });
+  }, req.user.clinicId);
 
-  logAction(req, 'CONSENT_CREATED', 'consent', doc.id, { modality });
+  await logAction(req, 'CONSENT_CREATED', 'consent', doc.id, { modality });
   return res.status(201).json(doc);
 });
 
 // GET /api/consents — list consent records (supports ?search= and ?status= query params)
-router.get('/', (req, res) => {
-  let records = db.all('consents');
+router.get('/', async (req, res) => {
+  let records = await db.all('consents', req.user.clinicId);
 
   const { search, status } = req.query;
   if (search) {
@@ -76,16 +76,16 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/consents/:id — get a single consent record
-router.get('/:id', (req, res) => {
-  const doc = db.findOne('consents', { id: req.params.id });
+router.get('/:id', async (req, res) => {
+  const doc = await db.findOne('consents', { id: req.params.id }, req.user.clinicId);
   if (!doc) return res.status(404).json({ error: 'Consent record not found.' });
   return res.json(doc);
 });
 
 // PUT /api/consents/:id/screening — save MRI screening results and tier flags
-router.put('/:id/screening', (req, res) => {
+router.put('/:id/screening', async (req, res) => {
   const { screening, tierFlags } = req.body || {};
-  const existing = db.findOne('consents', { id: req.params.id });
+  const existing = await db.findOne('consents', { id: req.params.id }, req.user.clinicId);
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
 
   // If tier1/tier2 flags exist, block patient from signing until radiologist reviews
@@ -104,19 +104,19 @@ router.put('/:id/screening', (req, res) => {
   };
   if (flaggedStatus) updateData.status = flaggedStatus;
 
-  const updated = db.update('consents', req.params.id, updateData);
-  logAction(req, 'SCREENING_COMPLETED', 'consent', updated.id, { flagged: !!flaggedStatus });
+  const updated = await db.update('consents', req.params.id, updateData, req.user.clinicId);
+  await logAction(req, 'SCREENING_COMPLETED', 'consent', updated.id, { flagged: !!flaggedStatus });
   return res.json(updated);
 });
 
 // PUT /api/consents/:id/sign — patient signs the consent declaration (Stage 1)
-router.put('/:id/sign', requireRole('radiographer', 'nurse', 'admin'), (req, res) => {
+router.put('/:id/sign', requireRole('radiographer', 'nurse', 'admin'), async (req, res) => {
   const { patientSignature, patientSignatureImage, witnessName, language } = req.body || {};
   if (!patientSignature?.trim()) {
     return res.status(400).json({ error: 'Patient signature is required.' });
   }
 
-  const existing = db.findOne('consents', { id: req.params.id });
+  const existing = await db.findOne('consents', { id: req.params.id }, req.user.clinicId);
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
 
   // Only allow signing when: no flags (in_progress) or radiologist has approved (awaiting_signature)
@@ -131,7 +131,7 @@ router.put('/:id/sign', requireRole('radiographer', 'nurse', 'admin'), (req, res
   const now = new Date().toISOString();
   const lang = language || existing.language || 'en';
 
-  const updated = db.update('consents', req.params.id, {
+  const updated = await db.update('consents', req.params.id, {
     status  : 'draft_stage1',
     language: lang,
     stage1  : {
@@ -143,13 +143,13 @@ router.put('/:id/sign', requireRole('radiographer', 'nurse', 'admin'), (req, res
       witnessName           : witnessName || null,
       completedAt           : now,
     },
-  });
-  logAction(req, 'PATIENT_SIGNED', 'consent', updated.id);
+  }, req.user.clinicId);
+  await logAction(req, 'PATIENT_SIGNED', 'consent', updated.id);
   return res.json(updated);
 });
 
 // PUT /api/consents/:id/stage2 — radiographer files post-procedure report
-router.put('/:id/stage2', requireRole('radiographer', 'admin'), (req, res) => {
+router.put('/:id/stage2', requireRole('radiographer', 'admin'), async (req, res) => {
 
   const {
     completedAsPlanned, procedureNotes,
@@ -163,12 +163,12 @@ router.put('/:id/stage2', requireRole('radiographer', 'admin'), (req, res) => {
   if (!radiographerSignature?.trim())
     return res.status(400).json({ error: 'Radiographer signature is required.' });
 
-  const existing = db.findOne('consents', { id: req.params.id });
+  const existing = await db.findOne('consents', { id: req.params.id }, req.user.clinicId);
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
   if (existing.status !== 'draft_stage1')
     return res.status(409).json({ error: 'Stage 1 must be completed before filing a procedure report.' });
 
-  const updated = db.update('consents', req.params.id, {
+  const updated = await db.update('consents', req.params.id, {
     status: 'draft_stage2',
     stage2: {
       completedAt          : new Date().toISOString(),
@@ -185,13 +185,13 @@ router.put('/:id/stage2', requireRole('radiographer', 'admin'), (req, res) => {
       radiographerSignature: radiographerSignature.trim(),
       radiographerSignatureImage: radiographerSignatureImage || null,
     },
-  });
-  logAction(req, 'STAGE2_COMPLETED', 'consent', updated.id);
+  }, req.user.clinicId);
+  await logAction(req, 'STAGE2_COMPLETED', 'consent', updated.id);
   return res.json(updated);
 });
 
 // PUT /api/consents/:id/stage3 — nurse files post-procedure vitals check
-router.put('/:id/stage3', requireRole('nurse', 'admin'), (req, res) => {
+router.put('/:id/stage3', requireRole('nurse', 'admin'), async (req, res) => {
 
   const {
     bloodPressureSystolic, bloodPressureDiastolic,
@@ -203,7 +203,7 @@ router.put('/:id/stage3', requireRole('nurse', 'admin'), (req, res) => {
   if (!nurseSignature?.trim())
     return res.status(400).json({ error: 'Nurse signature is required.' });
 
-  const existing = db.findOne('consents', { id: req.params.id });
+  const existing = await db.findOne('consents', { id: req.params.id }, req.user.clinicId);
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
   if (existing.status !== 'draft_stage2')
     return res.status(409).json({ error: 'Stage 2 must be completed before submitting vitals.' });
@@ -222,7 +222,7 @@ router.put('/:id/stage3', requireRole('nurse', 'admin'), (req, res) => {
     + (notes?.trim() ? `. ${notes.trim()}` : '');
 
   const now = new Date().toISOString();
-  const updated = db.update('consents', req.params.id, {
+  const updated = await db.update('consents', req.params.id, {
     status  : 'closed',
     closedAt: now,
     stage3  : {
@@ -240,14 +240,14 @@ router.put('/:id/stage3', requireRole('nurse', 'admin'), (req, res) => {
       nurseSignature      : nurseSignature?.trim() || '',
       nurseSignatureImage : nurseSignatureImage || null,
     },
-  });
-  logAction(req, 'STAGE3_COMPLETED', 'consent', updated.id);
+  }, req.user.clinicId);
+  await logAction(req, 'STAGE3_COMPLETED', 'consent', updated.id);
   return res.json(updated);
 });
 
 // GET /api/consents/:id/pdf — download structured text export of a closed record
-router.get('/:id/pdf', (req, res) => {
-  const doc = db.findOne('consents', { id: req.params.id });
+router.get('/:id/pdf', async (req, res) => {
+  const doc = await db.findOne('consents', { id: req.params.id }, req.user.clinicId);
   if (!doc) return res.status(404).json({ error: 'Consent record not found.' });
   if (doc.status !== 'closed')
     return res.status(400).json({ error: 'Only closed records can be exported.' });
@@ -453,7 +453,7 @@ router.get('/:id/pdf', (req, res) => {
 });
 
 // PUT /api/consents/:id/review — radiologist records their decision
-router.put('/:id/review', requireRole('radiologist', 'admin'), (req, res) => {
+router.put('/:id/review', requireRole('radiologist', 'admin'), async (req, res) => {
 
   const { decision, notes, radiologistSignature, radiologistSignatureImage } = req.body || {};
 
@@ -465,14 +465,14 @@ router.put('/:id/review', requireRole('radiologist', 'admin'), (req, res) => {
   if (!radiologistSignature?.trim())
     return res.status(400).json({ error: 'Radiologist signature is required.' });
 
-  const existing = db.findOne('consents', { id: req.params.id });
+  const existing = await db.findOne('consents', { id: req.params.id }, req.user.clinicId);
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
   if (existing.status !== 'pending_review' && existing.status !== 'flagged_tier1')
     return res.status(409).json({ error: 'This record is not awaiting radiologist review.' });
 
   // approved/proceed_with_modifications → awaiting_signature (patient must still sign)
   const newStatus = decision === 'declined' ? 'declined' : 'awaiting_signature';
-  const updated = db.update('consents', req.params.id, {
+  const updated = await db.update('consents', req.params.id, {
     status: newStatus,
     radiologistReview: {
       decision,
@@ -483,15 +483,15 @@ router.put('/:id/review', requireRole('radiologist', 'admin'), (req, res) => {
       reviewedByName      : req.user.name,
       reviewedAt          : new Date().toISOString(),
     },
-  });
-  logAction(req, 'RADIOLOGIST_REVIEWED', 'consent', updated.id, { decision });
+  }, req.user.clinicId);
+  await logAction(req, 'RADIOLOGIST_REVIEWED', 'consent', updated.id, { decision });
   return res.json(updated);
 });
 
 // PUT /api/consents/:id/recall — admin recalls a declined record back to active queue
-router.put('/:id/recall', requireRole('admin'), (req, res) => {
+router.put('/:id/recall', requireRole('admin'), async (req, res) => {
 
-  const existing = db.findOne('consents', { id: req.params.id });
+  const existing = await db.findOne('consents', { id: req.params.id }, req.user.clinicId);
   if (!existing) return res.status(404).json({ error: 'Consent record not found.' });
   if (existing.status !== 'declined')
     return res.status(409).json({ error: 'Only declined records can be recalled.' });
@@ -501,27 +501,26 @@ router.put('/:id/recall', requireRole('admin'), (req, res) => {
                    : tf.tier2?.length > 0 ? 'pending_review'
                    : 'in_progress';
 
-  const updated = db.update('consents', req.params.id, {
+  const updated = await db.update('consents', req.params.id, {
     status: backStatus,
     radiologistReview: null
-  });
-  logAction(req, 'CONSENT_RECALLED', 'consent', updated.id);
+  }, req.user.clinicId);
+  await logAction(req, 'CONSENT_RECALLED', 'consent', updated.id);
   return res.json(updated);
 });
 
 // DELETE /api/consents/:id — admin deletes a single consent record
-router.delete('/:id', requireRole('admin'), (req, res) => {
-  const removed = db.remove('consents', req.params.id);
+router.delete('/:id', requireRole('admin'), async (req, res) => {
+  const removed = await db.remove('consents', req.params.id, req.user.clinicId);
   if (!removed) return res.status(404).json({ error: 'Consent record not found.' });
-  logAction(req, 'CONSENT_DELETED', 'consent', req.params.id);
+  await logAction(req, 'CONSENT_DELETED', 'consent', req.params.id);
   return res.json({ ok: true });
 });
 
 // DELETE /api/consents — admin deletes all consent records
-router.delete('/', requireRole('admin'), (req, res) => {
-
-  const count = db.removeAll('consents');
-  logAction(req, 'ALL_CONSENTS_DELETED', 'consent', null, { count });
+router.delete('/', requireRole('admin'), async (req, res) => {
+  const count = await db.removeAll('consents', req.user.clinicId);
+  await logAction(req, 'ALL_CONSENTS_DELETED', 'consent', null, { count });
   return res.json({ ok: true, deleted: count });
 });
 

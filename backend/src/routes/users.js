@@ -14,11 +14,11 @@ const VALID_ROLES = ['radiographer', 'nurse', 'radiologist', 'admin'];
 router.use(verifyToken);
 
 // GET /api/users — list all users (admin only)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   if (req.user.role !== 'admin')
     return res.status(403).json({ error: 'Only admins can view staff accounts.' });
 
-  const users = db.all('users').map(u => ({
+  const users = (await db.all('users', req.user.clinicId)).map(u => ({
     id: u.id, name: u.name, email: u.email, role: u.role,
     createdAt: u.createdAt, updatedAt: u.updatedAt,
   }));
@@ -40,18 +40,18 @@ router.post('/', async (req, res) => {
   if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: 'Invalid role.' });
 
   const normalEmail = email.toLowerCase().trim();
-  const existing = db.findOne('users', { email: normalEmail });
+  const existing = await db.findOne('users', { email: normalEmail }, req.user.clinicId);
   if (existing) return res.status(409).json({ error: 'An account with that email already exists.' });
 
   const hashed = await bcrypt.hash(password, 10);
-  const user = db.insert('users', {
+  const user = await db.insert('users', {
     name : name.trim(),
     email: normalEmail,
     role,
     password: hashed,
-  });
+  }, req.user.clinicId);
 
-  logAction(req, 'USER_CREATED', 'user', user.id, { role, email: normalEmail });
+  await logAction(req, 'USER_CREATED', 'user', user.id, { role, email: normalEmail });
   return res.status(201).json({
     id: user.id, name: user.name, email: user.email,
     role: user.role, createdAt: user.createdAt,
@@ -59,12 +59,12 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/users/:id — update name / email / role (admin only)
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   if (req.user.role !== 'admin')
     return res.status(403).json({ error: 'Only admins can edit staff accounts.' });
 
   const { name, email, role } = req.body || {};
-  const existing = db.findOne('users', { id: req.params.id });
+  const existing = await db.findOne('users', { id: req.params.id }, req.user.clinicId);
   if (!existing) return res.status(404).json({ error: 'User not found.' });
 
   const updates = {};
@@ -75,7 +75,7 @@ router.put('/:id', (req, res) => {
   }
   if (email?.trim()) {
     const normalEmail = email.toLowerCase().trim();
-    const conflict = db.findOne('users', { email: normalEmail });
+    const conflict = await db.findOne('users', { email: normalEmail }, req.user.clinicId);
     if (conflict && conflict.id !== req.params.id)
       return res.status(409).json({ error: 'That email is already in use by another account.' });
     updates.email = normalEmail;
@@ -84,8 +84,8 @@ router.put('/:id', (req, res) => {
   if (Object.keys(updates).length === 0)
     return res.status(400).json({ error: 'No valid fields to update.' });
 
-  const updated = db.update('users', req.params.id, updates);
-  logAction(req, 'USER_UPDATED', 'user', updated.id, updates);
+  const updated = await db.update('users', req.params.id, updates, req.user.clinicId);
+  await logAction(req, 'USER_UPDATED', 'user', updated.id, updates);
   return res.json({
     id: updated.id, name: updated.name, email: updated.email,
     role: updated.role, updatedAt: updated.updatedAt,
@@ -106,7 +106,7 @@ router.put('/:id/password', async (req, res) => {
   if (!newPassword) return res.status(400).json({ error: 'New password is required.' });
   if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
 
-  const user = db.findOne('users', { id: req.params.id });
+  const user = await db.findOne('users', { id: req.params.id }, req.user.clinicId);
   if (!user) return res.status(404).json({ error: 'User not found.' });
 
   // Non-admin changing own password must verify current password
@@ -117,21 +117,21 @@ router.put('/:id/password', async (req, res) => {
   }
 
   const hashed = await bcrypt.hash(newPassword, 10);
-  db.update('users', req.params.id, { password: hashed });
-  logAction(req, 'PASSWORD_CHANGED', 'user', req.params.id);
+  await db.update('users', req.params.id, { password: hashed }, req.user.clinicId);
+  await logAction(req, 'PASSWORD_CHANGED', 'user', req.params.id);
   return res.json({ ok: true });
 });
 
 // DELETE /api/users/:id — delete a staff account (admin only, cannot delete own)
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   if (req.user.role !== 'admin')
     return res.status(403).json({ error: 'Only admins can delete staff accounts.' });
   if (req.user.id === req.params.id)
     return res.status(400).json({ error: 'You cannot delete your own account.' });
 
-  const ok = db.remove('users', req.params.id);
+  const ok = await db.remove('users', req.params.id, req.user.clinicId);
   if (!ok) return res.status(404).json({ error: 'User not found.' });
-  logAction(req, 'USER_DELETED', 'user', req.params.id);
+  await logAction(req, 'USER_DELETED', 'user', req.params.id);
   return res.json({ ok: true });
 });
 

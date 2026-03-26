@@ -2,6 +2,7 @@
 
 const express  = require('express');
 const bcrypt   = require('bcryptjs');
+const { pool } = require('../db/db-setup');
 const db       = require('../db/database');
 const { signToken, verifyToken } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
@@ -59,11 +60,14 @@ const ACCOUNT_LOCK_DURATION  = 30 * 60 * 1000; // 30 minutes
 //  POST /api/auth/login
 // ═══════════════════════════════════════════════════════════════
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, password, clinicSlug } = req.body || {};
   const ip = req.ip || req.connection?.remoteAddress || 'unknown';
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
+  }
+  if (!clinicSlug) {
+    return res.status(400).json({ error: 'Clinic identifier is required.' });
   }
 
   // ── IP rate-limit check ──────────────────────────────────
@@ -73,12 +77,46 @@ router.post('/login', async (req, res) => {
     });
   }
 
-  const user = db.findOne('users', { email: email.toLowerCase().trim() });
+  // ── Resolve clinic by slug ───────────────────────────────
+  let clinic;
+  try {
+    const clinicResult = await pool.query(
+      `SELECT * FROM clinics WHERE slug = $1 AND "isActive" = TRUE`,
+      [clinicSlug.toLowerCase().trim()]
+    );
+    clinic = clinicResult.rows[0] || null;
+  } catch (err) {
+    console.error('[Auth] Clinic lookup error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+
+  if (!clinic) {
+    recordIpFailure(ip);
+    return res.status(401).json({ error: 'Invalid clinic or credentials.' });
+  }
+
+  const clinicId = clinic.id;
+
+  // ── Find user scoped to clinic ───────────────────────────
+  let user;
+  try {
+    user = await db.findOne('users', { email: email.toLowerCase().trim() }, clinicId);
+  } catch (err) {
+    console.error('[Auth] User lookup error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+
   if (!user) {
     recordIpFailure(ip);
-    logAction(req, 'LOGIN_FAILED', 'user', null, { reason: 'invalid_credentials', email: email });
+    // Attach a synthetic clinicId so logAction can record it
+    req.user = { clinicId };
+    await logAction(req, 'LOGIN_FAILED', 'user', null, { reason: 'invalid_credentials', email });
+    req.user = null;
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
+
+  // Attach partial user for logging purposes (clinicId available)
+  req.user = { id: user.id, clinicId };
 
   // ── Account lockout check ────────────────────────────────
   if (user.lockedUntil) {
@@ -90,7 +128,7 @@ router.post('/login', async (req, res) => {
       });
     }
     // Lock expired — reset
-    db.update('users', user.id, { failedAttempts: 0, lockedUntil: null });
+    await db.update('users', user.id, { failedAttempts: 0, lockedUntil: null }, clinicId);
     user.failedAttempts = 0;
     user.lockedUntil = null;
   }
@@ -105,16 +143,16 @@ router.post('/login', async (req, res) => {
 
     if (attempts >= ACCOUNT_LOCK_THRESHOLD) {
       updates.lockedUntil = new Date(Date.now() + ACCOUNT_LOCK_DURATION).toISOString();
-      db.update('users', user.id, updates);
-      logAction(req, 'ACCOUNT_LOCKED', 'user', user.id, { reason: 'too_many_failures' });
+      await db.update('users', user.id, updates, clinicId);
+      await logAction(req, 'ACCOUNT_LOCKED', 'user', user.id, { reason: 'too_many_failures' });
       return res.status(423).json({
         error: 'Account locked due to too many failed attempts. Try again in 30 minutes.',
       });
     }
 
-    db.update('users', user.id, updates);
+    await db.update('users', user.id, updates, clinicId);
     const remaining = ACCOUNT_LOCK_THRESHOLD - attempts;
-    logAction(req, 'LOGIN_FAILED', 'user', user.id, { reason: 'invalid_password' });
+    await logAction(req, 'LOGIN_FAILED', 'user', user.id, { reason: 'invalid_password' });
     return res.status(401).json({
       error: `Invalid email or password. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining before account lock.`,
     });
@@ -123,21 +161,23 @@ router.post('/login', async (req, res) => {
   // ── Success — reset counters & issue token ──────────────
   clearIpAttempts(ip);
   if (user.failedAttempts > 0 || user.lockedUntil) {
-    db.update('users', user.id, { failedAttempts: 0, lockedUntil: null });
+    await db.update('users', user.id, { failedAttempts: 0, lockedUntil: null }, clinicId);
   }
 
-  const payload = { id: user.id, email: user.email, role: user.role, name: user.name };
+  const payload = { id: user.id, email: user.email, role: user.role, name: user.name, clinicId };
   const token   = signToken(payload);
 
-  logAction(req, 'LOGIN_SUCCESS', 'user', user.id);
+  // req.user already set above; update to full payload for logging
+  req.user = payload;
+  await logAction(req, 'LOGIN_SUCCESS', 'user', user.id);
   return res.json({ token, user: payload });
 });
 
 // ═══════════════════════════════════════════════════════════════
 //  GET /api/auth/me — validate session & return current user
 // ═══════════════════════════════════════════════════════════════
-router.get('/me', verifyToken, (req, res) => {
-  const user = db.findOne('users', { id: req.user.id });
+router.get('/me', verifyToken, async (req, res) => {
+  const user = await db.findOne('users', { id: req.user.id }, req.user.clinicId);
   if (!user) {
     return res.status(401).json({ error: 'Account no longer exists.' });
   }
@@ -148,10 +188,11 @@ router.get('/me', verifyToken, (req, res) => {
   }
 
   return res.json({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
+    id      : user.id,
+    email   : user.email,
+    name    : user.name,
+    role    : user.role,
+    clinicId: user.clinicId,
   });
 });
 

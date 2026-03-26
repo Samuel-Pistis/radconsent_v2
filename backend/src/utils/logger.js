@@ -1,5 +1,6 @@
 'use strict';
-const db = require('../db/db-setup');
+
+const { pool } = require('../db/db-setup');
 
 /**
  * Log an action to the audit trail
@@ -9,22 +10,22 @@ const db = require('../db/db-setup');
  * @param {string} resourceId - ID of the resource affected
  * @param {Object|string} details - Additional contextual details
  */
-function logAction(req, action, resourceType = null, resourceId = null, details = null) {
+async function logAction(req, action, resourceType = null, resourceId = null, details = null) {
   try {
-    const userId = req?.user?.id || req?.body?.email || 'system';
-    
+    const userId   = req?.user?.id || req?.body?.email || 'system';
+    const clinicId = req?.user?.clinicId || null;
+
     // Attempt to get the real IP if behind a proxy
     const ipAddress = req?.headers?.['x-forwarded-for'] || req?.socket?.remoteAddress || 'unknown';
 
-    const timestamp = new Date().toISOString();
+    const timestamp  = new Date().toISOString();
     const detailsStr = details ? (typeof details === 'string' ? details : JSON.stringify(details)) : null;
 
-    const stmt = db.prepare(`
-      INSERT INTO audit_logs (timestamp, userId, action, resourceType, resourceId, details, ipAddress)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    stmt.run(timestamp, userId, action, resourceType, resourceId, detailsStr, ipAddress);
+    await pool.query(
+      `INSERT INTO audit_logs (timestamp, "clinicId", "userId", action, "resourceType", "resourceId", details, "ipAddress")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [timestamp, clinicId, userId, action, resourceType, resourceId, detailsStr, ipAddress]
+    );
   } catch (err) {
     console.error('[Audit Logger Error]: Failed to write log', err);
   }
