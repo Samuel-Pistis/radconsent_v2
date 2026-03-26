@@ -5974,9 +5974,9 @@ function initDashboardCharts(records) {
 function initDatePickers() {
   const dark = gState.darkMode;
   const baseOpts = {
-    allowInput: true,
     dateFormat: 'Y-m-d',
     disableMobile: false,
+    clickOpens: true,
     theme: dark ? 'dark' : 'light',
   };
 
