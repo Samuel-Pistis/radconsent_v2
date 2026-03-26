@@ -1094,8 +1094,8 @@ function radReviewSelectDecision(val) {
 function radReviewCheckSubmit() {
   const decision = document.querySelector('input[name="rad-decision"]:checked')?.value;
   const notes = document.getElementById('rv-notes')?.value?.trim();
-  const sigOk = gState.rvSigMode === 'upload' ? !!rvSigUploadedDataUrl
-    : gState.rvSigMode === 'topaz' ? !!rvSigTopazPreviewUrl
+  const sigOk = gState.rvSigMode === 'upload' ? !!gState.rvSigUploadedDataUrl
+    : gState.rvSigMode === 'topaz' ? !!gState.rvSigTopazPreviewUrl
       : (gState.rvSigPadInstance && !gState.rvSigPadInstance.isEmpty());
   const btn = document.getElementById('rv-submit-btn');
   if (btn) btn.disabled = !(decision && notes && sigOk);
@@ -1311,6 +1311,7 @@ function renderRadReview() {
             </label>
             <input type="file" id="rv-sig-upload-input" accept="image/*" style="display:none" onchange="rvSigHandleUpload(this)" />
             ${gState.rvSigUploadedDataUrl ? `<img id="rv-sig-upload-preview" class="sig-img" src="${gState.rvSigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="rv-sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
+            ${gState.rvSigUploadedDataUrl ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="rvSigClearUpload()">Clear Image</button>` : ''}
           </div>
           <!-- Topaz pane -->
           <div id="rv-sig-topaz-pane" class="sig-topaz-pane"${gState.rvSigMode !== 'topaz' ? ' style="display:none"' : ''}>
@@ -2827,6 +2828,7 @@ function renderStage2Report() {
           </label>
           <input type="file" id="s2-sig-upload-input" accept="image/*" style="display:none" onchange="s2SigHandleUpload(this)" />
           ${gState.s2SigUploadedDataUrl ? `<img id="s2-sig-upload-preview" class="sig-img" src="${gState.s2SigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="s2-sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
+          ${gState.s2SigUploadedDataUrl ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="s2SigClearUpload()">Clear Image</button>` : ''}
         </div>
         <!-- Topaz pane -->
         <div id="s2-sig-topaz-pane" class="sig-topaz-pane"${gState.s2SigMode !== 'topaz' ? ' style="display:none"' : ''}>
@@ -2858,8 +2860,8 @@ function stage2ToggleComplications(show) {
 
 function stage2CheckSubmit() {
   const notes = (document.getElementById('s2-notes')?.value || '').trim();
-  const sigOk = gState.s2SigMode === 'upload' ? !!s2SigUploadedDataUrl
-    : gState.s2SigMode === 'topaz' ? !!s2SigTopazPreviewUrl
+  const sigOk = gState.s2SigMode === 'upload' ? !!gState.s2SigUploadedDataUrl
+    : gState.s2SigMode === 'topaz' ? !!gState.s2SigTopazPreviewUrl
       : (gState.s2SigPadInstance && !gState.s2SigPadInstance.isEmpty());
   const btn = document.getElementById('s2-submit-btn');
   if (btn) btn.disabled = !(notes && sigOk);
@@ -3115,6 +3117,7 @@ function renderStage3Vitals() {
             </label>
             <input type="file" id="s3-sig-upload-input" accept="image/*" style="display:none" onchange="s3SigHandleUpload(this)" />
             ${gState.s3SigUploadedDataUrl ? `<img id="s3-sig-upload-preview" class="sig-img" src="${gState.s3SigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="s3-sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
+            ${gState.s3SigUploadedDataUrl ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="s3SigClearUpload()">Clear Image</button>` : ''}
           </div>
           <!-- Topaz pane -->
           <div id="s3-sig-topaz-pane" class="sig-topaz-pane"${gState.s3SigMode !== 'topaz' ? ' style="display:none"' : ''}>
@@ -3181,6 +3184,14 @@ function s3SigClear() {
   stage3CheckSubmit();
 }
 
+function s3SigClearUpload() {
+  gState.s3SigUploadedDataUrl = null;
+  const preview = document.getElementById('s3-sig-upload-preview');
+  if (preview) { preview.src = ''; preview.style.display = 'none'; }
+  const inp = document.getElementById('s3-sig-upload-input');
+  if (inp) inp.value = '';
+  stage3CheckSubmit();
+}
 function s3SigHandleUpload(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -3259,8 +3270,8 @@ function s3SigTopazClear() {
 }
 
 function stage3CheckSubmit() {
-  const sigOk = gState.s3SigMode === 'upload' ? !!s3SigUploadedDataUrl
-    : gState.s3SigMode === 'topaz' ? !!s3SigTopazPreviewUrl
+  const sigOk = gState.s3SigMode === 'upload' ? !!gState.s3SigUploadedDataUrl
+    : gState.s3SigMode === 'topaz' ? !!gState.s3SigTopazPreviewUrl
       : (gState.s3SigPadInstance && !gState.s3SigPadInstance.isEmpty());
   const btn = document.getElementById('s3-submit-btn');
   if (btn) btn.disabled = !sigOk;
@@ -3358,6 +3369,14 @@ function s2SigClear() {
   stage2CheckSubmit();
 }
 
+function s2SigClearUpload() {
+  gState.s2SigUploadedDataUrl = null;
+  const preview = document.getElementById('s2-sig-upload-preview');
+  if (preview) { preview.src = ''; preview.style.display = 'none'; }
+  const inp = document.getElementById('s2-sig-upload-input');
+  if (inp) inp.value = '';
+  stage2CheckSubmit();
+}
 function s2SigHandleUpload(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -3476,6 +3495,14 @@ function rvSigClear() {
   radReviewCheckSubmit();
 }
 
+function rvSigClearUpload() {
+  gState.rvSigUploadedDataUrl = null;
+  const preview = document.getElementById('rv-sig-upload-preview');
+  if (preview) { preview.src = ''; preview.style.display = 'none'; }
+  const inp = document.getElementById('rv-sig-upload-input');
+  if (inp) inp.value = '';
+  radReviewCheckSubmit();
+}
 function rvSigHandleUpload(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -5522,6 +5549,14 @@ function sigSwitchMode(mode) {
   consentDeclCheckSubmit();
 }
 
+function sigClearUpload() {
+  gState.sigUploadedDataUrl = null;
+  const preview = document.getElementById('sig-upload-preview');
+  if (preview) { preview.src = ''; preview.style.display = 'none'; }
+  const inp = document.getElementById('sig-upload-input');
+  if (inp) inp.value = '';
+  consentDeclCheckSubmit();
+}
 function sigHandleUpload(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -5605,8 +5640,8 @@ function sigTopazClear() {
 
 function consentDeclCheckSubmit() {
   const sig = (document.getElementById('cdecl-sig')?.value || '').trim();
-  const sigOk = gState.sigMode === 'upload' ? !!sigUploadedDataUrl
-    : gState.sigMode === 'topaz' ? !!sigTopazPreviewUrl
+  const sigOk = gState.sigMode === 'upload' ? !!gState.sigUploadedDataUrl
+    : gState.sigMode === 'topaz' ? !!gState.sigTopazPreviewUrl
       : (gState.sigPadInstance && !gState.sigPadInstance.isEmpty());
   const btn = document.getElementById('cdecl-submit-btn');
   if (btn) btn.disabled = !(sig && sigOk);
@@ -5799,6 +5834,7 @@ function renderConsentDeclaration() {
             </label>
             <input type="file" id="sig-upload-input" accept="image/*" style="display:none" onchange="sigHandleUpload(this)" />
             ${gState.sigUploadedDataUrl ? `<img id="sig-upload-preview" class="sig-img" src="${gState.sigUploadedDataUrl}" alt="Uploaded signature" />` : `<img id="sig-upload-preview" class="sig-img" style="display:none" alt="Uploaded signature" />`}
+            ${gState.sigUploadedDataUrl ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="sigClearUpload()">Clear Image</button>` : ''}
           </div>
           <!-- Topaz pad pane -->
           <div id="sig-topaz-pane" class="sig-topaz-pane"${gState.sigMode !== 'topaz' ? ' style="display:none"' : ''}>
