@@ -4259,10 +4259,12 @@ function scrMultiToggle(stepId, changedVal, el) {
 }
 
 /* ── Record answer ONLY ─────────────────────────────── */
-function mriScrAnswer(stepId, value) {
+function mriScrAnswer(stepId, value, isText) {
   gState.mriScrState.answers[stepId] = value;
-  mriScrRefreshSteps();
-  render();
+  if (!isText) {
+    mriScrRefreshSteps();
+    render();
+  }
 }
 
 function mriScrNext(stepId, isMulti) {
@@ -4648,7 +4650,7 @@ function renderMriStep(step, stepNum, totalSteps) {
         <input class="form-control" type="text" id="scr-text-${step.id}"
           placeholder="${esc(step.placeholder || 'Type your answer here…')}"
           value="${esc(ans || '')}"
-          oninput="mriScrAnswer('${step.id}', this.value)" />
+          oninput="mriScrAnswer('${step.id}', this.value, true)" />
       </div>`;
   }
 
