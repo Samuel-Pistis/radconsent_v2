@@ -5920,13 +5920,13 @@ function render() {
   }
 
   // Preserve scroll position so answer selections don't jump to top
-  const mc = document.querySelector('.main-content');
+  const mc = document.querySelector('.main-scroll');
   const savedScroll = mc ? mc.scrollTop : 0;
 
   app.innerHTML = renderShell(renderPage());
   bindPageEvents();
 
-  const mcNew = document.querySelector('.main-content');
+  const mcNew = document.querySelector('.main-scroll');
   if (mcNew && savedScroll > 0) mcNew.scrollTop = savedScroll;
 }
 
