@@ -1937,6 +1937,11 @@ function selectModality(mod) {
   document.querySelectorAll('.modality-card').forEach(c =>
     c.classList.toggle('selected', c.dataset.mod === mod)
   );
+  const renalEl = document.getElementById('nc-renal-params');
+  if (renalEl) {
+    const needsRenal = mod === 'mri_with_gadolinium' || mod === 'ct_with_iv_contrast';
+    renalEl.style.display = needsRenal ? '' : 'none';
+  }
   updateNcSubmit();
 }
 
@@ -1991,19 +1996,24 @@ async function submitNewConsent() {
   const spo2 = (document.getElementById('nc-spo2')?.value || '').trim();
   const temp = (document.getElementById('nc-temp')?.value || '').trim();
   const weight = (document.getElementById('nc-weight')?.value || '').trim();
+  const height = (document.getElementById('nc-height')?.value || '').trim();
+  const rr = (document.getElementById('nc-rr')?.value || '').trim();
+  const gcs = (document.getElementById('nc-gcs')?.value || '').trim();
 
-  const hasVitals = bpSys || bpDia || pulse || spo2 || temp || weight;
+  const hasVitals = bpSys || bpDia || pulse || spo2 || temp || weight || height || rr || gcs;
   let vitalsPayload = null;
 
   if (hasVitals) {
     vitalsPayload = {};
     if (bpSys && bpDia) vitalsPayload.bp = `${bpSys}/${bpDia}`;
     else if (bpSys) vitalsPayload.bp = bpSys;
-
     if (pulse) vitalsPayload.pulse = pulse;
     if (spo2) vitalsPayload.spo2 = spo2;
     if (temp) vitalsPayload.temperature = temp;
     if (weight) vitalsPayload.weight = weight;
+    if (height) vitalsPayload.height = height;
+    if (rr) vitalsPayload.rr = rr;
+    if (gcs) vitalsPayload.gcs = gcs;
   }
 
   const payload = {
@@ -3649,27 +3659,34 @@ function renderNewConsent() {
       </div>
     </div>
 
-    <!-- ── Section 3: Pre-Procedure Clinical Data ── -->
-    <div class="card mb-4" id="nc-clinical-params" style="display: none;">
+    <!-- ── Section 3: Pre-Procedure Vitals ── -->
+    <div class="card mb-4" id="nc-clinical-params">
       <div class="nc-section-header">
         <div class="nc-section-num">3</div>
-        <div class="nc-section-title">${L.clinical} <span class="text-sm font-normal text-muted">(${L.optional})</span></div>
+        <div class="nc-section-title">Pre-Procedure Vitals <span class="text-sm font-normal text-muted">(${L.optional})</span></div>
       </div>
       <div class="nc-section-body">
-        <div style="font-size:13px;color:var(--c-text-sec);margin-bottom:16px">
-          ${L.clinicalHint}
+        <div style="font-size:13px;color:var(--c-text-sec);margin-bottom:20px">
+          Record baseline observations before the procedure begins. All fields are optional.
         </div>
-        
-        <div class="form-row mb-3">
-          <div class="form-group">
-            <label class="form-label" for="nc-urea">${L.urea} <span class="text-muted">(mmol/L)</span></label>
-            <input class="form-control" type="number" step="0.1" id="nc-urea" placeholder="e.g. 5.1" />
+
+        <!-- Renal function — shown only for contrast procedures -->
+        <div id="nc-renal-params" style="display:none">
+          <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--c-accent);margin-bottom:10px">Renal Function</div>
+          <div class="form-row mb-4">
+            <div class="form-group">
+              <label class="form-label" for="nc-urea">${L.urea} <span class="text-muted">(mmol/L)</span></label>
+              <input class="form-control" type="number" step="0.1" id="nc-urea" placeholder="e.g. 5.1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="nc-creatinine">${L.creatinine} <span class="text-muted">(µmol/L)</span></label>
+              <input class="form-control" type="number" step="1" id="nc-creatinine" placeholder="e.g. 85" />
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="nc-creatinine">${L.creatinine} <span class="text-muted">(µmol/L)</span></label>
-            <input class="form-control" type="number" step="1" id="nc-creatinine" placeholder="e.g. 85" />
-          </div>
+          <div style="border-top:1px solid var(--c-border);margin-bottom:20px"></div>
         </div>
+
+        <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--c-accent);margin-bottom:10px">Vital Signs</div>
 
         <div class="form-row mb-3">
           <div class="form-group">
@@ -3697,10 +3714,24 @@ function renderNewConsent() {
           </div>
         </div>
         
-        <div class="form-row">
-          <div class="form-group" style="max-width:300px">
+        <div class="form-row mb-3">
+          <div class="form-group">
             <label class="form-label" for="nc-weight">${L.weight} <span class="text-muted">(kg)</span></label>
             <input class="form-control" type="number" step="0.1" id="nc-weight" placeholder="e.g. 75.5" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nc-height">Height <span class="text-muted">(cm)</span></label>
+            <input class="form-control" type="number" step="1" id="nc-height" placeholder="e.g. 170" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="nc-rr">Respiratory Rate <span class="text-muted">(/min)</span></label>
+            <input class="form-control" type="number" id="nc-rr" placeholder="e.g. 16" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nc-gcs">GCS Score <span class="text-muted">(3–15)</span></label>
+            <input class="form-control" type="number" min="3" max="15" id="nc-gcs" placeholder="e.g. 15" />
           </div>
         </div>
 
