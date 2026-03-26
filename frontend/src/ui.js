@@ -1,5 +1,7 @@
 import { toggleSidebar, closeSidebar, toggleDark, api, doLogin, doLogout, validateSession, startExpiryTimer, API_BASE, MODALITY_LABELS, STATUS_LABELS, ROLE_LABELS, LANGUAGE_LABELS, DECISION_LABELS, state, gState } from './api.js';
 import { navigate } from './router.js';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
 /* ═══════════════════════════════════════════════════════════════
    UTILITY HELPERS
 ═══════════════════════════════════════════════════════════════ */
@@ -5969,9 +5971,57 @@ function initDashboardCharts(records) {
  * bindPageEvents() — called after every shell render.
  * Add page-specific event listeners here as pages are built.
  */
+function initDatePickers() {
+  const dark = gState.darkMode;
+  const baseOpts = {
+    allowInput: true,
+    dateFormat: 'Y-m-d',
+    disableMobile: false,
+    theme: dark ? 'dark' : 'light',
+  };
+
+  // Records filter — date range
+  const fromEl = document.getElementById('rec-date-from');
+  if (fromEl && !fromEl._flatpickr) {
+    flatpickr(fromEl, {
+      ...baseOpts,
+      defaultDate: fromEl.value || null,
+      maxDate: 'today',
+      onChange: ([d]) => {
+        const val = d ? d.toISOString().slice(0, 10) : '';
+        recordsFilterDate('from', val);
+      },
+    });
+  }
+
+  const toEl = document.getElementById('rec-date-to');
+  if (toEl && !toEl._flatpickr) {
+    flatpickr(toEl, {
+      ...baseOpts,
+      defaultDate: toEl.value || null,
+      maxDate: 'today',
+      onChange: ([d]) => {
+        const val = d ? d.toISOString().slice(0, 10) : '';
+        recordsFilterDate('to', val);
+      },
+    });
+  }
+
+  // New consent — date of birth
+  const dobEl = document.getElementById('nc-dob');
+  if (dobEl && !dobEl._flatpickr) {
+    flatpickr(dobEl, {
+      ...baseOpts,
+      maxDate: 'today',
+      onChange: ([d]) => { if (d) updateNcSubmit(); },
+    });
+  }
+}
+
 function bindPageEvents() {
   bindNewConsentEvents();
   bindMriScreeningEvents();
+  initDatePickers();
   
   if (state.page === 'dashboard' && gState.dashboardState.records) {
     initDashboardCharts(gState.dashboardState.records);

@@ -1630,4 +1630,37 @@ body:not(.light) .login-error { color: #FCA5A5; }
 
 .admin-table tr:last-child td {
   border-bottom: none;
-}
+}
+/* ═══════════════════════════════════════════════════════════════
+   FLATPICKR — themed overrides
+═══════════════════════════════════════════════════════════════ */
+.flatpickr-calendar {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  border: 1px solid var(--c-border);
+}
+.flatpickr-calendar.arrowTop::before,
+.flatpickr-calendar.arrowTop::after { display: none; }
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+}
+.flatpickr-day.today { border-color: var(--c-accent); color: var(--c-accent); }
+.flatpickr-day:hover { background: rgba(0,196,228,.12); }
+body.dark .flatpickr-calendar {
+  background: #0E2235;
+  border-color: #1E3A55;
+  color: #e2e8f0;
+}
+body.dark .flatpickr-month,
+body.dark .flatpickr-weekdays,
+body.dark span.flatpickr-weekday { background: #0E2235; color: #94a3b8; }
+body.dark .flatpickr-day { color: #cbd5e1; }
+body.dark .flatpickr-day.flatpickr-disabled { color: #334155; }
+body.dark .flatpickr-day:hover { background: rgba(0,196,228,.15); }
+body.dark .numInputWrapper:hover { background: rgba(255,255,255,.06); }
+body.dark .flatpickr-current-month input.cur-year,
+body.dark .flatpickr-current-month .flatpickr-monthDropdown-months { color: #e2e8f0; }
