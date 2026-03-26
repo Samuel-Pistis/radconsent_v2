@@ -143,6 +143,11 @@ function renderLogin() {
             <div id="login-error" class="login-error"></div>
             <form id="login-form" autocomplete="on">
               <div class="form-group">
+                <label class="form-label" for="login-clinic">Clinic Code</label>
+                <input class="form-control" type="text" id="login-clinic" name="clinic"
+                  placeholder="e.g. prestige" autocomplete="organization" required />
+              </div>
+              <div class="form-group">
                 <label class="form-label" for="login-email">Email address</label>
                 <input class="form-control" type="email" id="login-email" name="email"
                   placeholder="name@example.com" autocomplete="email" required />
@@ -185,6 +190,7 @@ function renderLogin() {
 }
 
 function fillDemo(email) {
+  document.getElementById('login-clinic').value = 'prestige';
   document.getElementById('login-email').value = email;
   document.getElementById('login-password').value = 'demo1234';
   document.getElementById('login-email').focus();
@@ -197,8 +203,15 @@ function bindLoginEvents() {
     e.preventDefault();
     const btn = document.getElementById('login-btn');
     const errBox = document.getElementById('login-error');
+    const clinicSlug = document.getElementById('login-clinic').value.trim().toLowerCase();
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
+
+    if (!clinicSlug) {
+      errBox.textContent = 'Please enter your clinic code.';
+      errBox.classList.add('show');
+      return;
+    }
 
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner"></span>&nbsp;Signing in…`;
@@ -206,7 +219,7 @@ function bindLoginEvents() {
     errBox.classList.remove('show');
 
     try {
-      const data = await api('POST', '/auth/login', { email, password });
+      const data = await api('POST', '/auth/login', { email, password, clinicSlug });
       if (data) doLogin(data.user, data.token);
     } catch (err) {
       errBox.textContent = err.message;
